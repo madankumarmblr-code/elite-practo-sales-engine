@@ -118,3 +118,21 @@ Browser ──► :8080 ──► Express
                         ├─ /api/*     JSON API + SQLite
                         └─ /*         React SPA (frontend/dist)
 ```
+
+## Option D — Vercel (UI only)
+
+See **[VERCEL.md](./VERCEL.md)**.
+
+Import the GitHub repo in Vercel. Root `vercel.json` already sets install/build/output and SPA rewrites.
+
+### API still needs a Node host
+
+Vercel only hosts the static UI. Host the API with Docker / VPS (Options A–C), then set a Vercel env var:
+
+```bash
+VITE_API_BASE=https://api.yourdomain.com
+```
+
+On the API host, set `CORS_ORIGIN` to your Vercel URL.
+
+For a **working app in one place**, prefer Docker (Option A).

@@ -241,6 +241,9 @@ export function bootstrap() {
     .prepare("SELECT * FROM users WHERE role = 'superadmin' OR username = 'superadmin' OR email = ?")
     .get('superadmin@practo.sales');
 
+  const demoPassword = process.env.SUPERADMIN_PASSWORD || 'SuperAdmin@123';
+  const passwordHash = bcrypt.hashSync(demoPassword, 10);
+
   if (!superAdmin) {
     const id = nanoid();
     db.prepare(`
@@ -251,26 +254,31 @@ export function bootstrap() {
       'Super Admin',
       'superadmin@practo.sales',
       'superadmin',
-      bcrypt.hashSync('SuperAdmin@123', 10),
+      passwordHash,
       JSON.stringify(permissionsForRole('superadmin')),
       ts,
       ts
     );
     console.log('Created Super Admin user');
-    console.log('  username: superadmin');
-    console.log('  email:    superadmin@practo.sales');
-    console.log('  password: SuperAdmin@123');
   } else {
+    // Keep demo credentials predictable across local / Docker / Vercel boots
     db.prepare(`
       UPDATE users
       SET role = 'superadmin',
-          username = COALESCE(NULLIF(username, ''), 'superadmin'),
+          username = 'superadmin',
+          email = 'superadmin@practo.sales',
+          password_hash = ?,
           permissions = ?,
           active = 1,
           updated_at = ?
       WHERE id = ?
-    `).run(JSON.stringify(permissionsForRole('superadmin')), ts, superAdmin.id);
+    `).run(passwordHash, JSON.stringify(permissionsForRole('superadmin')), ts, superAdmin.id);
   }
+
+  console.log('Super Admin ready');
+  console.log('  User ID:  superadmin');
+  console.log('  Email:    superadmin@practo.sales');
+  console.log(`  Password: ${demoPassword}`);
 
   console.log('Bootstrap complete — integrations & AI pilots ready; Super Admin ready');
 }

@@ -1,6 +1,5 @@
 /**
- * Vercel serverless entry — Express API at /api/*
- * Static UI is served from frontend/dist via vercel.json outputDirectory.
+ * Vercel catch-all serverless API — handles /api and /api/*
  */
 if (!process.env.DATA_DIR) {
   process.env.DATA_DIR = '/tmp/practo-sales-data';
@@ -8,9 +7,7 @@ if (!process.env.DATA_DIR) {
 
 const { createApp } = await import('../backend/src/app.js');
 
-const app = createApp({
+export default createApp({
   serveStatic: false,
   warmSheet: true,
 });
-
-export default app;

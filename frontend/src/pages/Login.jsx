@@ -205,6 +205,12 @@ export default function Login() {
             <p>Use your user ID or email and password.</p>
           </div>
 
+          <div className="login-demo-hint">
+            <strong>Demo login</strong>
+            <span>User ID: <code>superadmin</code></span>
+            <span>Password: <code>SuperAdmin@123</code></span>
+          </div>
+
           <label className="field">
             User ID / Email
             <input
@@ -214,7 +220,7 @@ export default function Login() {
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="username or email"
+              placeholder="superadmin"
               value={form.login}
               onChange={(e) => setForm({ ...form, login: e.target.value })}
             />
@@ -229,6 +235,7 @@ export default function Login() {
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
+              placeholder="SuperAdmin@123"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />

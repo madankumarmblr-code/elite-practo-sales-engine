@@ -19,10 +19,15 @@ async function request(path, options = {}) {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch {
+    throw new Error('Cannot reach API. Check that the server is running.');
+  }
 
   if (res.status === 401 && !path.startsWith('/api/auth/login')) {
     setToken('');
@@ -31,15 +36,25 @@ async function request(path, options = {}) {
     }
   }
 
+  const contentType = res.headers.get('Content-Type') || '';
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Request failed');
+    if (contentType.includes('application/json')) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || 'Request failed');
+    }
+    throw new Error(
+      res.status === 405 || res.status === 404
+        ? 'API is not available on this deployment. Redeploy with the fullstack Vercel config.'
+        : `Request failed (${res.status})`
+    );
   }
 
   const disposition = res.headers.get('Content-Disposition') || '';
-  const contentType = res.headers.get('Content-Type') || '';
   if (disposition.includes('attachment') || contentType.includes('text/csv')) {
     return res;
+  }
+  if (!contentType.includes('application/json')) {
+    throw new Error('API returned a non-JSON response. The serverless API may not be deployed.');
   }
   return res.json();
 }

@@ -48,7 +48,6 @@ export default function LeadGenerator() {
   const [criteria, setCriteria] = useState({
     city: '',
     zones: [],
-    localities: [],
     keywords: [],
     live: true,
   });
@@ -69,20 +68,7 @@ export default function LeadGenerator() {
   const [page, setPage] = useState(1);
   const [ready, setReady] = useState(false);
 
-  const zoneMeta = meta.zoneMetaByCity[criteria.city] || {};
-
   const zones = useMemo(() => meta.zonesByCity[criteria.city] || [], [meta, criteria.city]);
-
-  const localityOptions = useMemo(() => {
-    const selectedZones = criteria.zones.length ? criteria.zones : zones;
-    const set = new Set();
-    for (const z of selectedZones) {
-      for (const loc of meta.localitiesByCityZone?.[`${criteria.city}||${z}`] || []) {
-        set.add(loc);
-      }
-    }
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, [meta, criteria.city, criteria.zones, zones]);
 
   const keywords = useMemo(() => {
     if (!criteria.city) return meta.keywords || meta.specialties || [];
@@ -114,7 +100,6 @@ export default function LeadGenerator() {
         setCriteria({
           city,
           zones: defaultZone ? [defaultZone] : [],
-          localities: [],
           keywords: keyword ? [keyword] : [],
           live: true,
         });
@@ -127,7 +112,7 @@ export default function LeadGenerator() {
     async (nextCriteria = criteria) => {
       if (!nextCriteria.city || !nextCriteria.keywords?.length) return;
       setBusy(true);
-      setScanStep('Expanding zone → localities from Reach reference file…');
+        setScanStep('Expanding selected zones into covered localities (internal)…');
       try {
         await new Promise((r) => setTimeout(r, 120));
         setScanStep(
@@ -137,7 +122,6 @@ export default function LeadGenerator() {
           city: nextCriteria.city,
           zone: nextCriteria.zones?.[0] || 'All',
           zones: nextCriteria.zones?.length ? nextCriteria.zones : undefined,
-          localities: nextCriteria.localities?.length ? nextCriteria.localities : undefined,
           keyword: nextCriteria.keywords[0],
           keywords: nextCriteria.keywords,
           specialty: nextCriteria.keywords[0],
@@ -181,7 +165,6 @@ export default function LeadGenerator() {
     ready,
     criteria.city,
     criteria.zones.join('|'),
-    criteria.localities.join('|'),
     criteria.keywords.join('|'),
     criteria.live,
   ]);
@@ -196,7 +179,6 @@ export default function LeadGenerator() {
     setCriteria({
       city,
       zones: [],
-      localities: [],
       keywords: keyword ? [keyword] : [],
       live: criteria.live,
     });
@@ -308,8 +290,8 @@ export default function LeadGenerator() {
           <h1>Lead Generator</h1>
           <p>
             Driven by the live Google Sheet — pick <strong>City → Zone → Speciality</strong>. The system
-            expands each zone into covered localities (Reach reference), searches Google Maps / GMB /
-            websites / OSM, and returns <strong>deduped</strong> clinic leads.
+            internally expands each zone into covered localities, searches Maps / GMB / websites / OSM,
+            and returns <strong>deduped</strong> clinic leads.
           </p>
         </div>
         <div className="topbar-actions">
@@ -349,18 +331,8 @@ export default function LeadGenerator() {
             label="Zone(s)"
             options={zones}
             values={criteria.zones}
-            onChange={(zonesSelected) =>
-              setCriteria({ ...criteria, zones: zonesSelected, localities: [] })
-            }
+            onChange={(zonesSelected) => setCriteria({ ...criteria, zones: zonesSelected })}
           />
-          <MultiSelect
-            label={`Localities under zone (${localityOptions.length})`}
-            options={localityOptions}
-            values={criteria.localities}
-            onChange={(localities) => setCriteria({ ...criteria, localities })}
-          />
-        </div>
-        <div className="form-grid three" style={{ marginTop: '0.85rem' }}>
           <MultiSelect
             label="Speciality / keyword"
             options={keywords}
@@ -368,6 +340,8 @@ export default function LeadGenerator() {
             onChange={(keywordsSelected) => setCriteria({ ...criteria, keywords: keywordsSelected })}
             size={8}
           />
+        </div>
+        <div className="form-grid three" style={{ marginTop: '0.85rem' }}>
           <label className="field">
             Live sources (OSM / Places)
             <select
@@ -382,16 +356,14 @@ export default function LeadGenerator() {
               for GMB-quality pulls.
             </span>
           </label>
-          <label className="field">
-            Quick tip
+          <label className="field" style={{ gridColumn: 'span 2' }}>
+            How locality coverage works
             <div className="muted" style={{ fontSize: '0.85rem', lineHeight: 1.45, marginTop: 6 }}>
-              Example: <strong>Bangalore → Vijayanagar → General Dentistry</strong> also searches
-              Deepanjalinagar, Chandra Layout, Nagarbhavi, and other localities under that zone.
+              Pick a zone only — the system automatically searches every locality covered under that
+              zone from the internal Reach reference file (for example Bangalore → Vijayanagar also
+              covers Deepanjalinagar, Chandra Layout, Nagarbhavi, and more).
               {meta.localityCount ? (
-                <>
-                  {' '}
-                  Reference file: {meta.localityCount.toLocaleString()} localities.
-                </>
+                <> Reference loaded: {meta.localityCount.toLocaleString()} localities.</>
               ) : null}
             </div>
           </label>

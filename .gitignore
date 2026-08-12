@@ -17,3 +17,5 @@ data/
 .vite/
 *.webp
 .vercel/
+.env.local
+.env.*.local

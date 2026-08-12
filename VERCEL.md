@@ -31,12 +31,23 @@ After deploy, open `/api/health` — it must return JSON `{ "ok": true }`, not t
 
 ```bash
 npm i -g vercel
-vercel
+vercel link --project practo-sales-automation-1
+vercel build --prod
+vercel deploy --prebuilt --prod
 ```
 
-Or import the GitHub repo at [vercel.com/new](https://vercel.com/new).
+Or import the GitHub repo at [vercel.com/new](https://vercel.com/new) and set Production Branch to this fullstack branch / `main` after merge.
+
+## Production check (salesmaster.live)
+
+| Check | Expected |
+|-------|----------|
+| `https://www.salesmaster.live/api/health` | JSON `{ "ok": true, ... }` |
+| Login | `superadmin` / `SuperAdmin@123` → Dashboard |
+| If `/api/health` returns HTML | API function is missing — redeploy with this branch (Root Directory empty) |
 
 ## Notes
 
 - SQLite lives in `/tmp` on Vercel (ephemeral). Use Docker/VPS for durable CRM data.
 - First API request after a cold start can be slower (seed + sheet sync).
+- Custom domain `salesmaster.live` / `www.salesmaster.live` is on project `practo-sales-automation-1`.

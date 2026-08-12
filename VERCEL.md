@@ -1,36 +1,42 @@
 # Vercel deploy (UI + API)
 
-This repo deploys to Vercel as:
-
-- **Static UI** → `frontend/dist` (Vite)
-- **API** → serverless Express at `/api/*` (`api/[...path].js`)
-
 ## Demo login
 
 | Field | Value |
 |-------|--------|
 | User ID | `superadmin` |
-| Email | `superadmin@practo.sales` |
 | Password | `SuperAdmin@123` |
 
-## Dashboard settings (important)
+## How deploy works
+
+`vercel.json` does **not** use `outputDirectory` (that mode is static-only and breaks `/api`).
+
+Instead the build:
+
+1. Builds Vite → `frontend/dist`
+2. Copies it to `public/` (static CDN)
+3. Deploys `api/index.js` as a serverless Express function
+4. Rewrites `/api/*` → `/api` and SPA routes → `/index.html`
+
+## Dashboard settings
 
 | Setting | Value |
 |---------|--------|
-| **Root Directory** | **leave empty** (repo root — do **not** set to `backend`) |
-| Build & Output | handled by `vercel.json` |
+| **Root Directory** | **empty** (repo root — never `backend`) |
+| Framework | Other / leave default (`vercel.json` controls build) |
 
-If an old project was created as `*-backend` with Root Directory `backend`, either clear Root Directory or create a **new** project from the repo root.
+After deploy, open `/api/health` — it must return JSON `{ "ok": true }`, not the HTML app.
 
 ## Deploy
 
-1. Import the GitHub repo at [vercel.com/new](https://vercel.com/new)
-2. Confirm Root Directory is empty
-3. Deploy
+```bash
+npm i -g vercel
+vercel
+```
 
-After deploy, open `/api/health` — you should see JSON `{ "ok": true, ... }`, not the HTML login page.
+Or import the GitHub repo at [vercel.com/new](https://vercel.com/new).
 
 ## Notes
 
-- SQLite on Vercel uses `/tmp` (ephemeral across cold starts). Prefer Docker/VPS for durable CRM data.
-- First API request after a cold start may take longer (sheet sync + DB seed).
+- SQLite lives in `/tmp` on Vercel (ephemeral). Use Docker/VPS for durable CRM data.
+- First API request after a cold start can be slower (seed + sheet sync).

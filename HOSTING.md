@@ -123,7 +123,8 @@ Browser ──► :8080 ──► Express
 
 See **[VERCEL.md](./VERCEL.md)**.
 
-Import the GitHub repo in Vercel with **Root Directory empty** (not `backend`).
-`vercel.json` builds the Vite UI and routes `/api/*` to a serverless Express function.
+Import the repo with **Root Directory empty**. After deploy, `/api/health` must return JSON.
 
-SQLite on Vercel uses `/tmp` (ephemeral). For durable production data, prefer Docker (Option A).
+Demo login: `superadmin` / `SuperAdmin@123`
+
+SQLite on Vercel uses `/tmp` (ephemeral). Prefer Docker (Option A) for durable data.

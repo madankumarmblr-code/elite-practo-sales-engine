@@ -1,6 +1,7 @@
 node_modules/
 dist/
 build/
+public/
 *.db
 *.db-journal
 .env
@@ -15,3 +16,4 @@ data/
 *.log
 .vite/
 *.webp
+.vercel/

@@ -41,7 +41,7 @@ NODE_ENV=production PORT=8080 npm start
 
 Full steps, Nginx, env vars, Vercel, and systemd: see **[HOSTING.md](./HOSTING.md)** and **[VERCEL.md](./VERCEL.md)**.
 
-> **Vercel:** Import the repo with Root Directory empty. `vercel.json` serves the UI and `/api/*` serverless API. For durable SQLite data long-term, prefer Docker.
+> **Vercel:** Import with Root Directory empty. After deploy, `/api/health` must return JSON. Login: `superadmin` / `SuperAdmin@123`. Prefer Docker for durable data.
 
 ### Super Admin login
 

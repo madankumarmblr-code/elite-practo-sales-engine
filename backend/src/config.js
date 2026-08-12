@@ -12,6 +12,12 @@ export function getDataDir() {
     if (!fs.existsSync(resolved)) fs.mkdirSync(resolved, { recursive: true });
     return resolved;
   }
+  // Vercel serverless: only /tmp is writable
+  if (process.env.VERCEL) {
+    const tmp = '/tmp/practo-sales-data';
+    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp, { recursive: true });
+    return tmp;
+  }
   const fallback = path.join(__dirname, '../../data');
   if (!fs.existsSync(fallback)) fs.mkdirSync(fallback, { recursive: true });
   return fallback;

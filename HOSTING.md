@@ -119,20 +119,11 @@ Browser ──► :8080 ──► Express
                         └─ /*         React SPA (frontend/dist)
 ```
 
-## Option D — Vercel (UI only)
+## Option D — Vercel (UI + API)
 
 See **[VERCEL.md](./VERCEL.md)**.
 
-Import the GitHub repo in Vercel. Root `vercel.json` already sets install/build/output and SPA rewrites.
+Import the GitHub repo in Vercel with **Root Directory empty** (not `backend`).
+`vercel.json` builds the Vite UI and routes `/api/*` to a serverless Express function.
 
-### API still needs a Node host
-
-Vercel only hosts the static UI. Host the API with Docker / VPS (Options A–C), then set a Vercel env var:
-
-```bash
-VITE_API_BASE=https://api.yourdomain.com
-```
-
-On the API host, set `CORS_ORIGIN` to your Vercel URL.
-
-For a **working app in one place**, prefer Docker (Option A).
+SQLite on Vercel uses `/tmp` (ephemeral). For durable production data, prefer Docker (Option A).

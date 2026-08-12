@@ -41,7 +41,7 @@ NODE_ENV=production PORT=8080 npm start
 
 Full steps, Nginx, env vars, Vercel, and systemd: see **[HOSTING.md](./HOSTING.md)** and **[VERCEL.md](./VERCEL.md)**.
 
-> **Vercel:** Import the repo — `vercel.json` builds `frontend/dist` automatically. That hosts the static UI only; run the Express + SQLite API on Docker/VPS (set `VITE_API_BASE` if split).
+> **Vercel:** Import the repo with Root Directory empty. `vercel.json` serves the UI and `/api/*` serverless API. For durable SQLite data long-term, prefer Docker.
 
 ### Super Admin login
 

@@ -1,45 +1,45 @@
-# Vercel — static UI deploy
+# Vercel deploy (UI + API)
 
-Deploys the **Vite React frontend** to Vercel. Express + SQLite does **not** run on Vercel — host the API with Docker/VPS (see HOSTING.md).
+This repo deploys to Vercel as:
 
-## One-click / Git deploy
+- **Static UI** → `frontend/dist` (Vite)
+- **API** → serverless Express at `/api/*` (`api/index.js`)
 
-1. Import the GitHub repo in [Vercel](https://vercel.com/new)
-2. Leave **Root Directory** empty (repo root)
-3. Vercel reads `vercel.json` automatically:
+SQLite runs under `/tmp` on Vercel (ephemeral across cold starts; fine for demos). For durable production data, use Docker/VPS (HOSTING.md).
+
+## Dashboard settings (important)
 
 | Setting | Value |
 |---------|--------|
-| Install | `npm install --ignore-scripts && node node_modules/esbuild/install.js` |
-| Build | `npm run build` |
-| Output | `frontend/dist` |
+| Framework Preset | Other / Vite (auto from `vercel.json`) |
+| **Root Directory** | **leave empty** (repo root — do **not** set to `backend`) |
+| Build & Output | handled by `vercel.json` |
 
-4. Deploy
+If an old Vercel project was created with Root Directory `backend`, create a **new** project from the repo root or clear Root Directory.
 
-SPA routes (`/login`, `/leads`, …) are covered by the rewrite to `index.html`.
+## Deploy
 
-## Optional: point UI at a hosted API
+1. Import the GitHub repo at [vercel.com/new](https://vercel.com/new)
+2. Confirm Root Directory is empty
+3. Deploy
 
-In Vercel → Project → Settings → Environment Variables:
-
-| Name | Value |
-|------|--------|
-| `VITE_API_BASE` | `https://api.yourdomain.com` |
-
-Redeploy after saving. On the API host set `CORS_ORIGIN` to your Vercel URL (e.g. `https://practo-sales-automation.vercel.app`).
-
-## Local preview of the production build
+Or CLI:
 
 ```bash
-npm install
-npm run build
-npx serve frontend/dist
+npm i -g vercel
+vercel
 ```
 
-## Full app (API + UI)
+## What works on Vercel
 
-Use Docker on a VPS instead of Vercel:
+- Login / Super Admin
+- Dashboard, leads, contacts
+- Lead generator (sheet sync on first API request)
+- Commercial Suite (static HTML + `/api/commercial/*`)
+- Autopilot dry-run, integrations, settings, import/export
 
-```bash
-docker compose up -d --build
-```
+## Notes
+
+- First API request after a cold start may take longer (sheet sync + DB seed).
+- Serverless SQLite in `/tmp` is not shared across all instances — prefer Docker for long-term CRM data.
+- Optional: set `CORS_ORIGIN` in Vercel env if you call the API from another origin (same-origin UI does not need it).

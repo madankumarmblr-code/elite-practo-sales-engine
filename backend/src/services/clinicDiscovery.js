@@ -10,6 +10,7 @@ import {
   listLocalities,
 } from './zoneLocalities.js';
 import { dedupeLeads, liveDiscoverAreas } from './liveDiscovery.js';
+import { applySmartChannelToDiscoveryLead } from './aiAssist.js';
 
 export const PLATFORMS = [
   'Google Maps',
@@ -392,8 +393,8 @@ export async function discoverClinics({
     }
   }
 
-  // Prefer live rows first, then sheet-locality inventory; strict dedupe
-  let results = dedupeLeads([...liveLeads, ...sheetLeads]);
+  // Prefer live rows first, then sheet-locality inventory; strict dedupe + smart channel
+  let results = dedupeLeads([...liveLeads, ...sheetLeads]).map(applySmartChannelToDiscoveryLead);
   results.sort(
     (a, b) =>
       b.score - a.score ||

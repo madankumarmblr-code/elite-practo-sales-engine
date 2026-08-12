@@ -27,6 +27,10 @@ export default function LeadManagement() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyLead);
   const [editing, setEditing] = useState(null);
+  const [coach, setCoach] = useState(null);
+  const [replies, setReplies] = useState(null);
+  const [inbound, setInbound] = useState('');
+  const [selectedIds, setSelectedIds] = useState({});
 
   async function load() {
     try {
@@ -68,10 +72,13 @@ export default function LeadManagement() {
   function openCreate() {
     setEditing(null);
     setForm(emptyLead);
+    setCoach(null);
+    setReplies(null);
+    setInbound('');
     setOpen(true);
   }
 
-  function openEdit(lead) {
+  async function openEdit(lead) {
     setEditing(lead.id);
     setForm({
       name: lead.name,
@@ -87,8 +94,67 @@ export default function LeadManagement() {
       next_action: lead.next_action || '',
       notes: lead.notes || '',
       status: lead.status || 'open',
+      temperature: lead.temperature || '',
+      preferred_channel: lead.preferred_channel || '',
     });
     setOpen(true);
+    setReplies(null);
+    setInbound('');
+    try {
+      const full = await api.getLead(lead.id);
+      setCoach(full.followUp || null);
+      if (full.preferred_channel) {
+        setForm((f) => ({ ...f, preferred_channel: full.preferred_channel }));
+      }
+    } catch {
+      setCoach(null);
+    }
+  }
+
+  async function applyCoach() {
+    if (!editing || !coach?.suggestedNextAction) return;
+    try {
+      await api.updateLead(editing, {
+        next_action: coach.suggestedNextAction,
+        preferred_channel: coach.channel?.channel || form.preferred_channel,
+      });
+      toast('Follow-up action applied');
+      load();
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+
+  async function loadReplies() {
+    if (!editing) return;
+    try {
+      const data = await api.aiReplies({
+        leadId: editing,
+        inbound,
+        channel: form.preferred_channel || undefined,
+      });
+      setReplies(data);
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+
+  async function bulkQualify(temperature) {
+    const ids = Object.entries(selectedIds)
+      .filter(([, v]) => v)
+      .map(([id]) => id);
+    if (!ids.length) {
+      toast('Select leads in table view first');
+      return;
+    }
+    try {
+      const res = await api.bulkQualifyLeads(ids, temperature);
+      toast(`Qualified ${res.updated} as ${temperature}`);
+      setSelectedIds({});
+      load();
+    } catch (err) {
+      toast(err.message);
+    }
   }
 
   async function save(e) {
@@ -153,6 +219,15 @@ export default function LeadManagement() {
           </button>
           <button type="button" className="btn btn-primary" onClick={openCreate}>
             Add lead
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={() => bulkQualify('hot')}>
+            Hot
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={() => bulkQualify('warm')}>
+            Warm
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={() => bulkQualify('skip')}>
+            Skip
           </button>
         </div>
       </div>
@@ -221,9 +296,11 @@ export default function LeadManagement() {
             <table className="data">
               <thead>
                 <tr>
+                  <th />
                   <th>Lead</th>
                   <th>Stage</th>
                   <th>Score</th>
+                  <th>Channel</th>
                   <th>Value</th>
                   <th>Owner</th>
                   <th>Next action</th>
@@ -234,15 +311,28 @@ export default function LeadManagement() {
                 {leads.map((l) => (
                   <tr key={l.id}>
                     <td>
+                      <input
+                        type="checkbox"
+                        checked={!!selectedIds[l.id]}
+                        onChange={() =>
+                          setSelectedIds((s) => ({ ...s, [l.id]: !s[l.id] }))
+                        }
+                      />
+                    </td>
+                    <td>
                       <strong>{l.name}</strong>
                       <div className="muted" style={{ fontSize: '0.82rem' }}>
                         {l.company} · {l.source}
+                        {l.temperature ? ` · ${l.temperature}` : ''}
                       </div>
                     </td>
                     <td>
                       <span className={`badge ${stageBadge(l.stage)}`}>{l.stage}</span>
                     </td>
                     <td className="score">{l.score}</td>
+                    <td>
+                      <span className="badge badge-teal">{l.preferred_channel || '—'}</span>
+                    </td>
                     <td>{formatCurrency(l.value)}</td>
                     <td>{l.assigned_to}</td>
                     <td>{l.next_action || '—'}</td>
@@ -383,6 +473,67 @@ export default function LeadManagement() {
                   </select>
                 </label>
               ) : null}
+              {editing && coach ? (
+                <div className="panel" style={{ margin: 0, padding: '0.85rem' }}>
+                  <strong>AI follow-up coach</strong>
+                  <div style={{ marginTop: 6 }}>{coach.action}</div>
+                  <div className="muted" style={{ fontSize: '0.85rem' }}>
+                    Timing: {coach.timing} · Priority: {coach.priority} · Channel:{' '}
+                    {coach.channel?.label}
+                  </div>
+                  <ul className="muted" style={{ fontSize: '0.82rem', margin: '6px 0 0' }}>
+                    {(coach.checklist || []).map((c) => (
+                      <li key={c}>{c}</li>
+                    ))}
+                  </ul>
+                  <button type="button" className="btn btn-secondary" style={{ marginTop: 8 }} onClick={applyCoach}>
+                    Apply next action
+                  </button>
+                </div>
+              ) : null}
+
+              {editing ? (
+                <div className="panel" style={{ margin: 0, padding: '0.85rem' }}>
+                  <strong>AI reply suggestions</strong>
+                  <label className="field" style={{ marginTop: 8 }}>
+                    Paste inbound message
+                    <textarea
+                      rows={2}
+                      value={inbound}
+                      onChange={(e) => setInbound(e.target.value)}
+                      placeholder="e.g. What’s the price? / Call me tomorrow"
+                    />
+                  </label>
+                  <button type="button" className="btn btn-secondary" onClick={loadReplies}>
+                    Suggest replies
+                  </button>
+                  {replies?.suggestions?.length ? (
+                    <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                      {replies.suggestions.map((s) => (
+                        <div key={s.label} style={{ borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                            <strong style={{ fontSize: '0.85rem' }}>{s.label}</strong>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(s.body);
+                                toast('Reply copied');
+                              }}
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <div className="muted" style={{ fontSize: '0.82rem', whiteSpace: 'pre-wrap' }}>
+                            {s.body}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <button type="submit" className="btn btn-primary">
                 Save lead
               </button>

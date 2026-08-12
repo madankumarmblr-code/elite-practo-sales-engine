@@ -6,6 +6,7 @@ import { getDialogue } from '../services/channels/dialogues.js';
 import {
   listCampaigns,
   runCampaign,
+  runLeadsAutopilot,
   getAutopilotStats,
   getPlaybooks,
   resetDailyCountersIfNeeded,
@@ -142,7 +143,22 @@ export function registerAutopilotRoutes(app) {
     try {
       const mode = req.body?.mode;
       const limit = req.body?.limit;
-      const result = runCampaign(req.params.id, { mode, limit });
+      const leadIds = req.body?.leadIds;
+      const result = runCampaign(req.params.id, { mode, limit, leadIds });
+      res.json(result);
+    } catch (err) {
+      res.status(err.status || 500).json({ error: err.message || 'Run failed' });
+    }
+  });
+
+  app.post('/api/autopilot/run-leads', requirePermission('autopilot:write'), (req, res) => {
+    try {
+      const result = runLeadsAutopilot({
+        leadIds: req.body?.leadIds || [],
+        mode: req.body?.mode || 'dry_run',
+        product: req.body?.product || 'prime',
+        channel: req.body?.channel || null,
+      });
       res.json(result);
     } catch (err) {
       res.status(err.status || 500).json({ error: err.message || 'Run failed' });

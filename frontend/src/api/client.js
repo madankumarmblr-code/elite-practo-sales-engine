@@ -112,6 +112,19 @@ export const api = {
   },
   importLeads: (leads) =>
     request('/api/lead-generator/import', { method: 'POST', body: JSON.stringify({ leads }) }),
+  bulkQualifyLeads: (leadIds, temperature) =>
+    request('/api/leads/bulk-qualify', {
+      method: 'POST',
+      body: JSON.stringify({ leadIds, temperature }),
+    }),
+  aiDraft: (body) => request('/api/ai/draft', { method: 'POST', body: JSON.stringify(body) }),
+  aiFollowUp: (body) =>
+    request('/api/ai/follow-up', { method: 'POST', body: JSON.stringify(body) }),
+  aiReplies: (body) => request('/api/ai/replies', { method: 'POST', body: JSON.stringify(body) }),
+  aiChannel: (lead) =>
+    request('/api/ai/channel', { method: 'POST', body: JSON.stringify({ lead }) }),
+  runAutopilotForLeads: (body) =>
+    request('/api/autopilot/run-leads', { method: 'POST', body: JSON.stringify(body) }),
   getSheetStatus: () => request('/api/sheet/status'),
   syncSheet: () => request('/api/sheet/sync', { method: 'POST' }),
   getCommercialMeta: () => request('/api/commercial/meta'),

@@ -177,4 +177,12 @@ if (!integCols.includes('is_default')) {
   db.exec(`ALTER TABLE api_integrations ADD COLUMN is_default INTEGER DEFAULT 0`);
 }
 
+const leadCols = db.prepare('PRAGMA table_info(leads)').all().map((c) => c.name);
+if (!leadCols.includes('temperature')) {
+  db.exec(`ALTER TABLE leads ADD COLUMN temperature TEXT DEFAULT ''`);
+}
+if (!leadCols.includes('preferred_channel')) {
+  db.exec(`ALTER TABLE leads ADD COLUMN preferred_channel TEXT DEFAULT ''`);
+}
+
 export default db;

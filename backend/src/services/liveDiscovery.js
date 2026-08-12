@@ -243,8 +243,22 @@ export async function searchOverpass({ city, locality, keyword, limit = 12 }) {
 }
 
 /**
- * Google Places Text Search when API key is configured.
+ * Google Places Text Search + Place Details enrichment when API key is configured.
  */
+export async function enrichPlaceDetails(placeId, apiKey) {
+  if (!placeId || !apiKey) return null;
+  const url =
+    'https://maps.googleapis.com/maps/api/place/details/json?' +
+    new URLSearchParams({
+      place_id: placeId,
+      fields:
+        'name,formatted_phone_number,international_phone_number,website,url,opening_hours,rating,user_ratings_total,formatted_address,business_status',
+      key: apiKey,
+    });
+  const data = await fetchJson(url, { timeoutMs: 10000 });
+  return data?.result || null;
+}
+
 export async function searchGooglePlaces({ city, locality, keyword, limit = 12 }) {
   const integ = getIntegrationSecrets('google_maps');
   if (!integ?.hasKey) return [];
@@ -255,12 +269,39 @@ export async function searchGooglePlaces({ city, locality, keyword, limit = 12 }
     new URLSearchParams({ query: q, key, region: 'in', language: 'en' });
   const data = await fetchJson(url, { timeoutMs: 10000 });
   const results = Array.isArray(data.results) ? data.results.slice(0, limit) : [];
-  return results.map((r, i) => {
-    const name = r.name || `${keyword} Clinic`;
-    const address = r.formatted_address || `${locality}, ${city}`;
-    const hasWebsite = false;
-    return {
-      id: `gplaces-${r.place_id || i}`,
+
+  const enriched = [];
+  for (const r of results) {
+    let details = null;
+    try {
+      details = await enrichPlaceDetails(r.place_id, key);
+    } catch {
+      details = null;
+    }
+    const name = details?.name || r.name || `${keyword} Clinic`;
+    const address = details?.formatted_address || r.formatted_address || `${locality}, ${city}`;
+    const phone =
+      details?.international_phone_number || details?.formatted_phone_number || '';
+    const website = details?.website || null;
+    const hours = details?.opening_hours?.weekday_text || [];
+    const rating = details?.rating || r.rating || null;
+    const platforms = [
+      {
+        name: 'Google My Business',
+        listed: true,
+        url: details?.url || `https://www.google.com/maps/place/?q=place_id:${r.place_id}`,
+      },
+      {
+        name: 'Google Maps',
+        listed: true,
+        url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + address)}`,
+      },
+    ];
+    if (website) platforms.push({ name: 'Website', listed: true, url: website });
+
+    enriched.push({
+      id: `gplaces-${r.place_id || enriched.length}`,
+      placeId: r.place_id || null,
       clinicName: name,
       specialty: keyword,
       keyword,
@@ -268,32 +309,35 @@ export async function searchGooglePlaces({ city, locality, keyword, limit = 12 }
       zone: locality,
       locality,
       address,
-      owner: { name: 'Listing contact', phone: '', email: '', title: 'Clinic contact' },
+      openingHours: hours,
+      businessStatus: details?.business_status || null,
+      owner: {
+        name: 'Listing contact',
+        phone,
+        email: '',
+        whatsapp: phone,
+        title: 'Clinic contact',
+      },
       marketingHead: null,
-      practo: { hasProfile: false, url: null, rating: r.rating || null },
-      platforms: [
-        {
-          name: 'Google My Business',
-          listed: true,
-          url: `https://www.google.com/maps/place/?q=place_id:${r.place_id}`,
-        },
-        {
-          name: 'Google Maps',
-          listed: true,
-          url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + address)}`,
-        },
-      ],
-      website: null,
-      score: 75 + Math.round((r.rating || 0) * 3) + (r.user_ratings_total ? 5 : 0),
-      estimatedValue: 80000,
-      suggestedChannel: 'whatsapp',
-      matchReason: `Google Places · ${city} · ${locality} · ${keyword}`,
-      source: 'Google Places API',
+      practo: { hasProfile: false, url: null, rating: rating ? Number(rating) : null },
+      platforms,
+      website,
+      score:
+        78 +
+        Math.round((rating || 0) * 3) +
+        (phone ? 6 : 0) +
+        (website ? 5 : 0) +
+        (r.user_ratings_total ? 4 : 0),
+      estimatedValue: 85000 + (website ? 10000 : 0),
+      suggestedChannel: phone ? 'whatsapp' : website ? 'gmail' : 'calls',
+      matchReason: `Google Places + GMB details · ${city} · ${locality} · ${keyword}`,
+      source: 'Google Places / GMB',
       discoverySource: 'google_places',
       sheetMapped: true,
-      _hasWebsite: hasWebsite,
-    };
-  });
+      gmbEnriched: Boolean(details),
+    });
+  }
+  return enriched;
 }
 
 /**

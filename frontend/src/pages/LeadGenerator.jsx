@@ -175,10 +175,39 @@ export default function LeadGenerator() {
     setSelected(next);
   }
 
-  async function importSelected() {
-    const leads = results.filter((r) => selected[r.id]);
-    if (!leads.length) {
+  const [draft, setDraft] = useState(null);
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [productPitch, setProductPitch] = useState('prime');
+
+  function selectedLeads() {
+    return results.filter((r) => selected[r.id]);
+  }
+
+  function qualifySelected(temperature) {
+    const ids = new Set(selectedLeads().map((r) => r.id));
+    if (!ids.size) {
       toast('Select at least one clinic');
+      return;
+    }
+    setResults((rows) =>
+      rows.map((r) => {
+        if (!ids.has(r.id)) return r;
+        if (temperature === 'hot') {
+          return { ...r, temperature: 'hot', score: Math.max(r.score || 0, 88) };
+        }
+        if (temperature === 'warm') {
+          return { ...r, temperature: 'warm', score: Math.max(r.score || 0, 65) };
+        }
+        return { ...r, temperature: 'skip', score: Math.min(r.score || 0, 25) };
+      })
+    );
+    toast(`Marked ${ids.size} as ${temperature.toUpperCase()}`);
+  }
+
+  async function importSelected() {
+    const leads = selectedLeads().filter((r) => r.temperature !== 'skip');
+    if (!leads.length) {
+      toast('Select at least one non-skipped clinic');
       return;
     }
     setBusy(true);
@@ -187,6 +216,70 @@ export default function LeadGenerator() {
       toast(
         `Imported ${data.imported} clinics` +
           (data.skipped ? ` · skipped ${data.skipped} duplicates` : '')
+      );
+      setSelected({});
+      return data.leads || [];
+    } catch (err) {
+      toast(err.message);
+      return [];
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function draftForSelected() {
+    const lead = selectedLeads()[0];
+    if (!lead) {
+      toast('Select one clinic to draft outreach');
+      return;
+    }
+    setDraftBusy(true);
+    try {
+      const data = await api.aiDraft({
+        lead: {
+          name: lead.owner?.name || lead.name,
+          email: lead.owner?.email || lead.email,
+          phone: lead.owner?.phone || lead.phone,
+          company: lead.clinicName || lead.company,
+          score: lead.score,
+          website: lead.website,
+          practo: lead.practo,
+          notes: lead.practo?.hasProfile ? 'Practo profile: Yes' : 'Practo profile: No',
+          suggestedChannel: lead.suggestedChannel,
+        },
+        product: productPitch,
+        channel: lead.suggestedChannel || undefined,
+      });
+      setDraft(data);
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setDraftBusy(false);
+    }
+  }
+
+  async function launchAutopilot() {
+    const toImport = selectedLeads().filter((r) => r.temperature !== 'skip');
+    if (!toImport.length) {
+      toast('Select Hot/Warm clinics to launch Autopilot');
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await api.importLeads(toImport);
+      const leadIds = (data.leads || []).map((l) => l.id);
+      if (!leadIds.length) {
+        toast('Nothing imported (duplicates?) — cannot launch Autopilot');
+        return;
+      }
+      const run = await api.runAutopilotForLeads({
+        leadIds,
+        mode: 'dry_run',
+        product: productPitch,
+      });
+      toast(
+        `${run.message} · imported ${data.imported}` +
+          (data.skipped ? ` · skipped ${data.skipped} dupes` : '')
       );
       setSelected({});
     } catch (err) {
@@ -265,21 +358,37 @@ export default function LeadGenerator() {
             and returns <strong>deduped</strong> clinic leads.
           </p>
         </div>
-        <div className="topbar-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy}
-            onClick={() => runDiscovery(criteria)}
+        <div className="topbar-actions" style={{ flexWrap: 'wrap' }}>
+          <select
+            value={productPitch}
+            onChange={(e) => setProductPitch(e.target.value)}
+            title="Product pitch for AI drafts / Autopilot"
           >
+            <option value="prime">Prime</option>
+            <option value="reach">Reach</option>
+            <option value="video">Video</option>
+            <option value="prime_reach">Prime + Reach</option>
+            <option value="full_suite">Full suite</option>
+          </select>
+          <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => runDiscovery(criteria)}>
             Rescan
           </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={importSelected}
-            disabled={busy || !selectedCount}
-          >
+          <button type="button" className="btn btn-ghost" disabled={!selectedCount} onClick={() => qualifySelected('hot')}>
+            Hot
+          </button>
+          <button type="button" className="btn btn-ghost" disabled={!selectedCount} onClick={() => qualifySelected('warm')}>
+            Warm
+          </button>
+          <button type="button" className="btn btn-ghost" disabled={!selectedCount} onClick={() => qualifySelected('skip')}>
+            Skip
+          </button>
+          <button type="button" className="btn btn-secondary" disabled={draftBusy || !selectedCount} onClick={draftForSelected}>
+            {draftBusy ? 'Drafting…' : 'AI draft'}
+          </button>
+          <button type="button" className="btn btn-secondary" disabled={busy || !selectedCount} onClick={launchAutopilot}>
+            Autopilot selected
+          </button>
+          <button type="button" className="btn btn-primary" onClick={importSelected} disabled={busy || !selectedCount}>
             Import selected ({selectedCount})
           </button>
         </div>
@@ -514,7 +623,8 @@ export default function LeadGenerator() {
                     <th />
                     <th>Clinic</th>
                     <th>Clinic owner & contact</th>
-                    <th>Marketing head</th>
+                    <th>Channel</th>
+                    <th>Qualify</th>
                     <th>Practo</th>
                     <th>Platforms / sources</th>
                   </tr>
@@ -543,6 +653,7 @@ export default function LeadGenerator() {
                             <a href={r.website} target="_blank" rel="noreferrer">
                               Website
                             </a>
+                            {r.gmbEnriched ? ' · GMB enriched' : ''}
                           </div>
                         ) : null}
                         <div className="muted" style={{ fontSize: '0.75rem' }}>
@@ -559,18 +670,28 @@ export default function LeadGenerator() {
                         </div>
                       </td>
                       <td>
-                        {r.marketingHead ? (
-                          <>
-                            <div>{r.marketingHead.name}</div>
-                            <div className="muted" style={{ fontSize: '0.82rem' }}>
-                              {r.marketingHead.phone || '—'}
-                            </div>
-                            <div className="muted" style={{ fontSize: '0.82rem' }}>
-                              {r.marketingHead.email || '—'}
-                            </div>
-                          </>
+                        <span className="badge badge-teal">{r.suggestedChannel || '—'}</span>
+                        {r.channelReason ? (
+                          <div className="muted" style={{ fontSize: '0.72rem', marginTop: 4 }}>
+                            {r.channelReason}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td>
+                        {r.temperature ? (
+                          <span
+                            className={`badge ${
+                              r.temperature === 'hot'
+                                ? 'badge-coral'
+                                : r.temperature === 'warm'
+                                  ? 'badge-teal'
+                                  : 'badge-gray'
+                            }`}
+                          >
+                            {r.temperature}
+                          </span>
                         ) : (
-                          <span className="muted">Not listed</span>
+                          <span className="muted">—</span>
                         )}
                       </td>
                       <td>
@@ -637,6 +758,53 @@ export default function LeadGenerator() {
           </>
         )}
       </div>
+
+      {draft ? (
+        <div className="modal-backdrop" onClick={() => setDraft(null)}>
+          <div className="modal panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+            <h2>AI outreach draft</h2>
+            <p className="muted" style={{ marginTop: 0 }}>
+              {draft.channelLabel} · {draft.productLabel}
+              {draft.aiUsed ? ` · ${draft.aiNote}` : ` · ${draft.aiNote}`}
+            </p>
+            <div className="muted" style={{ fontSize: '0.85rem', marginBottom: 8 }}>
+              Smart pick: {(draft.smartPick?.reasons || []).join(' · ')}
+            </div>
+            {draft.subject ? (
+              <label className="field">
+                Subject
+                <input readOnly value={draft.subject} />
+              </label>
+            ) : null}
+            <label className="field">
+              Message
+              <textarea readOnly rows={10} value={draft.body} />
+            </label>
+            {draft.steps?.length ? (
+              <div className="muted" style={{ fontSize: '0.85rem' }}>
+                Steps: {draft.steps.join(' → ')}
+              </div>
+            ) : null}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  navigator.clipboard?.writeText(
+                    [draft.subject, draft.body].filter(Boolean).join('\n\n')
+                  );
+                  toast('Draft copied');
+                }}
+              >
+                Copy
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => setDraft(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

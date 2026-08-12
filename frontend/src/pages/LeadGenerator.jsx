@@ -16,39 +16,13 @@ const DEFAULT_META = {
 
 const PAGE_SIZE = 50;
 
-function MultiSelect({ label, options, values, onChange, size = 6 }) {
-  return (
-    <label className="field">
-      {label}
-      <select
-        multiple
-        size={Math.min(size, Math.max(4, options.length || 4))}
-        value={values}
-        onChange={(e) =>
-          onChange([...e.target.selectedOptions].map((o) => o.value))
-        }
-        style={{ minHeight: 110 }}
-      >
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-      <span className="muted" style={{ fontSize: '0.75rem' }}>
-        {values.length ? `${values.length} selected` : 'Hold Ctrl/Cmd to multi-select'}
-      </span>
-    </label>
-  );
-}
-
 export default function LeadGenerator() {
   const toast = useToast();
   const [meta, setMeta] = useState(DEFAULT_META);
   const [criteria, setCriteria] = useState({
     city: '',
-    zones: [],
-    keywords: [],
+    zone: 'All',
+    keyword: '',
     live: true,
   });
   const [results, setResults] = useState([]);
@@ -72,18 +46,11 @@ export default function LeadGenerator() {
 
   const keywords = useMemo(() => {
     if (!criteria.city) return meta.keywords || meta.specialties || [];
-    if (criteria.zones.length === 1) {
-      return meta.keywordsByCityZone[`${criteria.city}||${criteria.zones[0]}`] || [];
-    }
-    if (criteria.zones.length > 1) {
-      const set = new Set();
-      for (const z of criteria.zones) {
-        for (const k of meta.keywordsByCityZone[`${criteria.city}||${z}`] || []) set.add(k);
-      }
-      return [...set].sort((a, b) => a.localeCompare(b));
+    if (criteria.zone && criteria.zone !== 'All') {
+      return meta.keywordsByCityZone[`${criteria.city}||${criteria.zone}`] || [];
     }
     return meta.keywordsByCity[criteria.city] || meta.keywords || [];
-  }, [meta, criteria.city, criteria.zones]);
+  }, [meta, criteria.city, criteria.zone]);
 
   useEffect(() => {
     api
@@ -96,11 +63,11 @@ export default function LeadGenerator() {
           ? 'General Dentistry'
           : cityKeywords[0] || '';
         const cityZones = data.zonesByCity?.[city] || [];
-        const defaultZone = cityZones.includes('Vijayanagar') ? 'Vijayanagar' : '';
+        const defaultZone = cityZones.includes('Vijayanagar') ? 'Vijayanagar' : 'All';
         setCriteria({
           city,
-          zones: defaultZone ? [defaultZone] : [],
-          keywords: keyword ? [keyword] : [],
+          zone: defaultZone,
+          keyword,
           live: true,
         });
         setReady(true);
@@ -110,21 +77,19 @@ export default function LeadGenerator() {
 
   const runDiscovery = useCallback(
     async (nextCriteria = criteria) => {
-      if (!nextCriteria.city || !nextCriteria.keywords?.length) return;
+      if (!nextCriteria.city || !nextCriteria.keyword) return;
       setBusy(true);
-        setScanStep('Expanding selected zones into covered localities (internal)…');
+      setScanStep('Expanding selected zone into covered localities (internal)…');
       try {
         await new Promise((r) => setTimeout(r, 120));
         setScanStep(
-          `Searching clinics via sheet + OSM/GMB/website sources for ${nextCriteria.keywords.join(', ')}…`
+          `Searching clinics via sheet + OSM/GMB/website sources for ${nextCriteria.keyword}…`
         );
         const data = await api.searchLeads({
           city: nextCriteria.city,
-          zone: nextCriteria.zones?.[0] || 'All',
-          zones: nextCriteria.zones?.length ? nextCriteria.zones : undefined,
-          keyword: nextCriteria.keywords[0],
-          keywords: nextCriteria.keywords,
-          specialty: nextCriteria.keywords[0],
+          zone: nextCriteria.zone || 'All',
+          keyword: nextCriteria.keyword,
+          specialty: nextCriteria.keyword,
           live: nextCriteria.live,
           maxLocalities: 40,
           limit: null,
@@ -137,9 +102,10 @@ export default function LeadGenerator() {
         setPage(1);
         setZoneFilter('all');
         setLocalityFilter('all');
-        const where = nextCriteria.zones?.length
-          ? `${nextCriteria.zones.join(', ')} (+ localities)`
-          : `all zones in ${nextCriteria.city}`;
+        const where =
+          !nextCriteria.zone || nextCriteria.zone === 'All'
+            ? `all zones in ${nextCriteria.city}`
+            : `${nextCriteria.zone} (+ localities)`;
         toast(
           `Loaded ${data.count} unique leads · ${data.summary?.localitiesCovered || 0} localities · ${
             data.summary?.duplicatesRemoved || 0
@@ -158,30 +124,35 @@ export default function LeadGenerator() {
   );
 
   useEffect(() => {
-    if (!ready || !criteria.city || !criteria.keywords?.length) return undefined;
+    if (!ready || !criteria.city || !criteria.keyword) return undefined;
     const t = setTimeout(() => runDiscovery(criteria), 280);
     return () => clearTimeout(t);
-  }, [
-    ready,
-    criteria.city,
-    criteria.zones.join('|'),
-    criteria.keywords.join('|'),
-    criteria.live,
-  ]);
+  }, [ready, criteria.city, criteria.zone, criteria.keyword, criteria.live]);
 
   function updateCity(city) {
     const cityKeywords = meta.keywordsByCity[city] || meta.keywords || [];
-    const keyword = cityKeywords.includes(criteria.keywords[0])
-      ? criteria.keywords[0]
+    const keyword = cityKeywords.includes(criteria.keyword)
+      ? criteria.keyword
       : cityKeywords.includes('General Dentistry')
         ? 'General Dentistry'
         : cityKeywords[0] || '';
     setCriteria({
       city,
-      zones: [],
-      keywords: keyword ? [keyword] : [],
+      zone: 'All',
+      keyword,
       live: criteria.live,
     });
+  }
+
+  function updateZone(zone) {
+    const nextKeywords =
+      zone && zone !== 'All'
+        ? meta.keywordsByCityZone[`${criteria.city}||${zone}`] || []
+        : meta.keywordsByCity[criteria.city] || [];
+    const keyword = nextKeywords.includes(criteria.keyword)
+      ? criteria.keyword
+      : nextKeywords[0] || '';
+    setCriteria({ ...criteria, zone, keyword });
   }
 
   function toggle(id) {
@@ -327,19 +298,34 @@ export default function LeadGenerator() {
               ))}
             </select>
           </label>
-          <MultiSelect
-            label="Zone(s)"
-            options={zones}
-            values={criteria.zones}
-            onChange={(zonesSelected) => setCriteria({ ...criteria, zones: zonesSelected })}
-          />
-          <MultiSelect
-            label="Speciality / keyword"
-            options={keywords}
-            values={criteria.keywords}
-            onChange={(keywordsSelected) => setCriteria({ ...criteria, keywords: keywordsSelected })}
-            size={8}
-          />
+          <label className="field">
+            Zone
+            <select value={criteria.zone} onChange={(e) => updateZone(e.target.value)}>
+              <option value="All">All mapped zones</option>
+              {zones.map((z) => {
+                const count = meta.zoneMetaByCity?.[criteria.city]?.[z]?.localityCount;
+                return (
+                  <option key={z} value={z}>
+                    {z}
+                    {count ? ` (${count} localities)` : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+          <label className="field">
+            Speciality / keyword
+            <select
+              value={criteria.keyword}
+              onChange={(e) => setCriteria({ ...criteria, keyword: e.target.value })}
+            >
+              {keywords.map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="form-grid three" style={{ marginTop: '0.85rem' }}>
           <label className="field">

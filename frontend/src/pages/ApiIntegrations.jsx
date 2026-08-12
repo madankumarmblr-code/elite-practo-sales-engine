@@ -132,9 +132,9 @@ export default function ApiIntegrations() {
         <div>
           <h1>API Integrations</h1>
           <p>
-            Ready connectors for WhatsApp (Meta / Gupshup / Exotel), Gmail (OAuth / SendGrid / SES),
-            Calls (Twilio / Exotel / Knowlarity), AI, Discovery, and webhooks. Add credentials to go
-            live — configs export without secrets.
+            Free, freemium, and paid connectors for WhatsApp, Gmail, Calls, AI, Discovery (OSM /
+            Places / SERP / GMB), enrichment, and webhooks. Free discovery APIs run without keys;
+            add credentials on paid providers to go live.
           </p>
         </div>
         <div className="topbar-actions">
@@ -147,6 +147,24 @@ export default function ApiIntegrations() {
         </div>
       </div>
 
+      <div className="panel" style={{ marginBottom: '1rem' }}>
+        <h2>Availability</h2>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <span className="badge badge-green">
+            Free / ready now: {items.filter((i) => i.pricing === 'free' || i.availability === 'ready_free').length}
+          </span>
+          <span className="badge badge-teal">
+            Freemium: {items.filter((i) => i.pricing === 'freemium').length}
+          </span>
+          <span className="badge badge-coral">
+            Paid (needs key): {items.filter((i) => i.pricing === 'paid').length}
+          </span>
+          <span className="badge badge-blue">
+            Ready to run: {items.filter((i) => i.readyToRun).length}
+          </span>
+        </div>
+      </div>
+
       {Object.entries(grouped).map(([category, list]) => (
         <div className="panel" key={category} style={{ marginBottom: '1rem' }}>
           <h2>{category}</h2>
@@ -156,6 +174,7 @@ export default function ApiIntegrations() {
                 <tr>
                   <th>Integration</th>
                   <th>Channel</th>
+                  <th>Pricing</th>
                   <th>Status</th>
                   <th>Enabled</th>
                   <th>Last tested</th>
@@ -174,6 +193,28 @@ export default function ApiIntegrations() {
                     </td>
                     <td>
                       <span className="badge badge-gray">{item.channel || '—'}</span>
+                    </td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          item.pricing === 'free'
+                            ? 'badge-green'
+                            : item.pricing === 'freemium'
+                              ? 'badge-teal'
+                              : 'badge-coral'
+                        }`}
+                      >
+                        {item.pricing || 'paid'}
+                      </span>
+                      {item.readyToRun ? (
+                        <div className="muted" style={{ fontSize: '0.75rem' }}>
+                          ready to run
+                        </div>
+                      ) : (
+                        <div className="muted" style={{ fontSize: '0.75rem' }}>
+                          needs API key
+                        </div>
+                      )}
                     </td>
                     <td>
                       <span

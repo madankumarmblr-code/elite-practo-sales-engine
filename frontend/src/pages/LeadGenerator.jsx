@@ -8,6 +8,7 @@ const DEFAULT_META = {
   zoneMetaByCity: {},
   keywordsByCity: {},
   keywordsByCityZone: {},
+  localitiesByCityZone: {},
   keywords: [],
   specialties: [],
   platforms: [],
@@ -15,56 +16,108 @@ const DEFAULT_META = {
 
 const PAGE_SIZE = 50;
 
+function MultiSelect({ label, options, values, onChange, size = 6 }) {
+  return (
+    <label className="field">
+      {label}
+      <select
+        multiple
+        size={Math.min(size, Math.max(4, options.length || 4))}
+        value={values}
+        onChange={(e) =>
+          onChange([...e.target.selectedOptions].map((o) => o.value))
+        }
+        style={{ minHeight: 110 }}
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+      <span className="muted" style={{ fontSize: '0.75rem' }}>
+        {values.length ? `${values.length} selected` : 'Hold Ctrl/Cmd to multi-select'}
+      </span>
+    </label>
+  );
+}
+
 export default function LeadGenerator() {
   const toast = useToast();
   const [meta, setMeta] = useState(DEFAULT_META);
   const [criteria, setCriteria] = useState({
     city: '',
-    zone: 'All',
-    keyword: '',
+    zones: [],
+    localities: [],
+    keywords: [],
+    live: true,
   });
   const [results, setResults] = useState([]);
   const [summary, setSummary] = useState(null);
   const [scannedSources, setScannedSources] = useState([]);
+  const [queryInfo, setQueryInfo] = useState(null);
   const [selected, setSelected] = useState({});
   const [busy, setBusy] = useState(false);
   const [scanStep, setScanStep] = useState('');
   const [practoFilter, setPractoFilter] = useState('all');
   const [zoneFilter, setZoneFilter] = useState('all');
+  const [localityFilter, setLocalityFilter] = useState('all');
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [contactFilter, setContactFilter] = useState('all');
+  const [textFilter, setTextFilter] = useState('');
   const [page, setPage] = useState(1);
   const [ready, setReady] = useState(false);
 
   const zoneMeta = meta.zoneMetaByCity[criteria.city] || {};
 
-  const zones = useMemo(() => {
-    const list = meta.zonesByCity[criteria.city] || [];
-    if (!criteria.keyword) return list;
-    return list.filter((z) =>
-      (meta.keywordsByCityZone[`${criteria.city}||${z}`] || []).includes(criteria.keyword)
-    );
-  }, [meta, criteria.city, criteria.keyword]);
+  const zones = useMemo(() => meta.zonesByCity[criteria.city] || [], [meta, criteria.city]);
+
+  const localityOptions = useMemo(() => {
+    const selectedZones = criteria.zones.length ? criteria.zones : zones;
+    const set = new Set();
+    for (const z of selectedZones) {
+      for (const loc of meta.localitiesByCityZone?.[`${criteria.city}||${z}`] || []) {
+        set.add(loc);
+      }
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [meta, criteria.city, criteria.zones, zones]);
 
   const keywords = useMemo(() => {
     if (!criteria.city) return meta.keywords || meta.specialties || [];
-    if (criteria.zone && criteria.zone !== 'All') {
-      return meta.keywordsByCityZone[`${criteria.city}||${criteria.zone}`] || [];
+    if (criteria.zones.length === 1) {
+      return meta.keywordsByCityZone[`${criteria.city}||${criteria.zones[0]}`] || [];
+    }
+    if (criteria.zones.length > 1) {
+      const set = new Set();
+      for (const z of criteria.zones) {
+        for (const k of meta.keywordsByCityZone[`${criteria.city}||${z}`] || []) set.add(k);
+      }
+      return [...set].sort((a, b) => a.localeCompare(b));
     }
     return meta.keywordsByCity[criteria.city] || meta.keywords || [];
-  }, [meta, criteria.city, criteria.zone]);
+  }, [meta, criteria.city, criteria.zones]);
 
   useEffect(() => {
     api
       .getLeadGeneratorMeta()
       .then((data) => {
         setMeta(data);
-        const city = data.cities.includes('Bangalore')
-          ? 'Bangalore'
-          : data.cities[0] || '';
+        const city = data.cities.includes('Bangalore') ? 'Bangalore' : data.cities[0] || '';
         const cityKeywords = data.keywordsByCity?.[city] || data.keywords || data.specialties || [];
         const keyword = cityKeywords.includes('General Dentistry')
           ? 'General Dentistry'
           : cityKeywords[0] || '';
-        setCriteria({ city, zone: 'All', keyword });
+        const cityZones = data.zonesByCity?.[city] || [];
+        const defaultZone = cityZones.includes('Vijayanagar') ? 'Vijayanagar' : '';
+        setCriteria({
+          city,
+          zones: defaultZone ? [defaultZone] : [],
+          localities: [],
+          keywords: keyword ? [keyword] : [],
+          live: true,
+        });
         setReady(true);
       })
       .catch((e) => toast(e.message));
@@ -72,30 +125,42 @@ export default function LeadGenerator() {
 
   const runDiscovery = useCallback(
     async (nextCriteria = criteria) => {
-      if (!nextCriteria.city || !nextCriteria.keyword) return;
+      if (!nextCriteria.city || !nextCriteria.keywords?.length) return;
       setBusy(true);
-      setScanStep('Matching city / zone / keyword from locations sheet…');
+      setScanStep('Expanding zone → localities from Reach reference file…');
       try {
-        await new Promise((r) => setTimeout(r, 180));
-        setScanStep(`Pulling full leads for ${nextCriteria.keyword} in selected locations…`);
+        await new Promise((r) => setTimeout(r, 120));
+        setScanStep(
+          `Searching clinics via sheet + OSM/GMB/website sources for ${nextCriteria.keywords.join(', ')}…`
+        );
         const data = await api.searchLeads({
           city: nextCriteria.city,
-          zone: nextCriteria.zone || 'All',
-          keyword: nextCriteria.keyword,
-          specialty: nextCriteria.keyword,
+          zone: nextCriteria.zones?.[0] || 'All',
+          zones: nextCriteria.zones?.length ? nextCriteria.zones : undefined,
+          localities: nextCriteria.localities?.length ? nextCriteria.localities : undefined,
+          keyword: nextCriteria.keywords[0],
+          keywords: nextCriteria.keywords,
+          specialty: nextCriteria.keywords[0],
+          live: nextCriteria.live,
+          maxLocalities: 40,
           limit: null,
         });
         setResults(data.results || []);
         setSummary(data.summary || null);
         setScannedSources(data.scannedSources || []);
+        setQueryInfo(data.query || null);
         setSelected({});
         setPage(1);
         setZoneFilter('all');
-        const where =
-          nextCriteria.zone === 'All' || nextCriteria.zone === 'All zones'
-            ? `all mapped zones in ${nextCriteria.city}`
-            : `${nextCriteria.zone}, ${nextCriteria.city}`;
-        toast(`Loaded ${data.count} leads for ${nextCriteria.keyword} · ${where}`);
+        setLocalityFilter('all');
+        const where = nextCriteria.zones?.length
+          ? `${nextCriteria.zones.join(', ')} (+ localities)`
+          : `all zones in ${nextCriteria.city}`;
+        toast(
+          `Loaded ${data.count} unique leads · ${data.summary?.localitiesCovered || 0} localities · ${
+            data.summary?.duplicatesRemoved || 0
+          } dupes removed · ${where}`
+        );
       } catch (err) {
         setResults([]);
         setSummary(null);
@@ -109,30 +174,32 @@ export default function LeadGenerator() {
   );
 
   useEffect(() => {
-    if (!ready || !criteria.city || !criteria.keyword) return undefined;
-    const t = setTimeout(() => runDiscovery(criteria), 220);
+    if (!ready || !criteria.city || !criteria.keywords?.length) return undefined;
+    const t = setTimeout(() => runDiscovery(criteria), 280);
     return () => clearTimeout(t);
-  }, [ready, criteria.city, criteria.zone, criteria.keyword]);
+  }, [
+    ready,
+    criteria.city,
+    criteria.zones.join('|'),
+    criteria.localities.join('|'),
+    criteria.keywords.join('|'),
+    criteria.live,
+  ]);
 
   function updateCity(city) {
     const cityKeywords = meta.keywordsByCity[city] || meta.keywords || [];
-    const keyword = cityKeywords.includes(criteria.keyword)
-      ? criteria.keyword
+    const keyword = cityKeywords.includes(criteria.keywords[0])
+      ? criteria.keywords[0]
       : cityKeywords.includes('General Dentistry')
         ? 'General Dentistry'
         : cityKeywords[0] || '';
-    setCriteria({ city, zone: 'All', keyword });
-  }
-
-  function updateZone(zone) {
-    const nextKeywords =
-      zone && zone !== 'All'
-        ? meta.keywordsByCityZone[`${criteria.city}||${zone}`] || []
-        : meta.keywordsByCity[criteria.city] || [];
-    const keyword = nextKeywords.includes(criteria.keyword)
-      ? criteria.keyword
-      : nextKeywords[0] || '';
-    setCriteria({ ...criteria, zone, keyword });
+    setCriteria({
+      city,
+      zones: [],
+      localities: [],
+      keywords: keyword ? [keyword] : [],
+      live: criteria.live,
+    });
   }
 
   function toggle(id) {
@@ -164,7 +231,10 @@ export default function LeadGenerator() {
     setBusy(true);
     try {
       const data = await api.importLeads(leads);
-      toast(`Imported ${data.imported} clinics into Lead Management`);
+      toast(
+        `Imported ${data.imported} clinics` +
+          (data.skipped ? ` · skipped ${data.skipped} duplicates` : '')
+      );
       setSelected({});
     } catch (err) {
       toast(err.message);
@@ -174,20 +244,60 @@ export default function LeadGenerator() {
   }
 
   const filtered = useMemo(() => {
+    const q = textFilter.trim().toLowerCase();
     return results.filter((r) => {
       if (practoFilter === 'yes' && !r.practo?.hasProfile) return false;
       if (practoFilter === 'no' && r.practo?.hasProfile) return false;
       if (zoneFilter !== 'all' && r.zone !== zoneFilter) return false;
+      if (localityFilter !== 'all' && (r.locality || r.zone) !== localityFilter) return false;
+      if (platformFilter !== 'all') {
+        const names = r.platformNames || r.platforms?.map((p) => p.name) || [];
+        if (!names.includes(platformFilter)) return false;
+      }
+      if (sourceFilter !== 'all') {
+        const src = r.discoverySource || '';
+        if (sourceFilter === 'live') {
+          if (!['nominatim', 'overpass', 'google_places'].includes(src)) return false;
+        } else if (src !== sourceFilter) return false;
+      }
+      if (contactFilter === 'phone' && !(r.phone || r.owner?.phone)) return false;
+      if (contactFilter === 'email' && !(r.email || r.owner?.email)) return false;
+      if (contactFilter === 'website' && !r.website) return false;
+      if (q) {
+        const blob = [
+          r.clinicName,
+          r.owner?.name,
+          r.address,
+          r.locality,
+          r.zone,
+          r.keyword,
+          r.phone,
+          r.email,
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
       return true;
     });
-  }, [results, practoFilter, zoneFilter]);
+  }, [
+    results,
+    practoFilter,
+    zoneFilter,
+    localityFilter,
+    platformFilter,
+    sourceFilter,
+    contactFilter,
+    textFilter,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(page, totalPages);
   const pageRows = filtered.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE);
   const selectedCount = Object.values(selected).filter(Boolean).length;
-  const resultZones = useMemo(
-    () => [...new Set(results.map((r) => r.zone))].sort(),
+  const resultZones = useMemo(() => [...new Set(results.map((r) => r.zone))].sort(), [results]);
+  const resultLocalities = useMemo(
+    () => [...new Set(results.map((r) => r.locality || r.zone))].sort(),
     [results]
   );
 
@@ -197,8 +307,9 @@ export default function LeadGenerator() {
         <div>
           <h1>Lead Generator</h1>
           <p>
-            Driven by the live Google Sheet — pick <strong>City → Zone/Locality → Speciality</strong> to load
-            matching clinic leads with owner, marketing head, Practo, and platform details.
+            Driven by the live Google Sheet — pick <strong>City → Zone → Speciality</strong>. The system
+            expands each zone into covered localities (Reach reference), searches Google Maps / GMB /
+            websites / OSM, and returns <strong>deduped</strong> clinic leads.
           </p>
         </div>
         <div className="topbar-actions">
@@ -222,7 +333,7 @@ export default function LeadGenerator() {
       </div>
 
       <div className="panel" style={{ marginBottom: '1rem' }}>
-        <h2>Google Sheet filters</h2>
+        <h2>Discovery filters</h2>
         <div className="form-grid three">
           <label className="field">
             City
@@ -234,33 +345,55 @@ export default function LeadGenerator() {
               ))}
             </select>
           </label>
+          <MultiSelect
+            label="Zone(s)"
+            options={zones}
+            values={criteria.zones}
+            onChange={(zonesSelected) =>
+              setCriteria({ ...criteria, zones: zonesSelected, localities: [] })
+            }
+          />
+          <MultiSelect
+            label={`Localities under zone (${localityOptions.length})`}
+            options={localityOptions}
+            values={criteria.localities}
+            onChange={(localities) => setCriteria({ ...criteria, localities })}
+          />
+        </div>
+        <div className="form-grid three" style={{ marginTop: '0.85rem' }}>
+          <MultiSelect
+            label="Speciality / keyword"
+            options={keywords}
+            values={criteria.keywords}
+            onChange={(keywordsSelected) => setCriteria({ ...criteria, keywords: keywordsSelected })}
+            size={8}
+          />
           <label className="field">
-            Zone / locality
-            <select value={criteria.zone} onChange={(e) => updateZone(e.target.value)}>
-              <option value="All">All mapped zones</option>
-              {zones.map((z) => {
-                const type = zoneMeta[z]?.type || '';
-                return (
-                  <option key={z} value={z}>
-                    {z}
-                    {type ? ` (${type})` : ''}
-                  </option>
-                );
-              })}
+            Live sources (OSM / Places)
+            <select
+              value={criteria.live ? '1' : '0'}
+              onChange={(e) => setCriteria({ ...criteria, live: e.target.value === '1' })}
+            >
+              <option value="1">On — pull OSM + optional Google Places</option>
+              <option value="0">Off — sheet + locality inventory only</option>
             </select>
+            <span className="muted" style={{ fontSize: '0.75rem' }}>
+              Free OSM Nominatim/Overpass run automatically. Add Google Places key in API Integrations
+              for GMB-quality pulls.
+            </span>
           </label>
           <label className="field">
-            Keyword / specialty
-            <select
-              value={criteria.keyword}
-              onChange={(e) => setCriteria({ ...criteria, keyword: e.target.value })}
-            >
-              {keywords.map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
+            Quick tip
+            <div className="muted" style={{ fontSize: '0.85rem', lineHeight: 1.45, marginTop: 6 }}>
+              Example: <strong>Bangalore → Vijayanagar → General Dentistry</strong> also searches
+              Deepanjalinagar, Chandra Layout, Nagarbhavi, and other localities under that zone.
+              {meta.localityCount ? (
+                <>
+                  {' '}
+                  Reference file: {meta.localityCount.toLocaleString()} localities.
+                </>
+              ) : null}
+            </div>
           </label>
         </div>
 
@@ -268,43 +401,54 @@ export default function LeadGenerator() {
           <div className="muted" style={{ marginBottom: 8, fontSize: '0.85rem' }}>
             {busy && scanStep
               ? scanStep
-              : `Sheet source: Google Sheet (auto-sync) · ${meta.comboCount || meta.catalogSize || '—'} city/zone/speciality mappings · Platforms: ${(
+              : `Sources: Google Sheet + zone-localities.csv + ${(
                   scannedSources.length ? scannedSources : meta.platforms || []
                 )
                   .map((p) => p.name || p)
+                  .slice(0, 10)
                   .join(' · ')}${
                   meta.sheetSync?.lastSync
-                    ? ` · Last sync ${new Date(meta.sheetSync.lastSync).toLocaleString()}`
+                    ? ` · Sheet sync ${new Date(meta.sheetSync.lastSync).toLocaleString()}`
                     : ''
                 }`}
           </div>
           {summary ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <span className="badge badge-teal">{summary.total} leads loaded</span>
-              <span className="badge badge-blue">{summary.zonesCovered || 1} zone(s)</span>
+              <span className="badge badge-teal">{summary.total} unique leads</span>
+              <span className="badge badge-blue">{summary.zonesCovered || 0} zone(s)</span>
+              <span className="badge badge-blue">{summary.localitiesCovered || 0} localities</span>
               <span className="badge badge-green">Practo: {summary.withPractoProfile}</span>
               <span className="badge badge-coral">No Practo: {summary.withoutPractoProfile}</span>
+              <span className="badge badge-gray">Dupes removed: {summary.duplicatesRemoved || 0}</span>
+              <span className="badge badge-gray">Live: {summary.liveLeads || 0}</span>
             </div>
           ) : null}
-          {summary?.perZone ? (
+          {queryInfo?.localitiesScanned?.length ? (
             <div className="muted" style={{ marginTop: 10, fontSize: '0.82rem' }}>
-              Per zone:{' '}
-              {Object.entries(summary.perZone)
-                .slice(0, 12)
-                .map(([z, n]) => `${z} (${n})`)
-                .join(' · ')}
-              {Object.keys(summary.perZone).length > 12 ? ' …' : ''}
+              Localities searched:{' '}
+              {queryInfo.localitiesScanned.slice(0, 16).join(' · ')}
+              {queryInfo.localitiesScanned.length > 16 ? ' …' : ''}
             </div>
           ) : null}
         </div>
       </div>
 
       <div className="panel">
-        <div className="toolbar">
+        <div className="toolbar" style={{ flexWrap: 'wrap', gap: 8 }}>
           <strong style={{ marginRight: 8 }}>
             {filtered.length} clinics
             {filtered.length !== results.length ? ` (of ${results.length})` : ''}
           </strong>
+          <input
+            type="search"
+            placeholder="Search name, phone, locality…"
+            value={textFilter}
+            onChange={(e) => {
+              setTextFilter(e.target.value);
+              setPage(1);
+            }}
+            style={{ minWidth: 180 }}
+          />
           <select
             value={zoneFilter}
             onChange={(e) => {
@@ -320,15 +464,69 @@ export default function LeadGenerator() {
             ))}
           </select>
           <select
+            value={localityFilter}
+            onChange={(e) => {
+              setLocalityFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">All localities</option>
+            {resultLocalities.map((z) => (
+              <option key={z} value={z}>
+                {z}
+              </option>
+            ))}
+          </select>
+          <select
             value={practoFilter}
             onChange={(e) => {
               setPractoFilter(e.target.value);
               setPage(1);
             }}
           >
-            <option value="all">All Practo statuses</option>
-            <option value="yes">Has Practo profile</option>
-            <option value="no">No Practo profile</option>
+            <option value="all">All Practo</option>
+            <option value="yes">Has Practo</option>
+            <option value="no">No Practo</option>
+          </select>
+          <select
+            value={platformFilter}
+            onChange={(e) => {
+              setPlatformFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">All platforms</option>
+            {(meta.platforms || []).map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+          <select
+            value={sourceFilter}
+            onChange={(e) => {
+              setSourceFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">All sources</option>
+            <option value="live">Live OSM/Places only</option>
+            <option value="sheet_locality">Sheet + locality</option>
+            <option value="overpass">OSM Overpass</option>
+            <option value="nominatim">Nominatim</option>
+            <option value="google_places">Google Places</option>
+          </select>
+          <select
+            value={contactFilter}
+            onChange={(e) => {
+              setContactFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">Any contact</option>
+            <option value="phone">Has phone</option>
+            <option value="email">Has email</option>
+            <option value="website">Has website</option>
           </select>
           <button type="button" className="btn btn-ghost" onClick={() => toggleAll(pageRows)} disabled={!pageRows.length}>
             Select page
@@ -344,11 +542,10 @@ export default function LeadGenerator() {
         </div>
 
         {busy && !results.length ? (
-          <div className="empty">{scanStep || 'Loading sheet-mapped leads…'}</div>
+          <div className="empty">{scanStep || 'Discovering clinics across localities…'}</div>
         ) : !filtered.length ? (
           <div className="empty">
-            No leads for this city / zone / speciality combination in the Google Sheet. Try another
-            locality or keyword.
+            No leads for these filters. Try another zone/locality/speciality, or turn live sources on.
           </div>
         ) : (
           <>
@@ -359,9 +556,9 @@ export default function LeadGenerator() {
                     <th />
                     <th>Clinic</th>
                     <th>Clinic owner & contact</th>
-                    <th>Marketing head details</th>
-                    <th>Practo profile</th>
-                    <th>Platforms associated</th>
+                    <th>Marketing head</th>
+                    <th>Practo</th>
+                    <th>Platforms / sources</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -378,75 +575,77 @@ export default function LeadGenerator() {
                       <td>
                         <strong>{r.clinicName}</strong>
                         <div className="muted" style={{ fontSize: '0.82rem' }}>
-                          {r.keyword || r.specialty} · {r.zone}, {r.city}
+                          {r.keyword || r.specialty} · {r.locality || r.zone}, {r.city}
                         </div>
                         <div className="muted" style={{ fontSize: '0.78rem' }}>
                           {r.address}
                         </div>
+                        {r.website ? (
+                          <div style={{ fontSize: '0.78rem' }}>
+                            <a href={r.website} target="_blank" rel="noreferrer">
+                              Website
+                            </a>
+                          </div>
+                        ) : null}
+                        <div className="muted" style={{ fontSize: '0.75rem' }}>
+                          {r.matchReason}
+                        </div>
                       </td>
                       <td>
-                        <strong>{r.owner?.name}</strong>
+                        <div>{r.owner?.name || r.name}</div>
                         <div className="muted" style={{ fontSize: '0.82rem' }}>
-                          {r.owner?.title}
+                          {r.owner?.phone || r.phone || '—'}
                         </div>
-                        <div style={{ fontSize: '0.85rem', marginTop: 4 }}>
-                          <div>{r.owner?.phone}</div>
-                          <div>{r.owner?.email}</div>
+                        <div className="muted" style={{ fontSize: '0.82rem' }}>
+                          {r.owner?.email || r.email || '—'}
                         </div>
                       </td>
                       <td>
                         {r.marketingHead ? (
                           <>
-                            <strong>{r.marketingHead.name}</strong>
+                            <div>{r.marketingHead.name}</div>
                             <div className="muted" style={{ fontSize: '0.82rem' }}>
-                              {r.marketingHead.title}
+                              {r.marketingHead.phone || '—'}
                             </div>
-                            <div style={{ fontSize: '0.85rem', marginTop: 4 }}>
-                              <div>{r.marketingHead.phone}</div>
-                              <div>{r.marketingHead.email}</div>
+                            <div className="muted" style={{ fontSize: '0.82rem' }}>
+                              {r.marketingHead.email || '—'}
                             </div>
                           </>
                         ) : (
-                          <span className="muted">Not listed on public platforms</span>
+                          <span className="muted">Not listed</span>
                         )}
                       </td>
                       <td>
                         {r.practo?.hasProfile ? (
-                          <>
-                            <span className="badge badge-green">Yes</span>
-                            {r.practo.rating ? (
-                              <div className="muted" style={{ fontSize: '0.8rem', marginTop: 4 }}>
-                                Rating {r.practo.rating}
-                              </div>
-                            ) : null}
-                            {r.practo.url ? (
-                              <a
-                                href={r.practo.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  display: 'inline-block',
-                                  marginTop: 6,
-                                  color: 'var(--teal-deep)',
-                                  fontWeight: 600,
-                                  fontSize: '0.82rem',
-                                }}
-                              >
-                                Open Practo →
-                              </a>
-                            ) : null}
-                          </>
+                          <a href={r.practo.url} target="_blank" rel="noreferrer">
+                            Yes {r.practo.rating ? `· ${r.practo.rating}` : ''}
+                          </a>
                         ) : (
-                          <span className="badge badge-coral">No</span>
+                          <span className="muted">No</span>
                         )}
                       </td>
                       <td>
-                        <div className="platform-tags">
-                          {(r.platformNames || []).map((p) => (
-                            <span key={p} className="badge badge-blue">
-                              {p}
-                            </span>
-                          ))}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {(r.platforms || []).slice(0, 6).map((p) =>
+                            p.url ? (
+                              <a
+                                key={p.name}
+                                className="badge badge-gray"
+                                href={p.url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {p.name}
+                              </a>
+                            ) : (
+                              <span key={p.name} className="badge badge-gray">
+                                {p.name}
+                              </span>
+                            )
+                          )}
+                        </div>
+                        <div className="muted" style={{ fontSize: '0.75rem', marginTop: 4 }}>
+                          {r.discoverySource || r.source}
                         </div>
                       </td>
                     </tr>
@@ -454,14 +653,9 @@ export default function LeadGenerator() {
                 </tbody>
               </table>
             </div>
-
-            <div
-              className="toolbar"
-              style={{ marginTop: '0.85rem', marginBottom: 0, justifyContent: 'space-between' }}
-            >
-              <span className="muted" style={{ fontSize: '0.85rem' }}>
-                Showing {(pageSafe - 1) * PAGE_SIZE + 1}–{Math.min(pageSafe * PAGE_SIZE, filtered.length)} of{' '}
-                {filtered.length}
+            <div className="toolbar" style={{ marginTop: 12, justifyContent: 'space-between' }}>
+              <span className="muted">
+                Page {pageSafe} / {totalPages}
               </span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -470,11 +664,8 @@ export default function LeadGenerator() {
                   disabled={pageSafe <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  Previous
+                  Prev
                 </button>
-                <span className="muted" style={{ alignSelf: 'center', fontSize: '0.85rem' }}>
-                  Page {pageSafe} / {totalPages}
-                </span>
                 <button
                   type="button"
                   className="btn btn-ghost"

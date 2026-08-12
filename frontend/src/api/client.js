@@ -187,6 +187,7 @@ export const api = {
     ).toString();
     return request(`/api/integrations${qs ? `?${qs}` : ''}`);
   },
+  getIntegrationsCatalog: () => request('/api/integrations/catalog'),
   updateIntegration: (id, body) =>
     request(`/api/integrations/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   testIntegration: (id) => request(`/api/integrations/${id}/test`, { method: 'POST' }),

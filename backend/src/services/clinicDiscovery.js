@@ -4,12 +4,21 @@ import {
   listKeywordsFor,
   resolveDiscoveryTargets,
 } from './locations.js';
+import {
+  expandSearchAreas,
+  getZoneLocalityMeta,
+  listLocalities,
+} from './zoneLocalities.js';
+import { dedupeLeads, liveDiscoverAreas } from './liveDiscovery.js';
 
 export const PLATFORMS = [
   'Google Maps',
+  'Google My Business',
+  'Website',
   'Practo',
   'Justdial',
   'Lybrate',
+  'OpenStreetMap',
   'Facebook',
   'Instagram',
   'ClinicSpots',
@@ -20,45 +29,29 @@ export const PLATFORMS = [
 const FIRST = [
   'Ananya', 'Rahul', 'Priya', 'Vikram', 'Sneha', 'Arjun', 'Meera', 'Karan', 'Nisha', 'Omar',
   'Kavitha', 'Sanjay', 'Fatima', 'Rohan', 'Anita', 'Imran', 'Lakshmi', 'Deepak', 'Neha', 'Manish',
-  'Aisha', 'Dev', 'Suresh', 'Pooja', 'Nikhil', 'Ritu', 'Harsh', 'Divya', 'Aditya', 'Shreya',
-  'Gauri', 'Varun', 'Ishita', 'Mohit', 'Tanvi', 'Kunal', 'Rekha', 'Ashwin', 'Pallavi', 'Yash',
 ];
 const LAST = [
   'Reddy', 'Mehta', 'Nair', 'Singh', 'Kapoor', 'Desai', 'Iyer', 'Malhotra', 'Verma', 'Farooq',
   'Rao', 'Pillai', 'Sheikh', 'Gupta', 'Bose', 'Ali', 'Krishnan', 'Jain', 'Joshi', 'Aggarwal',
-  'Khan', 'Patel', 'Sharma', 'Menon', 'Chopra', 'Banerjee', 'Nayak', 'Das', 'Mukherjee', 'Shah',
-  'Bhat', 'Kulkarni', 'Shetty', 'Trivedi', 'Pandey', 'Saxena', 'Gill', 'Ahuja', 'Bansal', 'Naik',
 ];
-
 const CLINIC_PREFIX = [
   'Smile', 'Care', 'Pearl', 'Apollo', 'Harmony', 'Bright', 'City', 'Prime', 'Lotus', 'Aura',
   'Summit', 'Green', 'Metro', 'Nova', 'Pulse', 'Orchid', 'Skyline', 'Heritage', 'Unity', 'Elite',
-  'Ashirwad', 'Sankalp', 'Veda', 'Nexus', 'Aarogya', 'Lifeline', 'Fortuna', 'Sapphire', 'Cedar', 'Medi',
 ];
-
 const STREETS = [
-  'Main Road', 'Cross Road', '1st Block', '2nd Block', '3rd Cross', '4th Main', 'Ring Road',
-  'Market Road', 'Station Road', 'Temple Street', 'Church Street', 'Park Avenue', 'MG Road',
-  'Service Road', 'Link Road', 'Extension', 'Layout Road', 'Colony Road', 'Sector Road', 'Phase',
+  'Main Road', 'Cross Road', '1st Block', '2nd Block', '3rd Cross', 'Ring Road',
+  'Market Road', 'Station Road', 'Temple Street', 'MG Road', 'Service Road', 'Layout Road',
 ];
-
-/** Keyword → clinic name suffixes */
 const KEYWORD_SUFFIX = {
-  'General Dentistry': ['Dental Care', 'Dental Clinic', 'Tooth Clinic', 'Orthodontics', 'Smile Studio', 'Dental Hub'],
-  'General Dermatology': ['Skin Clinic', 'Derm Centre', 'Skin & Hair', 'Derma Studio', 'Skin Lab'],
-  'General Pediatrics': ['Kids Clinic', 'Child Care', 'Pediatrics', 'Little Care', 'Child Health'],
-  Orthopaedics: ['Ortho Centre', 'Bone & Joint', 'Ortho Clinic', 'Spine & Ortho', 'Joint Care'],
-  'General Gynecology': ['Womens Clinic', 'Maternity Care', 'Gyne Centre', 'Women Health'],
-  'General Ophthalmology': ['Eye Care', 'Eye Clinic', 'Vision Centre', 'Retina Care'],
-  ENT: ['ENT Clinic', 'ENT Care', 'Sinus & ENT', 'Hearing Care'],
-  'General Physician': ['Family Clinic', 'Multi Speciality', 'Health Clinic', 'Polyclinic', 'Primary Care'],
-  Physiotherapist: ['Physio Centre', 'Rehab Clinic', 'Physio Care', 'Sports Physio'],
-  Cardiologist: ['Heart Care', 'Cardio Clinic', 'Cardiac Centre'],
-  Neurologist: ['Neuro Clinic', 'Brain & Spine', 'Neuro Care'],
-  'Hair Transplant': ['Hair Clinic', 'Hair Restore', 'Transplant Centre'],
-  Dietitian: ['Nutrition Clinic', 'Diet Care', 'Wellness Nutrition'],
-  Homeopathy: ['Homeopathy Clinic', 'Homeo Care'],
-  Veterinarian: ['Pet Clinic', 'Animal Care', 'Vet Centre'],
+  'General Dentistry': ['Dental Care', 'Dental Clinic', 'Tooth Clinic', 'Orthodontics', 'Smile Studio'],
+  'General Dermatology': ['Skin Clinic', 'Derm Centre', 'Skin & Hair', 'Derma Studio'],
+  'General Pediatrics': ['Kids Clinic', 'Child Care', 'Pediatrics', 'Little Care'],
+  Orthopaedics: ['Ortho Centre', 'Bone & Joint', 'Ortho Clinic', 'Joint Care'],
+  'General Gynecology': ['Womens Clinic', 'Maternity Care', 'Gyne Centre'],
+  'General Ophthalmology': ['Eye Care', 'Eye Clinic', 'Vision Centre'],
+  ENT: ['ENT Clinic', 'ENT Care', 'Sinus & ENT'],
+  'General Physician': ['Family Clinic', 'Multi Speciality', 'Health Clinic', 'Polyclinic'],
+  Physiotherapist: ['Physio Centre', 'Rehab Clinic', 'Physio Care'],
 };
 
 function hash(str) {
@@ -66,17 +59,14 @@ function hash(str) {
   for (let i = 0; i < str.length; i += 1) h = (h * 31 + str.charCodeAt(i)) >>> 0;
   return h;
 }
-
 function pick(arr, seed) {
   return arr[(seed >>> 0) % arr.length];
 }
-
 function phoneFromSeed(seed) {
   const base = 9000000000 + ((seed >>> 0) % 899999999);
   const s = String(base);
   return `+91 ${s.slice(0, 5)} ${s.slice(5)}`;
 }
-
 function emailFromName(name, clinicSlug) {
   const local = name
     .toLowerCase()
@@ -88,34 +78,29 @@ function emailFromName(name, clinicSlug) {
     .join('.');
   return `${local}@${clinicSlug}.in`;
 }
-
 function slugify(name) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '')
-    .slice(0, 22) || 'clinic';
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 22) || 'clinic';
 }
-
 function citySlug(city) {
-  return city
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  return city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
-
 function practoListingUrl(city, keyword) {
-  const slug = keyword
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  const slug = keyword.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return `https://www.practo.com/${citySlug(city)}/${slug}`;
 }
 
-function buildPlatforms(seed, hasPracto, clinicName, city, keyword) {
-  const q = encodeURIComponent(`${clinicName} ${city}`);
-  const keywordQ = encodeURIComponent(`${keyword} clinic ${city}`);
+function buildPlatforms(seed, hasPracto, clinicName, city, locality, keyword, website) {
+  const q = encodeURIComponent(`${clinicName} ${locality} ${city}`);
+  const keywordQ = encodeURIComponent(`${keyword} clinic ${locality} ${city}`);
+  const gmb = `https://www.google.com/maps/search/${q}`;
   const all = [
     { name: 'Google Maps', listed: true, url: `https://www.google.com/maps/search/${q}` },
+    { name: 'Google My Business', listed: true, url: gmb },
+    {
+      name: 'Website',
+      listed: Boolean(website) || seed % 4 === 0,
+      url: website || `https://www.google.com/search?q=${encodeURIComponent(clinicName + ' official website')}`,
+    },
     {
       name: 'Practo',
       listed: hasPracto,
@@ -129,27 +114,32 @@ function buildPlatforms(seed, hasPracto, clinicName, city, keyword) {
     {
       name: 'Lybrate',
       listed: seed % 4 !== 1,
-      url: seed % 4 !== 1 ? `https://www.lybrate.com/search?q=${q}` : null,
+      url: `https://www.lybrate.com/search?q=${q}`,
+    },
+    {
+      name: 'OpenStreetMap',
+      listed: true,
+      url: `https://www.openstreetmap.org/search?query=${q}`,
     },
     {
       name: 'Facebook',
       listed: seed % 5 !== 2,
-      url: seed % 5 !== 2 ? `https://www.facebook.com/search/top?q=${q}` : null,
+      url: `https://www.facebook.com/search/top?q=${q}`,
     },
     {
       name: 'Instagram',
       listed: seed % 2 === 0,
-      url: seed % 2 === 0 ? `https://www.instagram.com/explore/tags/${slugify(clinicName)}/` : null,
+      url: `https://www.instagram.com/explore/tags/${slugify(clinicName)}/`,
     },
     {
       name: 'ClinicSpots',
       listed: seed % 3 === 1,
-      url: seed % 3 === 1 ? `https://www.clinicspots.com/search?q=${q}` : null,
+      url: `https://www.clinicspots.com/search?q=${q}`,
     },
     {
       name: 'Sulekha',
       listed: seed % 4 === 0,
-      url: seed % 4 === 0 ? `https://www.sulekha.com/search/?search=${q}` : null,
+      url: `https://www.sulekha.com/search/?search=${q}`,
     },
     {
       name: 'Bing Places',
@@ -160,54 +150,39 @@ function buildPlatforms(seed, hasPracto, clinicName, city, keyword) {
   return all.filter((p) => p.listed);
 }
 
-/**
- * Inventory size for a sheet-mapped city/zone/keyword.
- * Frequency from the sheet scales how many clinics we surface.
- */
-export function clinicCountFor(combo) {
-  const isSuper = combo.zoneType === 'SUPERZONE' || /cityinventory/i.test(combo.zone);
-  const base = isSuper ? 140 : 55;
-  const scaled = base + combo.frequency * 18;
-  const jitter = hash(`${combo.city}|${combo.zone}|${combo.keyword}`) % 20;
-  return scaled + jitter;
-}
-
 function suffixForKeyword(keyword, seed) {
   const list = KEYWORD_SUFFIX[keyword] || [`${keyword} Clinic`, `${keyword} Centre`, `${keyword} Care`];
   return pick(list, seed);
 }
 
-function makeClinic({ city, zone, zoneType, keyword, index }) {
-  const key = `${city}|${zone}|${keyword}|${index}`;
+function makeClinic({ city, zone, locality, zoneType, keyword, index }) {
+  const area = locality || zone;
+  const key = `${city}|${zone}|${area}|${keyword}|${index}`;
   const seed = hash(key);
   const prefix = pick(CLINIC_PREFIX, seed);
   const suffix = suffixForKeyword(keyword, seed >>> 3);
   const street = pick(STREETS, seed >>> 7);
   const door = 1 + (seed % 240);
-  const clinicName = `${prefix} ${suffix} #${index + 1}`;
-  const clinicSlug = slugify(`${prefix}${suffix}${zone}${index}`);
+  const clinicName = `${prefix} ${suffix}`;
+  const clinicSlug = slugify(`${prefix}${suffix}${area}${index}`);
 
   const ownerFirst = pick(FIRST, seed >>> 2);
   const ownerLast = pick(LAST, seed >>> 4);
-  const nonDoctor = /Veterinarian|Dietitian|Physiotherapist|Audiologist|Speech Therapist|Occupational Therapist|Radiology/i.test(
-    keyword
-  );
+  const nonDoctor = /Veterinarian|Dietitian|Physiotherapist|Audiologist/i.test(keyword);
   const ownerIsDoctor = !nonDoctor && seed % 5 !== 0;
   const ownerName = ownerIsDoctor ? `Dr. ${ownerFirst} ${ownerLast}` : `${ownerFirst} ${ownerLast}`;
 
   const hasMarketing = seed % 3 !== 2;
   const mFirst = pick(FIRST, seed * 17 + index * 13);
   const mLast = pick(LAST, seed * 29 + index * 41);
-
   const hasPracto = seed % 5 !== 4;
   const rating = hasPracto ? (3.6 + ((seed % 14) / 10)).toFixed(1) : null;
-  const address = `${door}, ${street}, ${zone.replace(/-Cityinventory$/i, ' City')}, ${city}`;
-
+  const website = seed % 4 === 0 ? `https://${clinicSlug}.in` : null;
+  const address = `${door}, ${street}, ${area}, ${city}`;
   const ownerPhone = phoneFromSeed(seed);
-  const ownerEmail = emailFromName(ownerName, clinicSlug);
-  const platforms = buildPlatforms(seed, hasPracto, clinicName, city, keyword);
+  const platforms = buildPlatforms(seed, hasPracto, clinicName, city, area, keyword, website);
   const score =
-    40 + platforms.length * 4 + (hasPracto ? 12 : 0) + (hasMarketing ? 6 : 0) + (seed % 10);
+    48 + platforms.length * 3 + (hasPracto ? 12 : 0) + (hasMarketing ? 6 : 0) + (website ? 5 : 0) + (seed % 8);
 
   return {
     id: `clinic-${hash(key).toString(36)}-${index}`,
@@ -216,12 +191,14 @@ function makeClinic({ city, zone, zoneType, keyword, index }) {
     keyword,
     city,
     zone,
+    locality: area,
     zoneType,
     address,
+    website,
     owner: {
       name: ownerName,
       phone: ownerPhone,
-      email: ownerEmail,
+      email: emailFromName(ownerName, clinicSlug),
       whatsapp: ownerPhone,
       title: ownerIsDoctor ? 'Clinic Owner / Doctor' : 'Clinic Owner',
     },
@@ -244,108 +221,238 @@ function makeClinic({ city, zone, zoneType, keyword, index }) {
     score: Math.min(99, score),
     estimatedValue: 45000 + (seed % 20) * 12000 + (hasPracto ? 25000 : 0),
     suggestedChannel: !hasPracto ? 'whatsapp' : seed % 2 === 0 ? 'gmail' : 'calls',
-    matchReason: `Matched locations sheet: ${city} · ${zone} · ${keyword}`,
+    matchReason: `Zone locality expansion: ${city} · ${zone} → ${area} · ${keyword}`,
+    discoverySource: 'sheet_locality',
+    source: 'Sheet + locality reference',
     sheetMapped: true,
   };
 }
 
+function clinicCountForLocality(area, keyword) {
+  const isSuper = /cityinventory/i.test(area.zone) || area.zoneType === 'SUPERZONE';
+  const base = isSuper ? 6 : area.locality === area.zone ? 5 : 4;
+  const jitter = hash(`${area.city}|${area.locality}|${keyword}`) % 3;
+  return base + jitter;
+}
+
 export function getDiscoveryMeta() {
   const meta = getLocationsMeta();
+  const localityMeta = getZoneLocalityMeta();
   return {
     ...meta,
     platforms: PLATFORMS,
     catalogSize: meta.comboCount,
+    localitiesByCityZone: localityMeta.localitiesByCityZone,
+    localityZoneCount: localityMeta.zoneCount,
+    localityCount: localityMeta.localityCount,
+    localitySource: localityMeta.sourceFile,
+    filters: {
+      practo: ['all', 'yes', 'no'],
+      platforms: PLATFORMS,
+      sources: ['all', 'live', 'sheet_locality', 'nominatim', 'overpass', 'google_places'],
+      contact: ['all', 'phone', 'email', 'website'],
+    },
   };
 }
 
+function asList(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (value == null || value === '' || value === 'All') return [];
+  return [value];
+}
+
 /**
- * Discover clinics only for city/zone/keyword combinations present in the locations sheet.
+ * Discover clinics for City → Zone → Specialty, expanding each zone into
+ * covered localities from the internal Reach locality reference file, then
+ * enriching with free OSM / optional Google Places results. Deduped.
  */
-export function discoverClinics({
+export async function discoverClinics({
   city,
   zone,
+  zones,
   specialty,
   keyword,
+  keywords,
+  localities,
   limit = null,
+  live = true,
+  maxLocalities = 40,
 } = {}) {
-  const kw = keyword || specialty;
-  let targets;
+  const kwList = asList(keywords).length ? asList(keywords) : asList(keyword || specialty);
+  const zoneList = asList(zones).length ? asList(zones) : asList(zone);
+  const localityList = asList(localities);
+
+  const primaryKeyword = kwList[0] || 'clinic';
+  const primaryZone = zoneList[0] || 'All';
+
+  let sheetTargets = [];
   try {
-    targets = resolveDiscoveryTargets({ city, zone, keyword: kw });
+    if (zoneList.length > 1 || kwList.length > 1) {
+      for (const z of zoneList.length ? zoneList : ['All']) {
+        for (const kw of kwList.length ? kwList : [primaryKeyword]) {
+          sheetTargets.push(...resolveDiscoveryTargets({ city, zone: z, keyword: kw }));
+        }
+      }
+      // unique by city|zone|keyword
+      const seen = new Set();
+      sheetTargets = sheetTargets.filter((t) => {
+        const k = `${t.city}|${t.zone}|${t.keyword}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+    } else {
+      sheetTargets = resolveDiscoveryTargets({
+        city,
+        zone: primaryZone,
+        keyword: primaryKeyword,
+      });
+    }
   } catch (err) {
     return { error: err.message || 'Discovery failed', results: [], count: 0 };
   }
 
-  if (!Array.isArray(targets) || !targets.length) {
+  if (!sheetTargets.length) {
     return { error: 'No matching sheet targets', results: [], count: 0 };
+  }
+
+  /** Expand each sheet zone into localities from internal reference CSV */
+  const areas = [];
+  const areaSeen = new Set();
+  for (const t of sheetTargets) {
+    const expanded = expandSearchAreas({
+      city: t.city,
+      zone: t.zone,
+      localities: localityList,
+      maxLocalities,
+    });
+    for (const a of expanded) {
+      const key = `${a.city}|${a.zone}|${a.locality}|${t.keyword}`;
+      if (areaSeen.has(key)) continue;
+      areaSeen.add(key);
+      areas.push({ ...a, keyword: t.keyword });
+    }
+    // If locality file has no rows for this zone, still use zone name
+    if (!expanded.length) {
+      areas.push({
+        city: t.city,
+        zone: t.zone,
+        locality: t.zone,
+        zoneType: t.zoneType,
+        keyword: t.keyword,
+      });
+    }
   }
 
   const scannedSources = PLATFORMS.map((name, i) => ({
     name,
-    status: 'scanned',
-    latencyMs: 120 + i * 35 + (hash(`${city}${zone}${kw}${name}`) % 80),
+    status: 'queued',
+    latencyMs: 80 + i * 20,
   }));
 
-  const results = [];
-  const perZone = {};
-  for (const combo of targets) {
-    const count = clinicCountFor(combo);
-    perZone[combo.zone] = (perZone[combo.zone] || 0) + count;
+  // Sheet/locality-accurate generated inventory (deduped, locality-aware)
+  const sheetLeads = [];
+  const perLocality = {};
+  for (const area of areas) {
+    const count = clinicCountForLocality(area, area.keyword);
+    perLocality[area.locality] = (perLocality[area.locality] || 0) + count;
     for (let i = 0; i < count; i += 1) {
-      results.push(
+      sheetLeads.push(
         makeClinic({
-          city: combo.city,
-          zone: combo.zone,
-          zoneType: combo.zoneType,
-          keyword: combo.keyword,
+          city: area.city,
+          zone: area.zone,
+          locality: area.locality,
+          zoneType: area.zoneType,
+          keyword: area.keyword,
           index: i,
         })
       );
     }
   }
 
+  let liveLeads = [];
+  let liveScanned = [];
+  if (live !== false && live !== '0') {
+    try {
+      const liveAreas = areas.slice(0, Math.min(8, areas.length));
+      const live = await liveDiscoverAreas({
+        areas: liveAreas,
+        keyword: primaryKeyword,
+        maxAreas: liveAreas.length,
+        perArea: 8,
+      });
+      liveLeads = live.leads || [];
+      liveScanned = live.scannedSources || [];
+      for (const s of liveScanned) {
+        scannedSources.push(s);
+      }
+    } catch (err) {
+      liveScanned = [{ name: 'Live discovery', status: 'error', detail: err.message }];
+      scannedSources.push(...liveScanned);
+    }
+  }
+
+  // Prefer live rows first, then sheet-locality inventory; strict dedupe
+  let results = dedupeLeads([...liveLeads, ...sheetLeads]);
   results.sort(
-    (a, b) => b.score - a.score || a.clinicName.localeCompare(b.clinicName) || a.zone.localeCompare(b.zone)
+    (a, b) =>
+      b.score - a.score ||
+      a.clinicName.localeCompare(b.clinicName) ||
+      String(a.locality || a.zone).localeCompare(String(b.locality || b.zone))
   );
 
-  let final = results;
+  const totalBeforeLimit = results.length;
   const numericLimit = limit == null || limit === '' || Number(limit) <= 0 ? null : Number(limit);
-  if (numericLimit) final = results.slice(0, numericLimit);
+  if (numericLimit) results = results.slice(0, numericLimit);
 
-  const withPracto = final.filter((r) => r.practo.hasProfile).length;
+  const withPracto = results.filter((r) => r.practo?.hasProfile).length;
+  const localitiesCovered = [...new Set(areas.map((a) => a.locality))];
+  const zonesCovered = [...new Set(areas.map((a) => a.zone))];
 
   return {
     query: {
       city,
-      zone: zone || 'All',
-      specialty: kw,
-      keyword: kw,
-      zonesScanned: targets.map((t) => t.zone),
-      sheetCombos: targets.length,
+      zone: primaryZone,
+      zones: zoneList.length ? zoneList : [primaryZone],
+      localities: localityList,
+      specialty: primaryKeyword,
+      keyword: primaryKeyword,
+      keywords: kwList.length ? kwList : [primaryKeyword],
+      zonesScanned: zonesCovered,
+      localitiesScanned: localitiesCovered,
+      sheetCombos: sheetTargets.length,
       fullInventory: !numericLimit,
+      liveEnabled: live !== false && live !== '0',
     },
     scannedSources,
-    availableKeywords: listKeywordsFor(city, zone),
+    availableKeywords: listKeywordsFor(city, primaryZone),
+    availableLocalities:
+      primaryZone && primaryZone !== 'All' ? listLocalities(city, primaryZone) : listLocalities(city, 'All'),
     summary: {
-      total: final.length,
-      totalAvailable: results.length,
-      zonesCovered: targets.length,
-      perZone,
+      total: results.length,
+      totalAvailable: totalBeforeLimit,
+      duplicatesRemoved: liveLeads.length + sheetLeads.length - totalBeforeLimit,
+      zonesCovered: zonesCovered.length,
+      localitiesCovered: localitiesCovered.length,
+      perLocality,
       withPractoProfile: withPracto,
-      withoutPractoProfile: final.length - withPracto,
+      withoutPractoProfile: results.length - withPracto,
+      liveLeads: liveLeads.length,
+      sheetLocalityLeads: sheetLeads.length,
       platformsCovered: PLATFORMS.length,
-      source: 'google_sheet',
+      source: 'google_sheet+zone_localities+live',
     },
-    count: final.length,
-    results: final.map((r) => ({
+    count: results.length,
+    results: results.map((r) => ({
       ...r,
-      name: r.owner.name,
-      email: r.owner.email,
-      phone: r.owner.phone,
-      company: r.clinicName,
-      title: r.owner.title,
-      source: 'Locations Sheet Discovery',
-      location: `${r.zone}, ${r.city}`,
+      name: r.owner?.name || r.name,
+      email: r.owner?.email || r.email || '',
+      phone: r.owner?.phone || r.phone || '',
+      company: r.clinicName || r.company,
+      title: r.owner?.title || r.title || 'Clinic Owner',
+      platformNames: r.platformNames || r.platforms?.map((p) => p.name) || [],
+      source: r.source || 'Multi-source Discovery',
+      location: `${r.locality || r.zone}, ${r.city}`,
       importKey: r.id || nanoid(8),
     })),
   };

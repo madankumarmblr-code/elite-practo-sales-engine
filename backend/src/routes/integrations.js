@@ -3,6 +3,7 @@ import db from '../db/db.js';
 import { authRequired, requirePermission } from '../auth/middleware.js';
 import { selfTestIntegration } from '../services/outreach.js';
 import { dialoguesFor, PRODUCTS } from '../services/channels/dialogues.js';
+import { catalogByProvider, INTEGRATION_CATALOG } from '../services/channels/catalog.js';
 
 const now = () => new Date().toISOString();
 
@@ -13,27 +14,66 @@ function parseRow(row) {
   for (const [k, v] of Object.entries(secrets)) {
     masked[k] = v ? '••••••••' : '';
   }
+  const config = JSON.parse(row.config || '{}');
+  const catalog = catalogByProvider(row.provider);
+  const pricing = config.pricing || catalog?.pricing || 'paid';
+  const availability =
+    catalog?.availability ||
+    (Object.keys(catalog?.secrets || secrets).length === 0 ? 'ready_free' : 'needs_key');
   return {
     ...row,
     enabled: !!row.enabled,
     is_default: !!row.is_default,
     channel: row.channel || '',
-    config: JSON.parse(row.config || '{}'),
+    config,
     secrets: masked,
     hasSecrets: Object.values(secrets).some(Boolean),
+    pricing,
+    availability,
+    readyToRun:
+      availability === 'ready_free' ||
+      (availability === 'needs_key' && Object.values(secrets).some(Boolean) && !!row.enabled),
   };
 }
 
 export function registerIntegrationRoutes(app) {
+  app.get(
+    '/api/integrations/catalog',
+    authRequired,
+    requirePermission('api_integrations:read', 'settings:read'),
+    (_req, res) => {
+      res.json({
+        items: INTEGRATION_CATALOG.map((p) => ({
+          provider: p.provider,
+          label: p.label,
+          category: p.category,
+          channel: p.channel,
+          pricing: p.pricing,
+          availability: p.availability,
+          notes: p.notes,
+          is_default: !!p.is_default,
+          freeToRun: p.availability === 'ready_free',
+        })),
+        free: INTEGRATION_CATALOG.filter((p) => p.pricing === 'free'),
+        freemium: INTEGRATION_CATALOG.filter((p) => p.pricing === 'freemium'),
+        paid: INTEGRATION_CATALOG.filter((p) => p.pricing === 'paid'),
+        readyNow: INTEGRATION_CATALOG.filter((p) => p.availability === 'ready_free'),
+      });
+    }
+  );
+
   app.get(
     '/api/integrations',
     authRequired,
     requirePermission('api_integrations:read', 'settings:read'),
     (req, res) => {
       const channel = (req.query.channel || '').toString();
+      const pricing = (req.query.pricing || '').toString();
       let rows = db.prepare('SELECT * FROM api_integrations ORDER BY category, is_default DESC, label').all();
       if (channel) rows = rows.filter((r) => r.channel === channel);
-      res.json(rows.map(parseRow));
+      let parsed = rows.map(parseRow);
+      if (pricing) parsed = parsed.filter((r) => r.pricing === pricing);
+      res.json(parsed);
     }
   );
 

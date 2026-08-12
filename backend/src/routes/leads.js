@@ -136,24 +136,49 @@ export function registerLeadRoutes(app) {
     res.json({ ok: true });
   });
 
-  // Lead generator — sheet-driven city / zone / keyword discovery
-  app.post('/api/lead-generator/search', (req, res) => {
+  // Lead generator — sheet + locality expansion + live multi-source discovery
+  app.post('/api/lead-generator/search', async (req, res) => {
     const body = req.body || {};
     const city = body.city || body.location;
-    const { zone = 'All', specialty, keyword, limit = null } = body;
-    const kw = keyword || specialty;
+    const {
+      zone = 'All',
+      zones,
+      localities,
+      specialty,
+      keyword,
+      keywords,
+      limit = null,
+      live = true,
+      maxLocalities = 40,
+    } = body;
+    const kw = keyword || specialty || (Array.isArray(keywords) ? keywords[0] : null);
 
     if (!city || !kw) {
       return res.status(400).json({
-        error: 'Select city and keyword/specialty from the locations sheet (zone can be All)',
+        error: 'Select city and keyword/specialty (zone can be All; localities auto-expand under zone)',
       });
     }
 
-    const discovery = discoverClinics({ city, zone, specialty: kw, keyword: kw, limit });
-    if (discovery.error && !discovery.results?.length) {
-      return res.status(400).json({ error: discovery.error });
+    try {
+      const discovery = await discoverClinics({
+        city,
+        zone,
+        zones,
+        localities,
+        specialty: kw,
+        keyword: kw,
+        keywords,
+        limit,
+        live,
+        maxLocalities,
+      });
+      if (discovery.error && !discovery.results?.length) {
+        return res.status(400).json({ error: discovery.error });
+      }
+      res.json(discovery);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Discovery failed' });
     }
-    res.json(discovery);
   });
 
   app.get('/api/lead-generator/options', (req, res) => {
@@ -198,27 +223,67 @@ export function registerLeadRoutes(app) {
         status, assigned_to, last_contacted_at, next_action, notes, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', 'Unassigned', NULL, ?, ?, ?, ?)
     `);
+    const findByPhone = db.prepare(
+      `SELECT id FROM leads WHERE replace(replace(replace(phone,' ',''),'+',''),'-','') LIKE ? LIMIT 1`
+    );
+    const findByEmail = db.prepare(`SELECT id FROM leads WHERE lower(email) = lower(?) LIMIT 1`);
+    const findByCompanyCity = db.prepare(
+      `SELECT id FROM leads WHERE lower(company) = lower(?) AND notes LIKE ? LIMIT 1`
+    );
     const created = [];
+    const skipped = [];
     const ts = now();
     const tx = db.transaction((items) => {
+      const seen = new Set();
       for (const item of items) {
-        const id = nanoid();
         const owner = item.owner || {};
+        const phone = String(owner.phone || item.phone || '').replace(/\D/g, '').slice(-10);
+        const email = String(owner.email || item.email || '').trim().toLowerCase();
+        const company = String(item.clinicName || item.company || '').trim();
+        const city = String(item.city || '').trim();
+        const dedupeKey = phone
+          ? `p:${phone}`
+          : email
+            ? `e:${email}`
+            : `c:${company.toLowerCase()}|${city.toLowerCase()}`;
+        if (seen.has(dedupeKey)) {
+          skipped.push({ reason: 'duplicate_in_batch', company });
+          continue;
+        }
+        seen.add(dedupeKey);
+
+        if (phone && findByPhone.get(`%${phone}`)) {
+          skipped.push({ reason: 'duplicate_phone', company, phone });
+          continue;
+        }
+        if (email && findByEmail.get(email)) {
+          skipped.push({ reason: 'duplicate_email', company, email });
+          continue;
+        }
+        if (company && city && findByCompanyCity.get(company, `%${city}%`)) {
+          skipped.push({ reason: 'duplicate_company', company });
+          continue;
+        }
+
+        const id = nanoid();
         const marketing = item.marketingHead || null;
         const practo = item.practo || {};
         const platforms = item.platformNames || item.platforms?.map((p) => p.name) || [];
         const notes = [
           item.matchReason || 'Imported from multi-platform lead generator',
-          `Clinic: ${item.clinicName || item.company || ''}`,
-          `Specialty: ${item.specialty || ''}`,
-          `Location: ${item.zone || ''}, ${item.city || item.location || ''}`,
+          `Clinic: ${company}`,
+          `Specialty: ${item.specialty || item.keyword || ''}`,
+          `Location: ${item.locality || item.zone || ''}, ${city || item.location || ''}`,
+          `Zone: ${item.zone || ''}`,
           `Address: ${item.address || ''}`,
+          `Website: ${item.website || ''}`,
           `Owner: ${owner.name || item.name || ''} | ${owner.phone || item.phone || ''} | ${owner.email || item.email || ''}`,
           marketing
             ? `Marketing Head: ${marketing.name} | ${marketing.phone || ''} | ${marketing.email || ''}`
             : 'Marketing Head: Not listed',
           `Practo profile: ${practo.hasProfile ? 'Yes' : 'No'}${practo.url ? ` (${practo.url})` : ''}`,
           `Platforms: ${platforms.join(', ') || 'n/a'}`,
+          `Discovery source: ${item.discoverySource || item.source || 'n/a'}`,
         ].join('\n');
 
         insert.run(
@@ -226,7 +291,7 @@ export function registerLeadRoutes(app) {
           owner.name || item.name,
           owner.email || item.email || '',
           owner.phone || item.phone || '',
-          item.clinicName || item.company || '',
+          company,
           owner.title || item.title || 'Clinic Owner',
           item.source || 'Multi-platform Discovery',
           'new',
@@ -241,6 +306,11 @@ export function registerLeadRoutes(app) {
       }
     });
     tx(incoming);
-    res.status(201).json({ imported: created.length, leads: created });
+    res.status(201).json({
+      imported: created.length,
+      skipped: skipped.length,
+      skipReasons: skipped,
+      leads: created,
+    });
   });
 }

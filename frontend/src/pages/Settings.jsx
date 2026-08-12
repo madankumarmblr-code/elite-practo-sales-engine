@@ -187,12 +187,19 @@ export default function Settings() {
             <Link className="btn btn-secondary" to="/api-integrations">
               Open API Integrations →
             </Link>
+            <Link className="btn btn-secondary" to="/lead-generator">
+              Lead Generator →
+            </Link>
             {user?.role === 'superadmin' || can('users:write') ? (
               <Link className="btn btn-primary" to="/super-admin">
                 Super Admin dashboard →
               </Link>
             ) : null}
           </div>
+          <p className="muted" style={{ marginTop: '0.85rem', fontSize: '0.85rem' }}>
+            Free discovery (OSM Nominatim / Overpass) runs without keys. Configure WhatsApp, Gmail,
+            Calls, Gemini/Groq, SerpAPI, Outscraper, and Places keys under API Integrations.
+          </p>
         </div>
 
         <div className="panel">

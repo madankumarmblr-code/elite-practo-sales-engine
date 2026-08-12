@@ -245,7 +245,8 @@ export function bootstrap() {
   const passwordHash = bcrypt.hashSync(demoPassword, 10);
 
   if (!superAdmin) {
-    const id = nanoid();
+    // Stable id so signed tokens still resolve after serverless /tmp DB rebuilds
+    const id = 'user_superadmin';
     db.prepare(`
       INSERT INTO users (id, name, email, username, password_hash, role, permissions, active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, 'superadmin', ?, 1, ?, ?)

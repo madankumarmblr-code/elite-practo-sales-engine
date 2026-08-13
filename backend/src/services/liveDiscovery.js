@@ -257,7 +257,14 @@ export async function searchNominatim({ city, zone, locality, keyword, limit = 8
 /**
  * Free Overpass query for clinics/hospitals/dentists near a named area.
  */
-export async function searchOverpass({ city, zone, locality, keyword, limit = 12 }) {
+export async function searchOverpass({
+  city,
+  zone,
+  locality,
+  keyword,
+  limit = 12,
+  timeoutMs = 8000,
+} = {}) {
   const amenity =
     /dentist|dental|orthodont/i.test(keyword)
       ? 'dentist|clinic|doctors|hospital'
@@ -274,11 +281,13 @@ export async function searchOverpass({ city, zone, locality, keyword, limit = 12
       format: 'jsonv2',
       limit: '1',
     });
-  const geo = await fetchJson(geoUrl, { timeoutMs: 6000 });
+  const geoBudget = Math.min(4000, Math.max(1500, Math.floor(timeoutMs * 0.4)));
+  const geo = await fetchJson(geoUrl, { timeoutMs: geoBudget });
   if (!Array.isArray(geo) || !geo[0]) return [];
   const { lat, lon } = geo[0];
+  const overpassTimeoutSec = Math.max(4, Math.min(12, Math.floor(timeoutMs / 1000)));
   const overpassQuery = `
-    [out:json][timeout:15];
+    [out:json][timeout:${overpassTimeoutSec}];
     (
       node["amenity"~"${amenity}"](around:2500,${lat},${lon});
       way["amenity"~"${amenity}"](around:2500,${lat},${lon});
@@ -290,7 +299,7 @@ export async function searchOverpass({ city, zone, locality, keyword, limit = 12
     method: 'POST',
     headers: { 'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `data=${encodeURIComponent(overpassQuery)}`,
-    signal: AbortSignal.timeout(16000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
   const data = await res.json();
@@ -462,6 +471,55 @@ export async function searchGooglePlaces({ city, zone, locality, keyword, limit 
  * Dedupes across Overpass / Nominatim / Places within the fan-out.
  * Stops early when deadlineMs elapses so serverless handlers can return under maxDuration.
  */
+/**
+ * Prefer the zone name and drop "X 1 Block" style micro-localities when the parent
+ * zone (or a shorter parent locality) is already queued. Those blocks rarely geocode
+ * and burn the serverless time budget before Practo.com can return clinics.
+ */
+export function prioritizeLiveAreas(areas = [], maxAreas = 8) {
+  const ranked = [...areas].sort((a, b) => {
+    const aLoc = String(a.locality || '');
+    const bLoc = String(b.locality || '');
+    const aZone = aLoc.toLowerCase() === String(a.zone || '').toLowerCase() ? 0 : 1;
+    const bZone = bLoc.toLowerCase() === String(b.zone || '').toLowerCase() ? 0 : 1;
+    const aBlock = /\b\d+\s*block\b/i.test(aLoc) ? 1 : 0;
+    const bBlock = /\b\d+\s*block\b/i.test(bLoc) ? 1 : 0;
+    return aZone - bZone || aBlock - bBlock || aLoc.localeCompare(bLoc);
+  });
+
+  const out = [];
+  const seen = new Set();
+  for (const area of ranked) {
+    const loc = String(area.locality || area.zone || '').trim();
+    if (!loc) continue;
+    const key = `${area.city}|${area.zone}|${loc}`.toLowerCase();
+    if (seen.has(key)) continue;
+
+    // Skip "Jayanagar 5 Block" when "Jayanagar" is already included
+    const parent = loc.replace(/\s+\d+\s*(st|nd|rd|th)?\s*block\b/i, '').trim();
+    if (parent && parent.toLowerCase() !== loc.toLowerCase()) {
+      const parentAlready = out.some(
+        (a) =>
+          String(a.city) === String(area.city) &&
+          String(a.locality || a.zone || '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ') === parent.toLowerCase()
+      );
+      if (parentAlready) continue;
+    }
+
+    seen.add(key);
+    out.push(area);
+    if (out.length >= maxAreas) break;
+  }
+  return out;
+}
+
+/**
+ * Live multi-source discovery for a list of areas.
+ * Practo.com is queried first (reliable, ~2s). OSM Overpass runs in parallel with a
+ * short timeout so flaky Overpass 504s cannot consume the whole serverless budget.
+ */
 export async function liveDiscoverAreas({
   areas,
   keyword,
@@ -471,11 +529,43 @@ export async function liveDiscoverAreas({
 } = {}) {
   const scanned = [];
   const leads = [];
-  const slice = areas.slice(0, maxAreas);
+  const onServerless = Boolean(process.env.VERCEL);
+  const slice = prioritizeLiveAreas(areas, maxAreas);
   const started = Date.now();
   let timedOut = false;
 
-  const pastDeadline = () => deadlineMs > 0 && Date.now() - started >= deadlineMs;
+  const remainingMs = () => (deadlineMs > 0 ? Math.max(0, deadlineMs - (Date.now() - started)) : 60000);
+  const pastDeadline = () => deadlineMs > 0 && remainingMs() < 400;
+
+  // City-level Practo first — guarantees authentic leads even if locality OSM fails
+  if (slice[0]?.city && !pastDeadline()) {
+    try {
+      const cityHit = await searchPractoWeb({
+        city: slice[0].city,
+        zone: slice[0].zone,
+        locality: '',
+        keyword,
+        limit: Math.max(perArea, 10),
+      });
+      if (cityHit.results?.length) {
+        leads.push(...cityHit.results);
+        scanned.push({
+          name: `Practo.com · ${slice[0].city}`,
+          status: 'scanned',
+          count: cityHit.results.length,
+        });
+      } else {
+        scanned.push({
+          name: `Practo.com · ${slice[0].city}`,
+          status: cityHit.ok ? 'empty' : 'error',
+          count: 0,
+          detail: cityHit.status ? `HTTP ${cityHit.status}` : undefined,
+        });
+      }
+    } catch (err) {
+      scanned.push({ name: `Practo.com · ${slice[0].city}`, status: 'error', detail: err.message });
+    }
+  }
 
   for (const area of slice) {
     if (pastDeadline()) {
@@ -490,115 +580,32 @@ export async function liveDiscoverAreas({
 
     const zone = area.zone || area.locality;
     const locality = area.locality || area.zone;
-    let areaCount = 0;
+    const budget = remainingMs();
+    const overpassBudget = Math.min(onServerless ? 7000 : 12000, Math.max(2500, budget - 1500));
 
-    // Free Overpass (best structured clinic data)
-    try {
-      const rows = await searchOverpass({
+    // Practo (primary) + Overpass (secondary) in parallel
+    const [practoSettled, overpassSettled] = await Promise.allSettled([
+      searchPractoWeb({
         city: area.city,
         zone,
         locality,
         keyword,
         limit: perArea,
-      });
-      leads.push(...rows);
-      areaCount += rows.length;
-      scanned.push({ name: `OSM Overpass · ${locality}`, status: 'scanned', count: rows.length });
-    } catch (err) {
-      scanned.push({
-        name: `OSM Overpass · ${locality}`,
-        status: 'error',
-        detail: err.message,
-      });
-    }
-
-    if (pastDeadline()) {
-      timedOut = true;
-      scanned.push({
-        name: 'Live discovery',
-        status: 'timeout',
-        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
-      });
-      break;
-    }
-
-    // Free Nominatim fallback if Overpass returned little
-    if (areaCount < 3) {
-      try {
-        await new Promise((r) => setTimeout(r, 1100)); // Nominatim polite rate limit
-        if (pastDeadline()) {
-          timedOut = true;
-          scanned.push({
-            name: 'Live discovery',
-            status: 'timeout',
-            detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
-          });
-          break;
-        }
-        const rows = await searchNominatim({
-          city: area.city,
-          zone,
-          locality,
-          keyword,
-          limit: Math.min(6, perArea),
-        });
-        leads.push(...rows);
-        areaCount += rows.length;
-        scanned.push({ name: `Nominatim · ${locality}`, status: 'scanned', count: rows.length });
-      } catch (err) {
-        scanned.push({ name: `Nominatim · ${locality}`, status: 'error', detail: err.message });
-      }
-    }
-
-    if (pastDeadline()) {
-      timedOut = true;
-      scanned.push({
-        name: 'Live discovery',
-        status: 'timeout',
-        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
-      });
-      break;
-    }
-
-    // Google Places when key present
-    try {
-      const rows = await searchGooglePlaces({
+      }),
+      searchOverpass({
         city: area.city,
         zone,
         locality,
         keyword,
         limit: perArea,
-      });
-      if (rows.length) {
-        leads.push(...rows);
-        scanned.push({ name: `Google Places · ${locality}`, status: 'scanned', count: rows.length });
-      }
-    } catch (err) {
-      scanned.push({ name: `Google Places · ${locality}`, status: 'error', detail: err.message });
-    }
+        timeoutMs: overpassBudget,
+      }),
+    ]);
 
-    if (pastDeadline()) {
-      timedOut = true;
-      scanned.push({
-        name: 'Live discovery',
-        status: 'timeout',
-        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
-      });
-      break;
-    }
-
-    // Practo.com public listings (no API key)
-    try {
-      const found = await searchPractoWeb({
-        city: area.city,
-        zone,
-        locality,
-        keyword,
-        limit: perArea,
-      });
-      if (found.results.length) {
+    if (practoSettled.status === 'fulfilled') {
+      const found = practoSettled.value;
+      if (found.results?.length) {
         leads.push(...found.results);
-        areaCount += found.results.length;
         scanned.push({
           name: `Practo.com · ${locality}`,
           status: 'scanned',
@@ -612,24 +619,73 @@ export async function liveDiscoverAreas({
           detail: found.status ? `HTTP ${found.status}` : undefined,
         });
       }
-    } catch (err) {
-      scanned.push({ name: `Practo.com · ${locality}`, status: 'error', detail: err.message });
+    } else {
+      scanned.push({
+        name: `Practo.com · ${locality}`,
+        status: 'error',
+        detail: practoSettled.reason?.message || 'failed',
+      });
     }
+
+    if (overpassSettled.status === 'fulfilled') {
+      const rows = overpassSettled.value || [];
+      if (rows.length) {
+        leads.push(...rows);
+        scanned.push({ name: `OSM Overpass · ${locality}`, status: 'scanned', count: rows.length });
+      } else {
+        scanned.push({ name: `OSM Overpass · ${locality}`, status: 'empty', count: 0 });
+      }
+    } else {
+      scanned.push({
+        name: `OSM Overpass · ${locality}`,
+        status: 'error',
+        detail: overpassSettled.reason?.message || 'failed',
+      });
+    }
+
+    if (pastDeadline()) {
+      timedOut = true;
+      scanned.push({
+        name: 'Live discovery',
+        status: 'timeout',
+        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
+      });
+      break;
+    }
+
+    // Google Places when keyed (skip if almost out of time)
+    if (remainingMs() > 2500) {
+      try {
+        const rows = await searchGooglePlaces({
+          city: area.city,
+          zone,
+          locality,
+          keyword,
+          limit: perArea,
+        });
+        if (rows.length) {
+          leads.push(...rows);
+          scanned.push({ name: `Google Places · ${locality}`, status: 'scanned', count: rows.length });
+        }
+      } catch (err) {
+        scanned.push({ name: `Google Places · ${locality}`, status: 'error', detail: err.message });
+      }
+    }
+
+    // Enough authentic leads — stop early so the UI stays responsive
+    if (dedupeLeads(leads).length >= Math.max(perArea * 2, 16)) break;
   }
 
   let finalLeads = dedupeLeads(leads);
-  if (!timedOut && finalLeads.length) {
+  if (!timedOut && finalLeads.length && remainingMs() > 1500) {
     try {
-      const remaining = deadlineMs > 0 ? Math.max(0, deadlineMs - (Date.now() - started)) : 8000;
-      if (remaining > 1500) {
-        const enriched = await enrichLeadsWithPractoWeb(finalLeads, {
-          city: slice[0]?.city,
-          keyword,
-          deadlineMs: Math.min(remaining, 10000),
-        });
-        finalLeads = enriched.leads;
-        scanned.push(...enriched.scanned);
-      }
+      const enriched = await enrichLeadsWithPractoWeb(finalLeads, {
+        city: slice[0]?.city,
+        keyword,
+        deadlineMs: Math.min(remainingMs(), onServerless ? 6000 : 10000),
+      });
+      finalLeads = enriched.leads;
+      scanned.push(...enriched.scanned);
     } catch (err) {
       scanned.push({ name: 'Practo.com enrich', status: 'error', detail: err.message });
     }

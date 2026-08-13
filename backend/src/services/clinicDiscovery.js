@@ -9,7 +9,7 @@ import {
   getZoneLocalityMeta,
   listLocalities,
 } from './zoneLocalities.js';
-import { dedupeLeads, liveDiscoverAreas, filterAuthenticLeads, isAuthenticLead } from './liveDiscovery.js';
+import { dedupeLeads, liveDiscoverAreas, filterAuthenticLeads, isAuthenticLead, prioritizeLiveAreas } from './liveDiscovery.js';
 import { applySmartChannelToDiscoveryLead } from './aiAssist.js';
 import { specialtySlug, slugifyPracto } from './practoWeb.js';
 
@@ -383,16 +383,16 @@ export async function discoverClinics({
 
   const liveEnabled = live !== false && live !== '0';
   const onServerless = Boolean(process.env.VERCEL);
-  const liveBudgetMs = onServerless ? 22000 : 50000;
-  const maxLiveAreas = onServerless ? 6 : 12;
-  const perArea = onServerless ? 8 : 12;
+  const liveBudgetMs = onServerless ? 28000 : 50000;
+  const maxLiveAreas = onServerless ? 4 : 10;
+  const perArea = onServerless ? 10 : 12;
 
   let liveLeads = [];
   let liveScanned = [];
   let liveTimedOut = false;
   if (liveEnabled) {
     try {
-      const liveAreas = areas.slice(0, Math.min(maxLiveAreas, areas.length));
+      const liveAreas = prioritizeLiveAreas(areas, Math.min(maxLiveAreas, areas.length));
       // Fan out across distinct keywords when multi-select
       const byKeyword = new Map();
       for (const a of liveAreas) {
@@ -418,6 +418,18 @@ export async function discoverClinics({
     } catch (err) {
       liveScanned = [{ name: 'Live discovery', status: 'error', detail: err.message }];
       scannedSources.push(...liveScanned);
+    }
+  }
+
+  // Count live hits per locality for the UI (synthetic path already filled perLocality)
+  if (!allowSynthetic) {
+    for (const area of areas) {
+      perLocality[area.locality] = perLocality[area.locality] || 0;
+    }
+    for (const lead of liveLeads) {
+      const loc = lead.locality || lead.zone;
+      if (!loc) continue;
+      perLocality[loc] = (perLocality[loc] || 0) + 1;
     }
   }
 

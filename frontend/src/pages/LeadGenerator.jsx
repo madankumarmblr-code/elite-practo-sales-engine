@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client';
 import { useToast } from '../hooks/useToast';
 
@@ -36,11 +36,12 @@ export default function LeadGenerator() {
   const [zoneFilter, setZoneFilter] = useState('all');
   const [localityFilter, setLocalityFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('live');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [contactFilter, setContactFilter] = useState('all');
   const [textFilter, setTextFilter] = useState('');
   const [page, setPage] = useState(1);
   const [ready, setReady] = useState(false);
+  const searchSeq = useRef(0);
 
   const zones = useMemo(() => meta.zonesByCity[criteria.city] || [], [meta, criteria.city]);
 
@@ -77,6 +78,7 @@ export default function LeadGenerator() {
   const runDiscovery = useCallback(
     async (nextCriteria = criteria) => {
       if (!nextCriteria.city || !nextCriteria.keyword) return;
+      const seq = ++searchSeq.current;
       setBusy(true);
       setLastError('');
       setScanStep(
@@ -93,6 +95,7 @@ export default function LeadGenerator() {
           maxLocalities: 12,
           limit: 80,
         });
+        if (seq !== searchSeq.current) return; // stale response
         setResults(data.results || []);
         setSummary(data.summary || null);
         setScannedSources(data.scannedSources || []);
@@ -101,6 +104,7 @@ export default function LeadGenerator() {
         setPage(1);
         setZoneFilter('all');
         setLocalityFilter('all');
+        setSourceFilter('all');
         const where =
           !nextCriteria.zone || nextCriteria.zone === 'All'
             ? `all zones in ${nextCriteria.city}`
@@ -109,19 +113,29 @@ export default function LeadGenerator() {
         const synth = data.summary?.syntheticRejected
           ? ` · ${data.summary.syntheticRejected} sample rows dropped`
           : '';
-        toast(
-          `Found ${data.count} authentic leads · Practo ${
-            data.summary?.withPractoProfile || 0
-          } · ${data.summary?.duplicatesRemoved || 0} dupes removed · ${where}${liveNote}${synth}`
-        );
+        const n = data.count || data.results?.length || 0;
+        if (!n) {
+          toast(
+            `No live clinics found yet for ${where}. Tap Refresh — Practo.com / maps may have timed out.`
+          );
+        } else {
+          toast(
+            `Found ${n} authentic leads · Practo ${
+              data.summary?.withPractoProfile || 0
+            } · ${data.summary?.duplicatesRemoved || 0} dupes removed · ${where}${liveNote}${synth}`
+          );
+        }
       } catch (err) {
+        if (seq !== searchSeq.current) return;
         setResults([]);
         setSummary(null);
         setLastError(err.message || 'Search failed');
         toast(err.message);
       } finally {
-        setBusy(false);
-        setScanStep('');
+        if (seq === searchSeq.current) {
+          setBusy(false);
+          setScanStep('');
+        }
       }
     },
     [criteria, toast]
@@ -344,7 +358,7 @@ export default function LeadGenerator() {
           <div className="muted" style={{ marginBottom: 8, fontSize: '0.85rem' }}>
             {busy && scanStep
               ? scanStep
-              : `Sources: zone localities + ${(
+              : `Live sources: ${(
                   scannedSources.length ? scannedSources : meta.platforms || []
                 )
                   .map((p) => p.name || p)

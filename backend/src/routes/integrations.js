@@ -8,6 +8,56 @@ import { catalogByProvider, INTEGRATION_CATALOG } from '../services/channels/cat
 
 const now = () => new Date().toISOString();
 
+function connectivityOf(row, { hasSecrets, availability, readyToRun }) {
+  const tested = Boolean(row.last_tested_at);
+  const testOk = row.last_test_ok == null ? null : !!row.last_test_ok;
+  const message = row.last_test_message || '';
+
+  if (row.status === 'error' || testOk === false) {
+    return {
+      code: 'error',
+      label: 'Failed',
+      symbol: '●',
+      tone: 'coral',
+      hint: message || 'Last connectivity check failed',
+    };
+  }
+  if (row.status === 'connected' || testOk === true) {
+    return {
+      code: 'live',
+      label: 'Connected',
+      symbol: '●',
+      tone: 'green',
+      hint: message || 'API connectivity verified',
+    };
+  }
+  if (availability === 'ready_free' || readyToRun) {
+    return {
+      code: 'ready',
+      label: tested ? 'Ready' : 'Ready to test',
+      symbol: '●',
+      tone: 'teal',
+      hint: message || (availability === 'ready_free' ? 'Free connector — no key required' : 'Credentials present'),
+    };
+  }
+  if (!hasSecrets && availability === 'needs_key') {
+    return {
+      code: 'needs_key',
+      label: 'Needs key',
+      symbol: '●',
+      tone: 'amber',
+      hint: message || 'Add API credentials, then run Test',
+    };
+  }
+  return {
+    code: 'idle',
+    label: tested ? 'Idle' : 'Untested',
+    symbol: '○',
+    tone: 'gray',
+    hint: message || 'Run Test to verify connectivity',
+  };
+}
+
 function parseRow(row) {
   if (!row) return row;
   const secrets = JSON.parse(row.secrets || '{}');
@@ -21,6 +71,11 @@ function parseRow(row) {
   const availability =
     catalog?.availability ||
     (Object.keys(catalog?.secrets || secrets).length === 0 ? 'ready_free' : 'needs_key');
+  const hasSecrets = Object.values(secrets).some(Boolean);
+  const readyToRun =
+    availability === 'ready_free' ||
+    (availability === 'needs_key' && hasSecrets && !!row.enabled && row.status !== 'error');
+  const connectivity = connectivityOf(row, { hasSecrets, availability, readyToRun });
   return {
     ...row,
     enabled: !!row.enabled,
@@ -28,16 +83,27 @@ function parseRow(row) {
     channel: row.channel || '',
     config,
     secrets: masked,
-    hasSecrets: Object.values(secrets).some(Boolean),
+    hasSecrets,
     pricing,
     availability,
-    readyToRun:
-      availability === 'ready_free' ||
-      (availability === 'needs_key' &&
-        Object.values(secrets).some(Boolean) &&
-        !!row.enabled &&
-        row.status !== 'error'),
+    readyToRun,
+    last_test_ok: row.last_test_ok == null ? null : !!row.last_test_ok,
+    last_test_message: row.last_test_message || '',
+    connectivity,
   };
+}
+
+function saveProbeResult(id, probe) {
+  const ts = probe.testedAt || now();
+  const status = probe.status === 'needs_credentials' ? 'ready' : probe.status;
+  const ok =
+    probe.ok === true ? 1 : probe.status === 'needs_credentials' ? null : 0;
+  db.prepare(
+    `UPDATE api_integrations
+     SET status=?, last_tested_at=?, last_test_message=?, last_test_ok=?, updated_at=?
+     WHERE id=?`
+  ).run(status, ts, probe.message || '', ok, ts, id);
+  return ts;
 }
 
 export function registerIntegrationRoutes(app) {
@@ -143,11 +209,7 @@ export function registerIntegrationRoutes(app) {
       if (!existing) return res.status(404).json({ error: 'Integration not found' });
       try {
         const probe = await verifyIntegration(existing);
-        const ts = probe.testedAt || now();
-        const status = probe.status === 'needs_credentials' ? 'ready' : probe.status;
-        db.prepare(
-          'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
-        ).run(status, ts, ts, req.params.id);
+        const ts = saveProbeResult(req.params.id, probe);
         res.json({
           ok: probe.ok,
           status: probe.status,
@@ -158,10 +220,12 @@ export function registerIntegrationRoutes(app) {
           integration: parseRow(db.prepare('SELECT * FROM api_integrations WHERE id = ?').get(req.params.id)),
         });
       } catch (err) {
-        const ts = now();
-        db.prepare(
-          'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
-        ).run('error', ts, ts, req.params.id);
+        const ts = saveProbeResult(req.params.id, {
+          ok: false,
+          status: 'error',
+          message: err.message || 'Integration test failed',
+          testedAt: now(),
+        });
         res.status(500).json({
           ok: false,
           status: 'error',
@@ -185,11 +249,7 @@ export function registerIntegrationRoutes(app) {
       for (const row of rows) {
         try {
           const probe = await verifyIntegration(row);
-          const ts = probe.testedAt || now();
-          const status = probe.status === 'needs_credentials' ? 'ready' : probe.status;
-          db.prepare(
-            'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
-          ).run(status, ts, ts, row.id);
+          saveProbeResult(row.id, probe);
           results.push({
             id: row.id,
             provider: row.provider,
@@ -199,12 +259,17 @@ export function registerIntegrationRoutes(app) {
             status: probe.status,
             message: probe.message,
             detail: probe.detail || null,
+            connectivity: parseRow(
+              db.prepare('SELECT * FROM api_integrations WHERE id = ?').get(row.id)
+            ).connectivity,
           });
         } catch (err) {
-          const ts = now();
-          db.prepare(
-            'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
-          ).run('error', ts, ts, row.id);
+          saveProbeResult(row.id, {
+            ok: false,
+            status: 'error',
+            message: err.message || 'Test failed',
+            testedAt: now(),
+          });
           results.push({
             id: row.id,
             provider: row.provider,

@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import db from '../db/db.js';
 import { authRequired, requirePermission } from '../auth/middleware.js';
 import { selfTestIntegration } from '../services/outreach.js';
+import { verifyIntegration } from '../services/integrationVerify.js';
 import { dialoguesFor, PRODUCTS } from '../services/channels/dialogues.js';
 import { catalogByProvider, INTEGRATION_CATALOG } from '../services/channels/catalog.js';
 
@@ -32,7 +33,10 @@ function parseRow(row) {
     availability,
     readyToRun:
       availability === 'ready_free' ||
-      (availability === 'needs_key' && Object.values(secrets).some(Boolean) && !!row.enabled),
+      (availability === 'needs_key' &&
+        Object.values(secrets).some(Boolean) &&
+        !!row.enabled &&
+        row.status !== 'error'),
   };
 }
 
@@ -105,6 +109,12 @@ export function registerIntegrationRoutes(app) {
         }
       }
       const config = b.config ? { ...JSON.parse(existing.config || '{}'), ...b.config } : JSON.parse(existing.config || '{}');
+      const hasSecrets = Object.values(nextSecrets).some(Boolean);
+      let nextStatus = b.status ?? existing.status;
+      // If credentials were cleared, don't leave a stale "connected"/"error" badge
+      if (!hasSecrets && (nextStatus === 'connected' || nextStatus === 'error')) {
+        nextStatus = 'ready';
+      }
       db.prepare(`
         UPDATE api_integrations
         SET label=?, category=?, enabled=?, status=?, config=?, secrets=?, notes=?, updated_at=?
@@ -113,7 +123,7 @@ export function registerIntegrationRoutes(app) {
         b.label ?? existing.label,
         b.category ?? existing.category,
         b.enabled !== undefined ? (b.enabled ? 1 : 0) : existing.enabled,
-        b.status ?? existing.status,
+        nextStatus,
         JSON.stringify(config),
         JSON.stringify(nextSecrets),
         b.notes ?? existing.notes,
@@ -128,24 +138,92 @@ export function registerIntegrationRoutes(app) {
     '/api/integrations/:id/test',
     authRequired,
     requirePermission('api_integrations:write'),
-    (req, res) => {
+    async (req, res) => {
       const existing = db.prepare('SELECT * FROM api_integrations WHERE id = ?').get(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Integration not found' });
-      const secrets = JSON.parse(existing.secrets || '{}');
-      const hasKey = Object.values(secrets).some(Boolean);
-      const status = hasKey ? 'connected' : 'ready';
-      const ts = now();
-      db.prepare(
-        'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
-      ).run(status, ts, ts, req.params.id);
+      try {
+        const probe = await verifyIntegration(existing);
+        const ts = probe.testedAt || now();
+        const status = probe.status === 'needs_credentials' ? 'ready' : probe.status;
+        db.prepare(
+          'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
+        ).run(status, ts, ts, req.params.id);
+        res.json({
+          ok: probe.ok,
+          status: probe.status,
+          message: probe.message,
+          detail: probe.detail || null,
+          httpStatus: probe.httpStatus || null,
+          testedAt: ts,
+          integration: parseRow(db.prepare('SELECT * FROM api_integrations WHERE id = ?').get(req.params.id)),
+        });
+      } catch (err) {
+        const ts = now();
+        db.prepare(
+          'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
+        ).run('error', ts, ts, req.params.id);
+        res.status(500).json({
+          ok: false,
+          status: 'error',
+          message: err.message || 'Integration test failed',
+          testedAt: ts,
+        });
+      }
+    }
+  );
+
+  /** Run connectivity checks for every integration (one-by-one sequential). */
+  app.post(
+    '/api/integrations/test-all',
+    authRequired,
+    requirePermission('api_integrations:write'),
+    async (_req, res) => {
+      const rows = db
+        .prepare('SELECT * FROM api_integrations ORDER BY category, is_default DESC, label')
+        .all();
+      const results = [];
+      for (const row of rows) {
+        try {
+          const probe = await verifyIntegration(row);
+          const ts = probe.testedAt || now();
+          const status = probe.status === 'needs_credentials' ? 'ready' : probe.status;
+          db.prepare(
+            'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
+          ).run(status, ts, ts, row.id);
+          results.push({
+            id: row.id,
+            provider: row.provider,
+            label: row.label,
+            category: row.category,
+            ok: probe.ok,
+            status: probe.status,
+            message: probe.message,
+            detail: probe.detail || null,
+          });
+        } catch (err) {
+          const ts = now();
+          db.prepare(
+            'UPDATE api_integrations SET status=?, last_tested_at=?, updated_at=? WHERE id=?'
+          ).run('error', ts, ts, row.id);
+          results.push({
+            id: row.id,
+            provider: row.provider,
+            label: row.label,
+            category: row.category,
+            ok: false,
+            status: 'error',
+            message: err.message || 'Test failed',
+            detail: null,
+          });
+        }
+      }
       res.json({
-        ok: true,
-        status,
-        message: hasKey
-          ? `${existing.label} credentials accepted — ready for live calls`
-          : `${existing.label} is ready. Add API credentials to go live.`,
-        testedAt: ts,
-        integration: parseRow(db.prepare('SELECT * FROM api_integrations WHERE id = ?').get(req.params.id)),
+        ok: results.every((r) => r.ok || r.status === 'needs_credentials'),
+        tested: results.length,
+        passed: results.filter((r) => r.ok).length,
+        needsCredentials: results.filter((r) => r.status === 'needs_credentials').length,
+        failed: results.filter((r) => !r.ok && r.status !== 'needs_credentials').length,
+        results,
       });
     }
   );

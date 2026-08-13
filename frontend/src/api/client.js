@@ -204,6 +204,7 @@ export const api = {
   updateIntegration: (id, body) =>
     request(`/api/integrations/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   testIntegration: (id) => request(`/api/integrations/${id}/test`, { method: 'POST' }),
+  testAllIntegrations: () => request('/api/integrations/test-all', { method: 'POST' }),
   createIntegration: (body) =>
     request('/api/integrations', { method: 'POST', body: JSON.stringify(body) }),
 };

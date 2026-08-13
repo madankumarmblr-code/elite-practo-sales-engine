@@ -13,6 +13,8 @@ export default function ApiIntegrations() {
   const [selfTest, setSelfTest] = useState(null);
   const [selfForm, setSelfForm] = useState({ phone: '', email: '', product: 'prime' });
   const [selfBusy, setSelfBusy] = useState(false);
+  const [testAllBusy, setTestAllBusy] = useState(false);
+  const [lastBatch, setLastBatch] = useState(null);
 
   async function load() {
     try {
@@ -81,10 +83,30 @@ export default function ApiIntegrations() {
     }
     try {
       const res = await api.testIntegration(id);
-      toast(res.message);
+      toast(res.message || (res.ok ? 'Test passed' : 'Test failed'));
       load();
     } catch (e) {
       toast(e.message);
+    }
+  }
+
+  async function testAll() {
+    if (!can('api_integrations:write')) {
+      toast('You do not have permission to test integrations');
+      return;
+    }
+    setTestAllBusy(true);
+    try {
+      const res = await api.testAllIntegrations();
+      setLastBatch(res);
+      toast(
+        `Checked ${res.tested}: ${res.passed} OK · ${res.needsCredentials} need keys · ${res.failed} failed`
+      );
+      load();
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      setTestAllBusy(false);
     }
   }
 
@@ -138,6 +160,11 @@ export default function ApiIntegrations() {
           </p>
         </div>
         <div className="topbar-actions">
+          {can('api_integrations:write') ? (
+            <button type="button" className="btn btn-primary" disabled={testAllBusy} onClick={testAll}>
+              {testAllBusy ? 'Testing all…' : 'Test all integrations'}
+            </button>
+          ) : null}
           <button type="button" className="btn btn-secondary" onClick={() => exportIntegrations('json')}>
             Export JSON
           </button>
@@ -146,6 +173,55 @@ export default function ApiIntegrations() {
           </button>
         </div>
       </div>
+
+      {lastBatch ? (
+        <div className="panel" style={{ marginBottom: '1rem' }}>
+          <h2>Last connectivity sweep</h2>
+          <p className="muted" style={{ marginTop: 0 }}>
+            {lastBatch.passed} passed · {lastBatch.needsCredentials} waiting for API keys ·{' '}
+            {lastBatch.failed} failed
+          </p>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>Integration</th>
+                  <th>Result</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lastBatch.results.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <strong>{r.label}</strong>
+                      <div className="muted" style={{ fontSize: '0.82rem' }}>
+                        {r.provider} · {r.category}
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          r.ok
+                            ? 'badge-green'
+                            : r.status === 'needs_credentials'
+                              ? 'badge-teal'
+                              : 'badge-coral'
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="muted" style={{ fontSize: '0.85rem' }}>
+                      {r.message}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       <div className="panel" style={{ marginBottom: '1rem' }}>
         <h2>Availability</h2>
@@ -221,9 +297,11 @@ export default function ApiIntegrations() {
                         className={`badge ${
                           item.status === 'connected'
                             ? 'badge-green'
-                            : item.status === 'ready'
-                              ? 'badge-teal'
-                              : 'badge-gray'
+                            : item.status === 'error'
+                              ? 'badge-coral'
+                              : item.status === 'ready'
+                                ? 'badge-teal'
+                                : 'badge-gray'
                         }`}
                       >
                         {item.status}

@@ -31,6 +31,14 @@ export default function LeadManagement() {
   const [replies, setReplies] = useState(null);
   const [inbound, setInbound] = useState('');
   const [selectedIds, setSelectedIds] = useState({});
+  const [productPitch, setProductPitch] = useState('prime');
+  const [draft, setDraft] = useState(null);
+  const [actionBusy, setActionBusy] = useState(false);
+
+  const selectedCount = Object.values(selectedIds).filter(Boolean).length;
+  const selectedLeadIds = Object.entries(selectedIds)
+    .filter(([, v]) => v)
+    .map(([id]) => id);
 
   async function load() {
     try {
@@ -140,11 +148,9 @@ export default function LeadManagement() {
   }
 
   async function bulkQualify(temperature) {
-    const ids = Object.entries(selectedIds)
-      .filter(([, v]) => v)
-      .map(([id]) => id);
+    const ids = selectedLeadIds;
     if (!ids.length) {
-      toast('Select leads in table view first');
+      toast('Select leads first');
       return;
     }
     try {
@@ -154,6 +160,46 @@ export default function LeadManagement() {
       load();
     } catch (err) {
       toast(err.message);
+    }
+  }
+
+  async function draftForSelected() {
+    const id = selectedLeadIds[0];
+    if (!id) {
+      toast('Select one lead for AI draft');
+      return;
+    }
+    setActionBusy(true);
+    try {
+      const data = await api.aiDraft({ leadId: id, product: productPitch });
+      setDraft(data);
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function launchAutopilot() {
+    const ids = selectedLeadIds;
+    if (!ids.length) {
+      toast('Select leads to launch Autopilot');
+      return;
+    }
+    setActionBusy(true);
+    try {
+      const run = await api.runAutopilotForLeads({
+        leadIds: ids,
+        mode: 'dry_run',
+        product: productPitch,
+      });
+      toast(run.message || 'Autopilot launched');
+      setSelectedIds({});
+      load();
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setActionBusy(false);
     }
   }
 
@@ -200,7 +246,9 @@ export default function LeadManagement() {
       <div className="topbar">
         <div>
           <h1>Lead Management</h1>
-          <p>Track stages, scores, and ownership across your sales pipeline.</p>
+          <p>
+            Pipeline for imported leads — select leads below for Hot/Warm/Skip, AI drafts, and Autopilot.
+          </p>
         </div>
         <div className="topbar-actions">
           <button
@@ -220,20 +268,11 @@ export default function LeadManagement() {
           <button type="button" className="btn btn-primary" onClick={openCreate}>
             Add lead
           </button>
-          <button type="button" className="btn btn-ghost" onClick={() => bulkQualify('hot')}>
-            Hot
-          </button>
-          <button type="button" className="btn btn-ghost" onClick={() => bulkQualify('warm')}>
-            Warm
-          </button>
-          <button type="button" className="btn btn-ghost" onClick={() => bulkQualify('skip')}>
-            Skip
-          </button>
         </div>
       </div>
 
       <div className="panel" style={{ marginBottom: '1rem' }}>
-        <div className="toolbar" style={{ marginBottom: 0 }}>
+        <div className="toolbar" style={{ marginBottom: 0, flexWrap: 'wrap', gap: 8 }}>
           <input
             type="search"
             placeholder="Filter leads…"
@@ -255,6 +294,68 @@ export default function LeadManagement() {
         </div>
       </div>
 
+      <div className="panel" style={{ marginBottom: '1rem' }}>
+        <h2>Selected lead actions ({selectedCount})</h2>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
+          After sending clinics from Lead Generator, select leads on the board or table, then use these
+          actions.
+        </p>
+        <div className="toolbar" style={{ marginBottom: 0, flexWrap: 'wrap', gap: 8 }}>
+          <select
+            value={productPitch}
+            onChange={(e) => setProductPitch(e.target.value)}
+            title="Product pitch for AI drafts / Autopilot"
+            disabled={!selectedCount}
+          >
+            <option value="prime">Prime</option>
+            <option value="reach">Reach</option>
+            <option value="video">Video</option>
+            <option value="prime_reach">Prime + Reach</option>
+            <option value="full_suite">Full suite</option>
+          </select>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={!selectedCount || actionBusy}
+            onClick={() => bulkQualify('hot')}
+          >
+            Hot
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={!selectedCount || actionBusy}
+            onClick={() => bulkQualify('warm')}
+          >
+            Warm
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={!selectedCount || actionBusy}
+            onClick={() => bulkQualify('skip')}
+          >
+            Skip
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={!selectedCount || actionBusy}
+            onClick={draftForSelected}
+          >
+            {actionBusy ? 'Working…' : 'AI draft'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={!selectedCount || actionBusy}
+            onClick={launchAutopilot}
+          >
+            Autopilot selected
+          </button>
+        </div>
+      </div>
+
       {view === 'board' ? (
         <div className="pipeline">
           {stages.map((s) => (
@@ -265,8 +366,39 @@ export default function LeadManagement() {
               </header>
               {(byStage[s.slug] || []).map((l) => (
                 <div className="lead-card" key={l.id} onClick={() => openEdit(l)}>
-                  <h4>{l.name}</h4>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                    }}
+                  >
+                    <h4 style={{ margin: 0 }}>{l.name}</h4>
+                    <input
+                      type="checkbox"
+                      checked={!!selectedIds[l.id]}
+                      title="Select for Hot / Warm / Skip / AI draft / Autopilot"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() =>
+                        setSelectedIds((prev) => ({ ...prev, [l.id]: !prev[l.id] }))
+                      }
+                    />
+                  </div>
                   <p>{l.company}</p>
+                  {l.temperature ? (
+                    <span
+                      className={`badge ${
+                        l.temperature === 'hot'
+                          ? 'badge-coral'
+                          : l.temperature === 'warm'
+                            ? 'badge-teal'
+                            : 'badge-gray'
+                      }`}
+                    >
+                      {l.temperature}
+                    </span>
+                  ) : null}
                   <div className="meta">
                     <span className="score">{l.score}</span>
                     <span>{formatCurrency(l.value)}</span>
@@ -351,6 +483,53 @@ export default function LeadManagement() {
           </div>
         </div>
       )}
+
+      {draft ? (
+        <div className="modal-backdrop" onClick={() => setDraft(null)}>
+          <div className="modal panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+            <h2>AI outreach draft</h2>
+            <p className="muted" style={{ marginTop: 0 }}>
+              {draft.channelLabel} · {draft.productLabel}
+              {draft.aiNote ? ` · ${draft.aiNote}` : ''}
+            </p>
+            <div className="muted" style={{ fontSize: '0.85rem', marginBottom: 8 }}>
+              Smart pick: {(draft.smartPick?.reasons || []).join(' · ')}
+            </div>
+            {draft.subject ? (
+              <label className="field">
+                Subject
+                <input readOnly value={draft.subject} />
+              </label>
+            ) : null}
+            <label className="field">
+              Message
+              <textarea readOnly rows={10} value={draft.body} />
+            </label>
+            {draft.steps?.length ? (
+              <div className="muted" style={{ fontSize: '0.85rem' }}>
+                Steps: {draft.steps.join(' → ')}
+              </div>
+            ) : null}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  navigator.clipboard?.writeText(
+                    [draft.subject, draft.body].filter(Boolean).join('\n\n')
+                  );
+                  toast('Draft copied');
+                }}
+              >
+                Copy
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => setDraft(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {open ? (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>

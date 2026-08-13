@@ -199,6 +199,25 @@ function ensureDefaultCampaigns() {
   }
 }
 
+/** Remove synthetic / demo inventory leads left from older builds. */
+function purgeSyntheticLeads() {
+  try {
+    const del = db.prepare(`
+      DELETE FROM leads
+      WHERE lower(coalesce(source, '')) LIKE '%sheet + locality%'
+         OR lower(coalesce(source, '')) LIKE '%locality reference%'
+         OR lower(coalesce(notes, '')) LIKE '%discovery source: sheet_locality%'
+         OR lower(coalesce(notes, '')) LIKE '%zone locality expansion:%'
+    `);
+    const info = del.run();
+    if (info.changes) {
+      console.log(`Purged ${info.changes} synthetic/demo lead(s)`);
+    }
+  } catch (err) {
+    console.warn('Synthetic lead purge skipped:', err.message);
+  }
+}
+
 /**
  * Bootstrap system defaults — Super Admin, integrations, ready AI pilots.
  */
@@ -346,6 +365,7 @@ export function bootstrap() {
 
   ensureIntegrations();
   ensureDefaultCampaigns();
+  purgeSyntheticLeads();
 
   const ts = now();
   const presetEmails = [

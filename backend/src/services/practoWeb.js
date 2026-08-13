@@ -137,11 +137,7 @@ export function listingToLead(entity, { city, zone, locality, keyword } = {}) {
 
   const practoUrl = cleanPractoUrl(branch?.url || entity.url);
   const addr = entity.address || branch?.address || {};
-  const area =
-    locality ||
-    addr.addressLocality ||
-    zone ||
-    '';
+  const area = addr.addressLocality || locality || zone || '';
   const phone = entity.telephone || branch?.telephone || '';
   const rating = ratingFromEntity(entity) || ratingFromEntity(branch);
   const reviews = reviewCountFromEntity(entity) || reviewCountFromEntity(branch);

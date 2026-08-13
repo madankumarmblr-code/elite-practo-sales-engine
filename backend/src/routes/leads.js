@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
 import db from '../db/db.js';
 import { discoverClinics, getDiscoveryMeta } from '../services/clinicDiscovery.js';
-import { leadDedupeKeys, normalizeName, normalizePhone } from '../services/liveDiscovery.js';
+import { leadDedupeKeys, normalizeName, normalizePhone, isAuthenticLead } from '../services/liveDiscovery.js';
 import {
   buildOutreachDraft,
   suggestFollowUp,
@@ -241,7 +241,8 @@ export function registerLeadRoutes(app) {
       keyword,
       keywords,
       limit = null,
-      live = false,
+      live = true,
+      allowSynthetic = false,
       maxLocalities = 40,
     } = body;
     const kw = keyword || specialty || (Array.isArray(keywords) ? keywords[0] : null);
@@ -263,6 +264,7 @@ export function registerLeadRoutes(app) {
         keywords,
         limit,
         live,
+        allowSynthetic: allowSynthetic === true || allowSynthetic === '1',
         maxLocalities,
       });
       if (discovery.error && !discovery.results?.length) {
@@ -333,6 +335,24 @@ export function registerLeadRoutes(app) {
     const tx = db.transaction((items) => {
       const seen = new Set();
       for (const item of items) {
+        if (!isAuthenticLead(item) && item.discoverySource === 'sheet_locality') {
+          skipped.push({
+            reason: 'synthetic_rejected',
+            company: item.clinicName || item.company || '',
+          });
+          continue;
+        }
+        if (
+          /sheet_locality|zone locality expansion|sheet \+ locality/i.test(
+            `${item.discoverySource || ''} ${item.source || ''} ${item.matchReason || ''}`
+          )
+        ) {
+          skipped.push({
+            reason: 'synthetic_rejected',
+            company: item.clinicName || item.company || '',
+          });
+          continue;
+        }
         const owner = item.owner || {};
         const phone = normalizePhone(owner.phone || item.phone || '');
         const email = String(owner.email || item.email || '').trim().toLowerCase();

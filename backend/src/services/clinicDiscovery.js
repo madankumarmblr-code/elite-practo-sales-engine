@@ -9,7 +9,7 @@ import {
   getZoneLocalityMeta,
   listLocalities,
 } from './zoneLocalities.js';
-import { dedupeLeads, liveDiscoverAreas } from './liveDiscovery.js';
+import { dedupeLeads, liveDiscoverAreas, filterAuthenticLeads, isAuthenticLead } from './liveDiscovery.js';
 import { applySmartChannelToDiscoveryLead } from './aiAssist.js';
 import { specialtySlug, slugifyPracto } from './practoWeb.js';
 
@@ -255,7 +255,7 @@ export function getDiscoveryMeta() {
     filters: {
       practo: ['all', 'yes', 'no'],
       platforms: PLATFORMS,
-      sources: ['all', 'live', 'sheet_locality', 'nominatim', 'overpass', 'google_places'],
+      sources: ['all', 'live', 'practo_web', 'nominatim', 'overpass', 'google_places'],
       contact: ['all', 'phone', 'email', 'website'],
     },
   };
@@ -268,9 +268,9 @@ function asList(value) {
 }
 
 /**
- * Discover clinics for City → Zone → Specialty, expanding each zone into
- * covered localities from the internal Reach locality reference file, then
- * enriching with free OSM / optional Google Places results. Deduped.
+ * Discover authentic clinics for City → Zone → Specialty.
+ * Uses live Practo.com + OSM (+ Google Places when keyed). Synthetic sheet
+ * inventory placeholders are not returned.
  */
 export async function discoverClinics({
   city,
@@ -281,7 +281,8 @@ export async function discoverClinics({
   keywords,
   localities,
   limit = null,
-  live = false,
+  live = true,
+  allowSynthetic = false,
   maxLocalities = 40,
 } = {}) {
   const kwList = asList(keywords).length ? asList(keywords) : asList(keyword || specialty);
@@ -299,7 +300,6 @@ export async function discoverClinics({
           sheetTargets.push(...resolveDiscoveryTargets({ city, zone: z, keyword: kw }));
         }
       }
-      // unique by city|zone|keyword
       const seen = new Set();
       sheetTargets = sheetTargets.filter((t) => {
         const k = `${t.city}|${t.zone}|${t.keyword}`;
@@ -338,7 +338,6 @@ export async function discoverClinics({
       areaSeen.add(key);
       areas.push({ ...a, keyword: t.keyword });
     }
-    // If locality file has no rows for this zone, still use zone name
     if (!expanded.length) {
       areas.push({
         city: t.city,
@@ -350,38 +349,43 @@ export async function discoverClinics({
     }
   }
 
-  const scannedSources = PLATFORMS.map((name, i) => ({
-    name,
-    status: 'queued',
-    latencyMs: 80 + i * 20,
-  }));
+  const scannedSources = [
+    { name: 'Practo.com', status: 'queued' },
+    { name: 'OpenStreetMap', status: 'queued' },
+    { name: 'Google Places', status: 'queued' },
+  ];
 
-  // Sheet/locality inventory (fast path) + optional time-budgeted live enrichment
+  // Optional legacy synthetic inventory (off by default)
   const sheetLeads = [];
   const perLocality = {};
-  for (const area of areas) {
-    const count = clinicCountForLocality(area, area.keyword);
-    perLocality[area.locality] = (perLocality[area.locality] || 0) + count;
-    for (let i = 0; i < count; i += 1) {
-      sheetLeads.push(
-        makeClinic({
-          city: area.city,
-          zone: area.zone,
-          locality: area.locality,
-          zoneType: area.zoneType,
-          keyword: area.keyword,
-          index: i,
-        })
-      );
+  if (allowSynthetic) {
+    for (const area of areas) {
+      const count = clinicCountForLocality(area, area.keyword);
+      perLocality[area.locality] = (perLocality[area.locality] || 0) + count;
+      for (let i = 0; i < count; i += 1) {
+        sheetLeads.push(
+          makeClinic({
+            city: area.city,
+            zone: area.zone,
+            locality: area.locality,
+            zoneType: area.zoneType,
+            keyword: area.keyword,
+            index: i,
+          })
+        );
+      }
+    }
+  } else {
+    for (const area of areas) {
+      perLocality[area.locality] = perLocality[area.locality] || 0;
     }
   }
 
   const liveEnabled = live !== false && live !== '0';
   const onServerless = Boolean(process.env.VERCEL);
-  // Keep well under Vercel maxDuration (60s): live OSM fan-out is the slow path
-  const liveBudgetMs = onServerless ? 16000 : 40000;
-  const maxLiveAreas = onServerless ? 3 : 8;
-  const perArea = onServerless ? 5 : 8;
+  const liveBudgetMs = onServerless ? 22000 : 50000;
+  const maxLiveAreas = onServerless ? 6 : 12;
+  const perArea = onServerless ? 8 : 12;
 
   let liveLeads = [];
   let liveScanned = [];
@@ -389,16 +393,25 @@ export async function discoverClinics({
   if (liveEnabled) {
     try {
       const liveAreas = areas.slice(0, Math.min(maxLiveAreas, areas.length));
-      const liveResult = await liveDiscoverAreas({
-        areas: liveAreas,
-        keyword: primaryKeyword,
-        maxAreas: liveAreas.length,
-        perArea,
-        deadlineMs: liveBudgetMs,
-      });
-      liveLeads = liveResult.leads || [];
-      liveScanned = liveResult.scannedSources || [];
-      liveTimedOut = Boolean(liveResult.timedOut);
+      // Fan out across distinct keywords when multi-select
+      const byKeyword = new Map();
+      for (const a of liveAreas) {
+        const kw = a.keyword || primaryKeyword;
+        if (!byKeyword.has(kw)) byKeyword.set(kw, []);
+        byKeyword.get(kw).push(a);
+      }
+      for (const [kw, kwAreas] of byKeyword.entries()) {
+        const liveResult = await liveDiscoverAreas({
+          areas: kwAreas,
+          keyword: kw,
+          maxAreas: kwAreas.length,
+          perArea,
+          deadlineMs: liveBudgetMs,
+        });
+        liveLeads.push(...(liveResult.leads || []));
+        liveScanned.push(...(liveResult.scannedSources || []));
+        liveTimedOut = liveTimedOut || Boolean(liveResult.timedOut);
+      }
       for (const s of liveScanned) {
         scannedSources.push(s);
       }
@@ -408,25 +421,11 @@ export async function discoverClinics({
     }
   }
 
-  // Prefer live rows; only fill localities that have little/no live coverage
-  const liveCountByLocality = {};
-  for (const lead of liveLeads) {
-    const loc = lead.locality || lead.zone || '';
-    liveCountByLocality[loc] = (liveCountByLocality[loc] || 0) + 1;
-  }
-  const MIN_LIVE_PER_LOCALITY = 3;
-  const gapFillSheetLeads =
-    liveLeads.length > 0
-      ? sheetLeads.filter((lead) => {
-          const loc = lead.locality || lead.zone || '';
-          return (liveCountByLocality[loc] || 0) < MIN_LIVE_PER_LOCALITY;
-        })
-      : sheetLeads;
-
-  const beforeDedupe = liveLeads.length + gapFillSheetLeads.length;
-  let results = dedupeLeads([...liveLeads, ...gapFillSheetLeads]).map(
-    applySmartChannelToDiscoveryLead
-  );
+  const combined = allowSynthetic ? [...liveLeads, ...sheetLeads] : liveLeads;
+  const beforeDedupe = combined.length;
+  const authentic = filterAuthenticLeads(combined);
+  const rejectedSynthetic = beforeDedupe - authentic.length;
+  let results = dedupeLeads(authentic).map(applySmartChannelToDiscoveryLead);
   results.sort(
     (a, b) =>
       b.score - a.score ||
@@ -457,6 +456,7 @@ export async function discoverClinics({
       fullInventory: !numericLimit,
       liveEnabled,
       liveTimedOut,
+      authenticOnly: !allowSynthetic,
     },
     scannedSources,
     availableKeywords: listKeywordsFor(city, primaryZone),
@@ -465,17 +465,19 @@ export async function discoverClinics({
     summary: {
       total: results.length,
       totalAvailable: totalBeforeLimit,
-      duplicatesRemoved: Math.max(0, beforeDedupe - totalBeforeLimit),
+      duplicatesRemoved: Math.max(0, authentic.length - totalBeforeLimit),
+      syntheticRejected: rejectedSynthetic,
       zonesCovered: zonesCovered.length,
       localitiesCovered: localitiesCovered.length,
       perLocality,
       withPractoProfile: withPracto,
       withoutPractoProfile: results.length - withPracto,
       liveLeads: liveLeads.length,
-      sheetLocalityLeads: gapFillSheetLeads.length,
+      sheetLocalityLeads: allowSynthetic ? sheetLeads.length : 0,
       liveTimedOut,
       platformsCovered: PLATFORMS.length,
-      source: liveEnabled ? 'google_sheet+zone_localities+live' : 'google_sheet+zone_localities',
+      source: liveEnabled ? 'practo.com+osm+places' : 'none',
+      authenticOnly: !allowSynthetic,
     },
     count: results.length,
     results: results.map((r) => ({
@@ -486,9 +488,10 @@ export async function discoverClinics({
       company: r.clinicName || r.company,
       title: r.owner?.title || r.title || 'Clinic Owner',
       platformNames: r.platformNames || r.platforms?.map((p) => p.name) || [],
-      source: r.source || 'Multi-source Discovery',
+      source: r.source || 'Live discovery',
       location: `${r.locality || r.zone}, ${r.city}`,
       importKey: r.id || nanoid(8),
+      authentic: isAuthenticLead(r),
     })),
   };
 }

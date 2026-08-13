@@ -72,9 +72,43 @@ export function leadDedupeKey(lead) {
   return leadDedupeKeys(lead)[0];
 }
 
+const AUTHENTIC_SOURCES = new Set(['nominatim', 'overpass', 'google_places', 'practo_web']);
+
 /**
- * Collapse duplicates across OSM / Places / sheet inventory.
- * Keeps the richest record when keys collide (phone, placeId, name+locality).
+ * True only for live-sourced clinics (OSM / Google Places / Practo.com).
+ * Rejects synthetic "sheet_locality" inventory placeholders.
+ */
+export function isAuthenticLead(lead) {
+  if (!lead || typeof lead !== 'object') return false;
+  const src = String(lead.discoverySource || '').trim();
+  if (src === 'sheet_locality') return false;
+  if (/sheet\s*\+\s*locality|synthetic|demo|sample/i.test(String(lead.source || ''))) return false;
+  if (/zone locality expansion/i.test(String(lead.matchReason || ''))) return false;
+
+  const name = String(lead.clinicName || lead.company || lead.name || '').trim();
+  if (name.length < 3) return false;
+  if (/^(clinic|hospital|doctor|unknown|listing contact)$/i.test(name)) return false;
+
+  if (AUTHENTIC_SOURCES.has(src)) return true;
+
+  // Fallback for imported rows that lost discoverySource but still have real signals
+  const phone = normalizePhone(lead.phone || lead.owner?.phone);
+  const email = String(lead.email || lead.owner?.email || '').trim();
+  const practoUrl = String(lead.practo?.url || '');
+  const hasPracto = Boolean(lead.practo?.hasProfile && /practo\.com/i.test(practoUrl));
+  const hasPlace = Boolean(lead.placeId);
+  const hasWebsite = Boolean(lead.website) && /^https?:\/\//i.test(String(lead.website));
+  return Boolean(phone || hasPracto || hasPlace || (email.includes('@') && hasWebsite));
+}
+
+export function filterAuthenticLeads(leads) {
+  if (!Array.isArray(leads)) return [];
+  return leads.filter(isAuthenticLead);
+}
+
+/**
+ * Collapse duplicates across OSM / Places / Practo.
+ * Keeps the richest record when keys collide (phone, placeId, name+locality, Practo URL).
  */
 export function dedupeLeads(leads) {
   const keyToIndex = new Map();
@@ -82,6 +116,13 @@ export function dedupeLeads(leads) {
 
   for (const lead of leads) {
     const keys = leadDedupeKeys(lead);
+    // Practo profile URL is a strong identity
+    const practoUrl = String(lead.practo?.url || '')
+      .split('?')[0]
+      .replace(/\/$/, '')
+      .toLowerCase();
+    if (practoUrl.includes('practo.com')) keys.push(`practo:${practoUrl}`);
+
     let hitIndex = -1;
     for (const key of keys) {
       if (keyToIndex.has(key)) {
@@ -91,7 +132,21 @@ export function dedupeLeads(leads) {
     }
     if (hitIndex >= 0) {
       if (richness(lead) > richness(out[hitIndex])) {
-        out[hitIndex] = lead;
+        // Prefer authentic Practo profile data when merging
+        const prev = out[hitIndex];
+        out[hitIndex] = {
+          ...prev,
+          ...lead,
+          practo: lead.practo?.hasProfile ? lead.practo : prev.practo,
+          platforms: mergePlatforms(prev.platforms, lead.platforms),
+          score: Math.max(Number(prev.score) || 0, Number(lead.score) || 0),
+        };
+      } else if (lead.practo?.hasProfile && !out[hitIndex].practo?.hasProfile) {
+        out[hitIndex] = {
+          ...out[hitIndex],
+          practo: lead.practo,
+          platforms: mergePlatforms(out[hitIndex].platforms, lead.platforms),
+        };
       }
       for (const key of keys) keyToIndex.set(key, hitIndex);
       continue;
@@ -99,6 +154,19 @@ export function dedupeLeads(leads) {
     const idx = out.length;
     out.push(lead);
     for (const key of keys) keyToIndex.set(key, idx);
+  }
+  return out;
+}
+
+function mergePlatforms(a, b) {
+  const list = [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])];
+  const seen = new Set();
+  const out = [];
+  for (const p of list) {
+    const name = p?.name || p;
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    out.push(typeof p === 'string' ? { name: p, listed: true } : p);
   }
   return out;
 }

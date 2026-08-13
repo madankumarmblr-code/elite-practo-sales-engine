@@ -36,7 +36,7 @@ export default function LeadGenerator() {
   const [zoneFilter, setZoneFilter] = useState('all');
   const [localityFilter, setLocalityFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('live');
   const [contactFilter, setContactFilter] = useState('all');
   const [textFilter, setTextFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -75,26 +75,23 @@ export default function LeadGenerator() {
   }, []);
 
   const runDiscovery = useCallback(
-    async (nextCriteria = criteria, { live = false } = {}) => {
+    async (nextCriteria = criteria) => {
       if (!nextCriteria.city || !nextCriteria.keyword) return;
       setBusy(true);
       setLastError('');
-      setScanStep('Expanding selected zone into covered localities…');
+      setScanStep(
+        `Loading authentic clinics from Practo.com + maps for ${nextCriteria.keyword}…`
+      );
       try {
-        await new Promise((r) => setTimeout(r, 80));
-        setScanStep(
-          live
-            ? `Enriching with live maps (budgeted) for ${nextCriteria.keyword}…`
-            : `Loading clinic inventory for ${nextCriteria.keyword}…`
-        );
         const data = await api.searchLeads({
           city: nextCriteria.city,
           zone: nextCriteria.zone || 'All',
           keyword: nextCriteria.keyword,
           specialty: nextCriteria.keyword,
-          live,
-          maxLocalities: live ? 8 : 40,
-          limit: live ? 60 : null,
+          live: true,
+          allowSynthetic: false,
+          maxLocalities: 12,
+          limit: 80,
         });
         setResults(data.results || []);
         setSummary(data.summary || null);
@@ -108,15 +105,14 @@ export default function LeadGenerator() {
           !nextCriteria.zone || nextCriteria.zone === 'All'
             ? `all zones in ${nextCriteria.city}`
             : `${nextCriteria.zone} (+ localities)`;
-        const liveNote = data.summary?.liveTimedOut
-          ? ' · live maps partially timed out (inventory kept)'
-          : live
-            ? ` · live ${data.summary?.liveLeads || 0}`
-            : '';
+        const liveNote = data.summary?.liveTimedOut ? ' · live sources partially timed out' : '';
+        const synth = data.summary?.syntheticRejected
+          ? ` · ${data.summary.syntheticRejected} sample rows dropped`
+          : '';
         toast(
-          `Loaded ${data.count} unique leads · ${data.summary?.localitiesCovered || 0} localities · ${
-            data.summary?.duplicatesRemoved || 0
-          } dupes removed · ${where}${liveNote}`
+          `Found ${data.count} authentic leads · Practo ${
+            data.summary?.withPractoProfile || 0
+          } · ${data.summary?.duplicatesRemoved || 0} dupes removed · ${where}${liveNote}${synth}`
         );
       } catch (err) {
         setResults([]);
@@ -133,8 +129,7 @@ export default function LeadGenerator() {
 
   useEffect(() => {
     if (!ready || !criteria.city || !criteria.keyword) return undefined;
-    // Auto-search uses fast inventory path so the page never hangs on live OSM
-    const t = setTimeout(() => runDiscovery(criteria, { live: false }), 280);
+    const t = setTimeout(() => runDiscovery(criteria), 280);
     return () => clearTimeout(t);
   }, [ready, criteria.city, criteria.zone, criteria.keyword]);
 
@@ -219,7 +214,7 @@ export default function LeadGenerator() {
       if (sourceFilter !== 'all') {
         const src = r.discoverySource || '';
         if (sourceFilter === 'live') {
-          if (!['nominatim', 'overpass', 'google_places'].includes(src)) return false;
+          if (!['nominatim', 'overpass', 'google_places', 'practo_web'].includes(src)) return false;
         } else if (src !== sourceFilter) return false;
       }
       if (contactFilter === 'phone' && !(r.phone || r.owner?.phone)) return false;
@@ -269,8 +264,9 @@ export default function LeadGenerator() {
         <div>
           <h1>Lead Generator</h1>
           <p>
-            Pick <strong>City → Zone → Speciality</strong> to find clinics, then send them to{' '}
-            <strong>Lead Management</strong> for Hot/Warm/Skip, AI drafts, and Autopilot.
+            Pick <strong>City → Zone → Speciality</strong> to load authentic clinics from{' '}
+            <strong>Practo.com</strong> and live maps (duplicates removed), then send them to{' '}
+            <strong>Lead Management</strong>.
           </p>
         </div>
         <div className="topbar-actions">
@@ -278,18 +274,9 @@ export default function LeadGenerator() {
             type="button"
             className="btn btn-secondary"
             disabled={busy}
-            onClick={() => runDiscovery(criteria, { live: false })}
+            onClick={() => runDiscovery(criteria)}
           >
-            Rescan
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            disabled={busy}
-            title="Optional short OSM / Places pass (stays under the server time limit)"
-            onClick={() => runDiscovery(criteria, { live: true })}
-          >
-            Enrich with live maps
+            Refresh authentic leads
           </button>
           <button type="button" className="btn btn-primary" onClick={importSelected} disabled={busy || !selectedCount}>
             Send to Lead Management ({selectedCount})
@@ -343,13 +330,11 @@ export default function LeadGenerator() {
           <label className="field">
             How locality coverage works
             <div className="muted" style={{ fontSize: '0.85rem', lineHeight: 1.45, marginTop: 6 }}>
-              Pick a zone — the system loads clinics from every locality under that zone in the
-              internal Reach reference (for example Bangalore → Vijayanagar also covers
-              Deepanjalinagar, Chandra Layout, Nagarbhavi, and more). Results are de-duplicated
-              before you send them to Lead Management. Use “Enrich with live maps” only when you
-              want a short optional OSM / Places pass on top of the inventory.
+              Pick a zone — we scan localities under that zone and pull real clinics from Practo.com,
+              OpenStreetMap, and Google Places (when configured). Sample/demo inventory rows are
+              excluded. Results are de-duplicated before you send them to Lead Management.
               {meta.localityCount ? (
-                <> Reference loaded: {meta.localityCount.toLocaleString()} localities.</>
+                <> Reference localities: {meta.localityCount.toLocaleString()}.</>
               ) : null}
             </div>
           </label>
@@ -378,7 +363,10 @@ export default function LeadGenerator() {
               <span className="badge badge-green">Practo: {summary.withPractoProfile}</span>
               <span className="badge badge-coral">No Practo: {summary.withoutPractoProfile}</span>
               <span className="badge badge-gray">Dupes removed: {summary.duplicatesRemoved || 0}</span>
-              <span className="badge badge-gray">Live: {summary.liveLeads || 0}</span>
+              <span className="badge badge-gray">Live authentic: {summary.liveLeads || 0}</span>
+              {summary.syntheticRejected ? (
+                <span className="badge badge-coral">Samples dropped: {summary.syntheticRejected}</span>
+              ) : null}
             </div>
           ) : null}
           {queryInfo?.localitiesScanned?.length ? (
@@ -467,9 +455,9 @@ export default function LeadGenerator() {
               setPage(1);
             }}
           >
-            <option value="all">All sources</option>
-            <option value="live">Live OSM/Places only</option>
-            <option value="sheet_locality">Zone locality inventory</option>
+            <option value="all">All authentic sources</option>
+            <option value="live">Live OSM/Places/Practo</option>
+            <option value="practo_web">Practo.com</option>
             <option value="overpass">OSM Overpass</option>
             <option value="nominatim">Nominatim</option>
             <option value="google_places">Google Places</option>

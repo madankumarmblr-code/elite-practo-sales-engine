@@ -20,7 +20,9 @@ function ensureIntegrations() {
   `);
 
   for (const p of INTEGRATION_CATALOG) {
-    const existing = db.prepare('SELECT id FROM api_integrations WHERE provider = ?').get(p.provider);
+    const existing = db.prepare('SELECT id, config, secrets, enabled FROM api_integrations WHERE provider = ?').get(
+      p.provider
+    );
     if (existing) {
       updateMeta.run(
         p.label,
@@ -31,6 +33,29 @@ function ensureIntegrations() {
         ts,
         p.provider
       );
+      // Migrate Practo partner-API config → practo.com website defaults
+      if (p.provider === 'practo') {
+        let cfg = {};
+        try {
+          cfg = JSON.parse(existing.config || '{}');
+        } catch {
+          cfg = {};
+        }
+        const nextCfg = {
+          ...cfg,
+          baseUrl: 'https://www.practo.com',
+          defaultCity: cfg.defaultCity || p.config.defaultCity || 'Bangalore',
+          specialty: cfg.specialty || p.config.specialty || 'dentist',
+          pricing: 'free',
+        };
+        delete nextCfg.environment;
+        delete nextCfg.version;
+        db.prepare(
+          `UPDATE api_integrations
+           SET config = ?, secrets = '{}', enabled = 1, status = CASE WHEN status = 'error' THEN 'ready' ELSE status END, updated_at = ?
+           WHERE provider = 'practo'`
+        ).run(JSON.stringify(nextCfg), ts);
+      }
     } else {
       insert.run(
         nanoid(),

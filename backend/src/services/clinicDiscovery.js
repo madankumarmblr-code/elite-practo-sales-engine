@@ -11,6 +11,7 @@ import {
 } from './zoneLocalities.js';
 import { dedupeLeads, liveDiscoverAreas } from './liveDiscovery.js';
 import { applySmartChannelToDiscoveryLead } from './aiAssist.js';
+import { specialtySlug, slugifyPracto } from './practoWeb.js';
 
 export const PLATFORMS = [
   'Google Maps',
@@ -83,11 +84,15 @@ function slugify(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 22) || 'clinic';
 }
 function citySlug(city) {
-  return city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const c = String(city || '').toLowerCase();
+  if (c === 'bengaluru') return 'bangalore';
+  return slugifyPracto(city) || 'bangalore';
 }
-function practoListingUrl(city, keyword) {
-  const slug = keyword.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return `https://www.practo.com/${citySlug(city)}/${slug}`;
+function practoListingUrl(city, keyword, locality) {
+  const parts = [citySlug(city), specialtySlug(keyword)];
+  const loc = slugifyPracto(locality);
+  if (loc) parts.push(loc);
+  return `https://www.practo.com/${parts.join('/')}`;
 }
 
 function buildPlatforms(seed, hasPracto, clinicName, city, locality, keyword, website) {
@@ -105,7 +110,7 @@ function buildPlatforms(seed, hasPracto, clinicName, city, locality, keyword, we
     {
       name: 'Practo',
       listed: hasPracto,
-      url: hasPracto ? practoListingUrl(city, keyword) : null,
+      url: hasPracto ? practoListingUrl(city, keyword, locality) : null,
     },
     {
       name: 'Justdial',
@@ -213,7 +218,7 @@ function makeClinic({ city, zone, locality, zoneType, keyword, index }) {
       : null,
     practo: {
       hasProfile: hasPracto,
-      url: hasPracto ? practoListingUrl(city, keyword) : null,
+      url: hasPracto ? practoListingUrl(city, keyword, locality) : null,
       rating: rating ? Number(rating) : null,
     },
     platforms,

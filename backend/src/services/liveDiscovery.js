@@ -4,6 +4,7 @@
  * Key-based: Google Places when configured in api_integrations.
  */
 import db from '../db/db.js';
+import { searchPractoWeb, enrichLeadsWithPractoWeb } from './practoWeb.js';
 
 const USER_AGENT = 'PractoSalesAutomation/1.0 (clinic-lead-discovery; contact=superadmin@practo.sales)';
 
@@ -507,7 +508,64 @@ export async function liveDiscoverAreas({
     } catch (err) {
       scanned.push({ name: `Google Places · ${locality}`, status: 'error', detail: err.message });
     }
+
+    if (pastDeadline()) {
+      timedOut = true;
+      scanned.push({
+        name: 'Live discovery',
+        status: 'timeout',
+        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
+      });
+      break;
+    }
+
+    // Practo.com public listings (no API key)
+    try {
+      const found = await searchPractoWeb({
+        city: area.city,
+        zone,
+        locality,
+        keyword,
+        limit: perArea,
+      });
+      if (found.results.length) {
+        leads.push(...found.results);
+        areaCount += found.results.length;
+        scanned.push({
+          name: `Practo.com · ${locality}`,
+          status: 'scanned',
+          count: found.results.length,
+        });
+      } else {
+        scanned.push({
+          name: `Practo.com · ${locality}`,
+          status: found.ok ? 'empty' : 'error',
+          count: 0,
+          detail: found.status ? `HTTP ${found.status}` : undefined,
+        });
+      }
+    } catch (err) {
+      scanned.push({ name: `Practo.com · ${locality}`, status: 'error', detail: err.message });
+    }
   }
 
-  return { leads: dedupeLeads(leads), scannedSources: scanned, timedOut };
+  let finalLeads = dedupeLeads(leads);
+  if (!timedOut && finalLeads.length) {
+    try {
+      const remaining = deadlineMs > 0 ? Math.max(0, deadlineMs - (Date.now() - started)) : 8000;
+      if (remaining > 1500) {
+        const enriched = await enrichLeadsWithPractoWeb(finalLeads, {
+          city: slice[0]?.city,
+          keyword,
+          deadlineMs: Math.min(remaining, 10000),
+        });
+        finalLeads = enriched.leads;
+        scanned.push(...enriched.scanned);
+      }
+    } catch (err) {
+      scanned.push({ name: 'Practo.com enrich', status: 'error', detail: err.message });
+    }
+  }
+
+  return { leads: dedupeLeads(finalLeads), scannedSources: scanned, timedOut };
 }

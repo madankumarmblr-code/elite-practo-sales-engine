@@ -44,8 +44,8 @@ export default function Layout({ toast }) {
         <div className="brand">
           <img src="/practo-logo-light.svg" alt="Practo" className="practo-logo" />
           <div className="brand-text">
-            <strong>Sales Automation</strong>
-            <small>{user?.roleLabel}{user?.username ? ` · @${user.username}` : ''}</small>
+            <strong>Salesmaster</strong>
+            <small>{user?.roleLabel || 'Enterprise'}</small>
           </div>
         </div>
         <nav className="nav">

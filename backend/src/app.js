@@ -14,10 +14,15 @@ import { registerIntegrationRoutes } from './routes/integrations.js';
 import { registerExportRoutes } from './routes/export.js';
 import { registerImportRoutes } from './routes/import.js';
 import { registerCommercialRoutes } from './routes/commercial.js';
+import { registerWorkspaceRoutes } from './routes/workspace.js';
 import { logEvent } from './services/logger.js';
 import { syncSheetFromGoogle } from './services/sheetSync.js';
 import { reloadLocationsIndex } from './services/locations.js';
 import { getFrontendDistDir } from './config.js';
+import {
+  durablePersistMiddleware,
+  durableStoreConfigured,
+} from './services/dbSnapshot.js';
 import './services/outreach.js';
 
 /**
@@ -63,6 +68,7 @@ export function createApp(options = {}) {
       service: 'practo-sales-api',
       env: isProd ? 'production' : 'development',
       vercel: Boolean(process.env.VERCEL),
+      durableStore: durableStoreConfigured(),
       time: new Date().toISOString(),
     });
   });
@@ -93,12 +99,17 @@ export function createApp(options = {}) {
     next();
   });
 
+  // Snapshot SQLite after successful writes (Vercel /tmp is ephemeral)
+  app.use('/api', durablePersistMiddleware);
+
   registerLeadRoutes(app);
   registerContactRoutes(app);
   registerAutopilotRoutes(app);
   registerSettingsRoutes(app);
   registerIntegrationRoutes(app);
+  registerWorkspaceRoutes(app);
   registerExportRoutes(app);
+  registerImportRoutes(app);
   registerCommercialRoutes(app);
 
   if (serveStatic) {

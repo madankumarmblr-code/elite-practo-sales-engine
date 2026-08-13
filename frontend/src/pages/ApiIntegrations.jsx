@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api, downloadExport } from '../api/client';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
+import { backupIntegration } from '../lib/workspaceBackup';
 
 const CHANNEL_LABELS = {
   whatsapp: 'WhatsApp',
@@ -101,6 +102,14 @@ function IntegrationCard({
         enabled,
         config: configDraft,
         secrets: secretsPayload,
+      });
+      backupIntegration(item.provider, {
+        enabled,
+        config: configDraft,
+        secrets: secretsPayload,
+        notes: item.notes,
+        status: item.status,
+        is_default: item.is_default,
       });
       setSecretDrafts(Object.fromEntries(secrets.map((k) => [k, ''])));
       toast('Saved — verifying API…');
@@ -286,6 +295,7 @@ export default function ApiIntegrations() {
   const [testingId, setTestingId] = useState(null);
   const [filter, setFilter] = useState('all');
   const [channelFilter, setChannelFilter] = useState('all');
+  const [durableStore, setDurableStore] = useState(null);
 
   async function load() {
     try {
@@ -297,6 +307,10 @@ export default function ApiIntegrations() {
 
   useEffect(() => {
     load();
+    fetch('/api/health')
+      .then((r) => r.json())
+      .then((h) => setDurableStore(Boolean(h.durableStore)))
+      .catch(() => setDurableStore(null));
   }, []);
 
   const counts = useMemo(() => {
@@ -370,6 +384,17 @@ export default function ApiIntegrations() {
     if (!can('api_integrations:write')) return;
     try {
       await api.updateIntegration(id, { is_default: true, enabled: true });
+      const row = items.find((i) => i.id === id);
+      if (row?.provider) {
+        backupIntegration(row.provider, {
+          enabled: true,
+          is_default: true,
+          config: row.config,
+          secrets: {},
+          notes: row.notes,
+          status: row.status,
+        });
+      }
       toast('Provider selected for this channel');
       load();
     } catch (e) {
@@ -428,6 +453,16 @@ export default function ApiIntegrations() {
           </button>
         </div>
       </div>
+
+      {durableStore === false ? (
+        <div className="panel" style={{ marginBottom: '1rem', borderColor: 'var(--amber, #d4a017)' }}>
+          <strong>API keys are kept in this browser.</strong>{' '}
+          <span className="muted">
+            After a server restart they are re-applied automatically. For shared/multi-device
+            durability, add <code>BLOB_READ_WRITE_TOKEN</code> (see VERCEL.md).
+          </span>
+        </div>
+      ) : null}
 
       <div className="panel" style={{ marginBottom: '1rem' }}>
         <div className="connectivity-summary">

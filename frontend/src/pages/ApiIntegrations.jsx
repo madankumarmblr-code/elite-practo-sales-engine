@@ -256,7 +256,11 @@ function IntegrationCard({
             type="button"
             className="btn btn-secondary"
             disabled={saving || testing}
-            onClick={() => onVerify(item.id).then(onSaved)}
+            onClick={async () => {
+              const res = await onVerify(item.id);
+              if (res?.message) toast(res.message);
+              onSaved();
+            }}
           >
             Verify only
           </button>

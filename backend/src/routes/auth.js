@@ -11,7 +11,10 @@ import {
 import { authRequired, requirePermission } from '../auth/middleware.js';
 import { issueAuthToken } from '../auth/token.js';
 import { logEvent, listEvents } from '../services/logger.js';
-import { persistDurableDbNow } from '../services/dbSnapshot.js';
+import {
+  persistDurableDbNow,
+  durableStoreConfigured,
+} from '../services/dbSnapshot.js';
 
 const now = () => new Date().toISOString();
 
@@ -213,8 +216,18 @@ export function registerAuthRoutes(app) {
       meta: { createdUserId: id, role, permissions: perms },
     });
 
-    await persistDurableDbNow();
-    res.status(201).json(publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id)));
+    const persist = await persistDurableDbNow();
+    const user = publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id));
+    if (durableStoreConfigured() && persist && persist.persisted === false) {
+      return res.status(201).json({
+        ...user,
+        durableWarning:
+          persist.reason === 'stale_instance'
+            ? 'User saved on this instance, but durable storage was behind — refresh and confirm the user list.'
+            : `User saved, but durable persist failed (${persist.reason || 'unknown'}).`,
+      });
+    }
+    res.status(201).json(user);
   });
 
   app.put('/api/users/:id', authRequired, requirePermission('users:write'), async (req, res) => {
@@ -294,8 +307,15 @@ export function registerAuthRoutes(app) {
       meta: { targetUserId: existing.id, role, permissions: perms },
     });
 
-    await persistDurableDbNow();
-    res.json(publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id)));
+    const persist = await persistDurableDbNow();
+    const user = publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id));
+    if (durableStoreConfigured() && persist && persist.persisted === false) {
+      return res.json({
+        ...user,
+        durableWarning: `User updated, but durable persist failed (${persist.reason || 'unknown'}).`,
+      });
+    }
+    res.json(user);
   });
 
   app.delete('/api/users/:id', authRequired, requirePermission('users:write'), async (req, res) => {

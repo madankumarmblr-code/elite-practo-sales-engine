@@ -294,7 +294,8 @@ function IntegrationCard({
 
 export default function ApiIntegrations() {
   const toast = useToast();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  const canWrite = user?.role === 'superadmin' || user?.isSuperAdmin || can('*');
   const [items, setItems] = useState([]);
   const [selfTest, setSelfTest] = useState(null);
   const [selfForm, setSelfForm] = useState({ phone: '', email: '', product: 'prime' });
@@ -353,7 +354,7 @@ export default function ApiIntegrations() {
   }, [items, filter, channelFilter]);
 
   async function verify(id) {
-    if (!can('api_integrations:write')) {
+    if (!canWrite) {
       toast('You do not have permission to test integrations');
       return null;
     }
@@ -370,7 +371,7 @@ export default function ApiIntegrations() {
   }
 
   async function testAll() {
-    if (!can('api_integrations:write')) {
+    if (!canWrite) {
       toast('You do not have permission to test integrations');
       return;
     }
@@ -389,7 +390,7 @@ export default function ApiIntegrations() {
   }
 
   async function selectProvider(channel, id) {
-    if (!can('api_integrations:write')) return;
+    if (!canWrite) return;
     try {
       await api.updateIntegration(id, { is_default: true, enabled: true });
       const row = items.find((i) => i.id === id);
@@ -411,7 +412,7 @@ export default function ApiIntegrations() {
   }
 
   async function runSelfTest() {
-    if (!can('api_integrations:write')) {
+    if (!canWrite) {
       toast('You do not have permission to test integrations');
       return;
     }
@@ -443,12 +444,12 @@ export default function ApiIntegrations() {
         <div>
           <h1>API Integrations</h1>
           <p>
-            Paste an API key, save & verify to mark <strong>Connected</strong>. Use each card’s{' '}
-            <strong>Advanced options</strong> dropdown to configure only the settings you need.
+            Workspace-wide connectors — keys saved by Super Admin apply to every user. Only Super
+            Admin can add or edit. Paste an API key, save & verify to mark <strong>Connected</strong>.
           </p>
         </div>
         <div className="topbar-actions">
-          {can('api_integrations:write') ? (
+          {canWrite ? (
             <button type="button" className="btn btn-primary" disabled={testAllBusy} onClick={testAll}>
               {testAllBusy ? 'Checking APIs…' : 'Refresh all connectivity'}
             </button>
@@ -461,6 +462,16 @@ export default function ApiIntegrations() {
           </button>
         </div>
       </div>
+
+      {!canWrite ? (
+        <div className="panel" style={{ marginBottom: '1rem' }}>
+          <strong>View only.</strong>{' '}
+          <span className="muted">
+            Integration keys are managed by Super Admin and already apply to your account for
+            Autopilot, discovery, and outreach.
+          </span>
+        </div>
+      ) : null}
 
       {durableStore === false ? (
         <div className="panel" style={{ marginBottom: '1rem', borderColor: 'var(--amber, #d4a017)' }}>
@@ -532,7 +543,7 @@ export default function ApiIntegrations() {
             <div className="panel" key={channel} style={{ marginBottom: '1rem' }}>
               <div className="integ-channel-bar">
                 <h2 style={{ margin: 0 }}>{CHANNEL_LABELS[channel] || list[0]?.category || channel}</h2>
-                {list.length > 1 && can('api_integrations:write') ? (
+                {list.length > 1 && canWrite ? (
                   <label className="field integ-channel-select">
                     Active provider
                     <select
@@ -554,7 +565,7 @@ export default function ApiIntegrations() {
                   <IntegrationCard
                     key={item.id}
                     item={item}
-                    canWrite={can('api_integrations:write')}
+                    canWrite={canWrite}
                     testing={testingId === item.id || testAllBusy}
                     toast={toast}
                     onVerify={verify}

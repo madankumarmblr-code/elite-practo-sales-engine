@@ -368,16 +368,8 @@ export function bootstrap() {
   purgeSyntheticLeads();
 
   const ts = now();
-  const presetEmails = [
-    'admin@practo.sales',
-    'manager@practo.sales',
-    'agent@practo.sales',
-    'viewer@practo.sales',
-  ];
-  for (const email of presetEmails) {
-    db.prepare('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email = ?)').run(email);
-    db.prepare('DELETE FROM users WHERE email = ?').run(email);
-  }
+  // Do not delete users by email on boot — that wiped Super Admin–created accounts
+  // that reused former demo addresses (e.g. agent@practo.sales).
 
   let superAdmin = db
     .prepare("SELECT * FROM users WHERE role = 'superadmin' OR username = 'superadmin' OR email = ?")
@@ -422,6 +414,25 @@ export function bootstrap() {
   console.log('  User ID:  superadmin');
   console.log('  Email:    superadmin@practo.sales');
   console.log(`  Password: ${demoPassword}`);
+
+  // API integration keys are Super Admin–only. Strip edit permission from
+  // older role assignments so Admins cannot change workspace-wide keys.
+  const nonSuper = db
+    .prepare("SELECT id, permissions FROM users WHERE role != 'superadmin'")
+    .all();
+  const stripWrite = db.prepare('UPDATE users SET permissions = ?, updated_at = ? WHERE id = ?');
+  for (const row of nonSuper) {
+    let perms = [];
+    try {
+      perms = JSON.parse(row.permissions || '[]');
+    } catch {
+      perms = [];
+    }
+    if (!Array.isArray(perms) || !perms.includes('api_integrations:write')) continue;
+    const next = perms.filter((p) => p && p !== 'api_integrations:write' && p !== '*');
+    if (!next.includes('api_integrations:read')) next.push('api_integrations:read');
+    stripWrite.run(JSON.stringify(next), ts, row.id);
+  }
 
   console.log('Bootstrap complete — integrations & AI pilots ready; Super Admin ready');
 }

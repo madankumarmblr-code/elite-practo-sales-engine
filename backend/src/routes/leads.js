@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import db from '../db/db.js';
 import { discoverClinics, getDiscoveryMeta } from '../services/clinicDiscovery.js';
+import { leadDedupeKeys, normalizeName, normalizePhone } from '../services/liveDiscovery.js';
 import {
   buildOutreachDraft,
   suggestFollowUp,
@@ -317,11 +318,14 @@ export function registerLeadRoutes(app) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', 'Unassigned', NULL, ?, ?, ?, ?, ?, ?)
     `);
     const findByPhone = db.prepare(
-      `SELECT id FROM leads WHERE replace(replace(replace(phone,' ',''),'+',''),'-','') LIKE ? LIMIT 1`
+      `SELECT id FROM leads WHERE replace(replace(replace(replace(phone,' ',''),'+',''),'-',''),'(','') LIKE ? LIMIT 1`
     );
     const findByEmail = db.prepare(`SELECT id FROM leads WHERE lower(email) = lower(?) LIMIT 1`);
     const findByCompanyCity = db.prepare(
-      `SELECT id FROM leads WHERE lower(company) = lower(?) AND notes LIKE ? LIMIT 1`
+      `SELECT id, company, notes FROM leads WHERE lower(company) = lower(?) LIMIT 20`
+    );
+    const findByPlaceId = db.prepare(
+      `SELECT id FROM leads WHERE notes LIKE ? LIMIT 1`
     );
     const created = [];
     const skipped = [];
@@ -330,21 +334,28 @@ export function registerLeadRoutes(app) {
       const seen = new Set();
       for (const item of items) {
         const owner = item.owner || {};
-        const phone = String(owner.phone || item.phone || '').replace(/\D/g, '').slice(-10);
+        const phone = normalizePhone(owner.phone || item.phone || '');
         const email = String(owner.email || item.email || '').trim().toLowerCase();
         const company = String(item.clinicName || item.company || '').trim();
         const city = String(item.city || '').trim();
-        const dedupeKey = phone
-          ? `p:${phone}`
-          : email
-            ? `e:${email}`
-            : `c:${company.toLowerCase()}|${city.toLowerCase()}`;
-        if (seen.has(dedupeKey)) {
+        const placeId = item.placeId || null;
+        const batchKeys = leadDedupeKeys({
+          ...item,
+          phone,
+          email,
+          clinicName: company,
+          owner: { ...owner, phone, email },
+        });
+        if (batchKeys.some((k) => seen.has(k))) {
           skipped.push({ reason: 'duplicate_in_batch', company });
           continue;
         }
-        seen.add(dedupeKey);
+        for (const k of batchKeys) seen.add(k);
 
+        if (placeId && findByPlaceId.get(`%Place ID: ${placeId}%`)) {
+          skipped.push({ reason: 'duplicate_place', company, placeId });
+          continue;
+        }
         if (phone && findByPhone.get(`%${phone}`)) {
           skipped.push({ reason: 'duplicate_phone', company, phone });
           continue;
@@ -353,9 +364,23 @@ export function registerLeadRoutes(app) {
           skipped.push({ reason: 'duplicate_email', company, email });
           continue;
         }
-        if (company && city && findByCompanyCity.get(company, `%${city}%`)) {
-          skipped.push({ reason: 'duplicate_company', company });
-          continue;
+        if (company && city) {
+          const companyHits = findByCompanyCity.all(company);
+          const cityLower = city.toLowerCase();
+          const locality = String(item.locality || item.zone || '')
+            .trim()
+            .toLowerCase();
+          const dupCompany = companyHits.find((row) => {
+            const notes = String(row.notes || '').toLowerCase();
+            if (!notes.includes(cityLower)) return false;
+            if (locality && notes.includes(locality)) return true;
+            // Same company + city without locality still counts as duplicate
+            return normalizeName(row.company) === normalizeName(company);
+          });
+          if (dupCompany) {
+            skipped.push({ reason: 'duplicate_company', company });
+            continue;
+          }
         }
 
         const id = nanoid();

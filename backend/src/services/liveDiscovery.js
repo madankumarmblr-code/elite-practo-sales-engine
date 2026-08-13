@@ -20,39 +20,84 @@ function getIntegrationSecrets(provider) {
   }
 }
 
-function normalizePhone(phone) {
+export function normalizePhone(phone) {
   const digits = String(phone || '').replace(/\D/g, '');
   if (digits.length >= 10) return digits.slice(-10);
   return digits || '';
 }
 
-function normalizeName(name) {
+export function normalizeName(name) {
   return String(name || '')
     .toLowerCase()
-    .replace(/\b(dr|clinic|hospital|centre|center|care|dental|the)\b/g, '')
+    .replace(/\b(dr|clinic|hospital|centre|center|care|dental|the|pvt|ltd|llp)\b/g, '')
     .replace(/[^a-z0-9]+/g, '')
     .slice(0, 48);
 }
 
-export function leadDedupeKey(lead) {
+function richness(lead) {
   const phone = normalizePhone(lead.phone || lead.owner?.phone);
+  const email = String(lead.email || lead.owner?.email || '').trim();
+  const website = lead.website ? 1 : 0;
+  const placeId = lead.placeId ? 2 : 0;
+  const score = Number(lead.score) || 0;
+  return (phone ? 8 : 0) + (email ? 4 : 0) + website * 3 + placeId + Math.min(10, Math.floor(score / 10));
+}
+
+/** Stable identity keys for a lead — used to collapse cross-source duplicates. */
+export function leadDedupeKeys(lead) {
+  const keys = [];
+  if (lead.placeId) keys.push(`place:${lead.placeId}`);
+  const phone = normalizePhone(lead.phone || lead.owner?.phone);
+  if (phone) keys.push(`p:${phone}`);
+  const email = String(lead.email || lead.owner?.email || '')
+    .trim()
+    .toLowerCase();
+  if (email && email.includes('@')) keys.push(`e:${email}`);
   const name = normalizeName(lead.clinicName || lead.company || lead.name);
   const city = String(lead.city || '')
     .toLowerCase()
     .replace(/[^a-z]/g, '');
-  if (phone) return `p:${phone}`;
-  if (name && city) return `n:${name}|${city}`;
-  return `id:${lead.id || lead.importKey || Math.random()}`;
+  const locality = String(lead.locality || lead.zone || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 32);
+  if (name && city && locality) keys.push(`nl:${name}|${city}|${locality}`);
+  else if (name && city) keys.push(`n:${name}|${city}`);
+  if (!keys.length) keys.push(`id:${lead.id || lead.importKey || Math.random()}`);
+  return keys;
 }
 
+export function leadDedupeKey(lead) {
+  return leadDedupeKeys(lead)[0];
+}
+
+/**
+ * Collapse duplicates across OSM / Places / sheet inventory.
+ * Keeps the richest record when keys collide (phone, placeId, name+locality).
+ */
 export function dedupeLeads(leads) {
-  const seen = new Set();
+  const keyToIndex = new Map();
   const out = [];
+
   for (const lead of leads) {
-    const key = leadDedupeKey(lead);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const keys = leadDedupeKeys(lead);
+    let hitIndex = -1;
+    for (const key of keys) {
+      if (keyToIndex.has(key)) {
+        hitIndex = keyToIndex.get(key);
+        break;
+      }
+    }
+    if (hitIndex >= 0) {
+      if (richness(lead) > richness(out[hitIndex])) {
+        out[hitIndex] = lead;
+      }
+      for (const key of keys) keyToIndex.set(key, hitIndex);
+      continue;
+    }
+    const idx = out.length;
     out.push(lead);
+    for (const key of keys) keyToIndex.set(key, idx);
   }
   return out;
 }
@@ -75,8 +120,9 @@ async function fetchJson(url, { timeoutMs = 8000, headers = {} } = {}) {
 /**
  * Free Nominatim search — place shortlist for a locality + specialty.
  */
-export async function searchNominatim({ city, locality, keyword, limit = 8 }) {
-  const q = `${keyword} clinic ${locality} ${city} India`;
+export async function searchNominatim({ city, zone, locality, keyword, limit = 8 }) {
+  const area = locality || zone;
+  const q = `${keyword} clinic ${area} ${city} India`;
   const url =
     'https://nominatim.openstreetmap.org/search?' +
     new URLSearchParams({
@@ -90,15 +136,15 @@ export async function searchNominatim({ city, locality, keyword, limit = 8 }) {
   if (!Array.isArray(rows)) return [];
   return rows.map((r, i) => {
     const name = r.display_name?.split(',')[0] || r.name || `${keyword} Clinic`;
-    const address = r.display_name || `${locality}, ${city}`;
+    const address = r.display_name || `${area}, ${city}`;
     return {
       id: `osm-nom-${r.place_id || i}`,
       clinicName: name,
       specialty: keyword,
       keyword,
       city,
-      zone: locality,
-      locality,
+      zone: zone || locality,
+      locality: area,
       address,
       lat: r.lat ? Number(r.lat) : null,
       lon: r.lon ? Number(r.lon) : null,
@@ -142,7 +188,7 @@ export async function searchNominatim({ city, locality, keyword, limit = 8 }) {
 /**
  * Free Overpass query for clinics/hospitals/dentists near a named area.
  */
-export async function searchOverpass({ city, locality, keyword, limit = 12 }) {
+export async function searchOverpass({ city, zone, locality, keyword, limit = 12 }) {
   const amenity =
     /dentist|dental|orthodont/i.test(keyword)
       ? 'dentist|clinic|doctors|hospital'
@@ -150,7 +196,8 @@ export async function searchOverpass({ city, locality, keyword, limit = 12 }) {
         ? 'hospital|clinic|doctors'
         : 'clinic|doctors|hospital|dentist';
 
-  const areaName = `${locality}, ${city}`;
+  const area = locality || zone;
+  const areaName = `${area}, ${city}`;
   const geoUrl =
     'https://nominatim.openstreetmap.org/search?' +
     new URLSearchParams({
@@ -189,7 +236,7 @@ export async function searchOverpass({ city, locality, keyword, limit = 12 }) {
       const addressParts = [
         tags['addr:housenumber'],
         tags['addr:street'],
-        tags['addr:suburb'] || locality,
+        tags['addr:suburb'] || area,
         city,
       ].filter(Boolean);
       const platforms = [
@@ -197,7 +244,7 @@ export async function searchOverpass({ city, locality, keyword, limit = 12 }) {
         {
           name: 'Google Maps',
           listed: true,
-          url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${locality} ${city}`)}`,
+          url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${area} ${city}`)}`,
         },
         {
           name: 'Google My Business',
@@ -214,9 +261,9 @@ export async function searchOverpass({ city, locality, keyword, limit = 12 }) {
         specialty: keyword,
         keyword,
         city,
-        zone: locality,
-        locality,
-        address: addressParts.join(', ') || `${locality}, ${city}`,
+        zone: zone || locality,
+        locality: area,
+        address: addressParts.join(', ') || `${area}, ${city}`,
         lat: el.lat || el.center?.lat || null,
         lon: el.lon || el.center?.lon || null,
         owner: {
@@ -233,13 +280,13 @@ export async function searchOverpass({ city, locality, keyword, limit = 12 }) {
         score: 70 + (phone ? 8 : 0) + (website ? 6 : 0) + (email ? 4 : 0),
         estimatedValue: 65000 + (website ? 15000 : 0),
         suggestedChannel: phone ? 'whatsapp' : email ? 'gmail' : 'calls',
-        matchReason: `OSM Overpass · ${city} · ${locality} · ${keyword}`,
+        matchReason: `OSM Overpass · ${city} · ${area} · ${keyword}`,
         source: 'OpenStreetMap Overpass (free)',
         discoverySource: 'overpass',
         sheetMapped: true,
       };
     })
-    .filter((r) => r.clinicName);
+    .filter((r) => r.clinicName && normalizeName(r.clinicName).length >= 3);
 }
 
 /**
@@ -259,11 +306,12 @@ export async function enrichPlaceDetails(placeId, apiKey) {
   return data?.result || null;
 }
 
-export async function searchGooglePlaces({ city, locality, keyword, limit = 12 }) {
+export async function searchGooglePlaces({ city, zone, locality, keyword, limit = 12 }) {
   const integ = getIntegrationSecrets('google_maps');
   if (!integ?.hasKey) return [];
   const key = integ.secrets.apiKey;
-  const q = `${keyword} clinic in ${locality}, ${city}`;
+  const area = locality || zone;
+  const q = `${keyword} clinic in ${area}, ${city}`;
   const url =
     'https://maps.googleapis.com/maps/api/place/textsearch/json?' +
     new URLSearchParams({ query: q, key, region: 'in', language: 'en' });
@@ -279,7 +327,7 @@ export async function searchGooglePlaces({ city, locality, keyword, limit = 12 }
       details = null;
     }
     const name = details?.name || r.name || `${keyword} Clinic`;
-    const address = details?.formatted_address || r.formatted_address || `${locality}, ${city}`;
+    const address = details?.formatted_address || r.formatted_address || `${area}, ${city}`;
     const phone =
       details?.international_phone_number || details?.formatted_phone_number || '';
     const website = details?.website || null;
@@ -306,8 +354,8 @@ export async function searchGooglePlaces({ city, locality, keyword, limit = 12 }
       specialty: keyword,
       keyword,
       city,
-      zone: locality,
-      locality,
+      zone: zone || locality,
+      locality: area,
       address,
       openingHours: hours,
       businessStatus: details?.business_status || null,
@@ -330,7 +378,7 @@ export async function searchGooglePlaces({ city, locality, keyword, limit = 12 }
         (r.user_ratings_total ? 4 : 0),
       estimatedValue: 85000 + (website ? 10000 : 0),
       suggestedChannel: phone ? 'whatsapp' : website ? 'gmail' : 'calls',
-      matchReason: `Google Places + GMB details · ${city} · ${locality} · ${keyword}`,
+      matchReason: `Google Places + GMB details · ${city} · ${area} · ${keyword}`,
       source: 'Google Places / GMB',
       discoverySource: 'google_places',
       sheetMapped: true,
@@ -342,6 +390,7 @@ export async function searchGooglePlaces({ city, locality, keyword, limit = 12 }
 
 /**
  * Fan out live discovery for a set of areas. Soft-fails per source.
+ * Dedupes across Overpass / Nominatim / Places within the fan-out.
  */
 export async function liveDiscoverAreas({ areas, keyword, maxAreas = 8, perArea = 8 }) {
   const scanned = [];
@@ -349,38 +398,46 @@ export async function liveDiscoverAreas({ areas, keyword, maxAreas = 8, perArea 
   const slice = areas.slice(0, maxAreas);
 
   for (const area of slice) {
+    const zone = area.zone || area.locality;
+    const locality = area.locality || area.zone;
+    let areaCount = 0;
+
     // Free Overpass (best structured clinic data)
     try {
       const rows = await searchOverpass({
         city: area.city,
-        locality: area.locality,
+        zone,
+        locality,
         keyword,
         limit: perArea,
       });
       leads.push(...rows);
-      scanned.push({ name: `OSM Overpass · ${area.locality}`, status: 'scanned', count: rows.length });
+      areaCount += rows.length;
+      scanned.push({ name: `OSM Overpass · ${locality}`, status: 'scanned', count: rows.length });
     } catch (err) {
       scanned.push({
-        name: `OSM Overpass · ${area.locality}`,
+        name: `OSM Overpass · ${locality}`,
         status: 'error',
         detail: err.message,
       });
     }
 
     // Free Nominatim fallback if Overpass returned little
-    if (leads.filter((l) => l.locality === area.locality).length < 3) {
+    if (areaCount < 3) {
       try {
         await new Promise((r) => setTimeout(r, 1100)); // Nominatim polite rate limit
         const rows = await searchNominatim({
           city: area.city,
-          locality: area.locality,
+          zone,
+          locality,
           keyword,
           limit: Math.min(6, perArea),
         });
         leads.push(...rows);
-        scanned.push({ name: `Nominatim · ${area.locality}`, status: 'scanned', count: rows.length });
+        areaCount += rows.length;
+        scanned.push({ name: `Nominatim · ${locality}`, status: 'scanned', count: rows.length });
       } catch (err) {
-        scanned.push({ name: `Nominatim · ${area.locality}`, status: 'error', detail: err.message });
+        scanned.push({ name: `Nominatim · ${locality}`, status: 'error', detail: err.message });
       }
     }
 
@@ -388,16 +445,17 @@ export async function liveDiscoverAreas({ areas, keyword, maxAreas = 8, perArea 
     try {
       const rows = await searchGooglePlaces({
         city: area.city,
-        locality: area.locality,
+        zone,
+        locality,
         keyword,
         limit: perArea,
       });
       if (rows.length) {
         leads.push(...rows);
-        scanned.push({ name: `Google Places · ${area.locality}`, status: 'scanned', count: rows.length });
+        scanned.push({ name: `Google Places · ${locality}`, status: 'scanned', count: rows.length });
       }
     } catch (err) {
-      scanned.push({ name: `Google Places · ${area.locality}`, status: 'error', detail: err.message });
+      scanned.push({ name: `Google Places · ${locality}`, status: 'error', detail: err.message });
     }
   }
 

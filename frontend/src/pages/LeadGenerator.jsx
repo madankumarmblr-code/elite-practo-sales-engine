@@ -23,7 +23,6 @@ export default function LeadGenerator() {
     city: '',
     zone: 'All',
     keyword: '',
-    live: true,
   });
   const [results, setResults] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -68,7 +67,6 @@ export default function LeadGenerator() {
           city,
           zone: defaultZone,
           keyword,
-          live: true,
         });
         setReady(true);
       })
@@ -90,7 +88,7 @@ export default function LeadGenerator() {
           zone: nextCriteria.zone || 'All',
           keyword: nextCriteria.keyword,
           specialty: nextCriteria.keyword,
-          live: nextCriteria.live,
+          live: true,
           maxLocalities: 40,
           limit: null,
         });
@@ -127,7 +125,7 @@ export default function LeadGenerator() {
     if (!ready || !criteria.city || !criteria.keyword) return undefined;
     const t = setTimeout(() => runDiscovery(criteria), 280);
     return () => clearTimeout(t);
-  }, [ready, criteria.city, criteria.zone, criteria.keyword, criteria.live]);
+  }, [ready, criteria.city, criteria.zone, criteria.keyword]);
 
   function updateCity(city) {
     const cityKeywords = meta.keywordsByCity[city] || meta.keywords || [];
@@ -140,7 +138,6 @@ export default function LeadGenerator() {
       city,
       zone: 'All',
       keyword,
-      live: criteria.live,
     });
   }
 
@@ -317,27 +314,14 @@ export default function LeadGenerator() {
             </select>
           </label>
         </div>
-        <div className="form-grid three" style={{ marginTop: '0.85rem' }}>
+        <div className="form-grid" style={{ marginTop: '0.85rem' }}>
           <label className="field">
-            Live sources (OSM / Places)
-            <select
-              value={criteria.live ? '1' : '0'}
-              onChange={(e) => setCriteria({ ...criteria, live: e.target.value === '1' })}
-            >
-              <option value="1">On — pull OSM + optional Google Places</option>
-              <option value="0">Off — sheet + locality inventory only</option>
-            </select>
-            <span className="muted" style={{ fontSize: '0.75rem' }}>
-              Free OSM Nominatim/Overpass run automatically. Add Google Places key in API Integrations
-              for GMB-quality pulls.
-            </span>
-          </label>
-          <label className="field" style={{ gridColumn: 'span 2' }}>
             How locality coverage works
             <div className="muted" style={{ fontSize: '0.85rem', lineHeight: 1.45, marginTop: 6 }}>
               Pick a zone only — the system automatically searches every locality covered under that
               zone from the internal Reach reference file (for example Bangalore → Vijayanagar also
-              covers Deepanjalinagar, Chandra Layout, Nagarbhavi, and more).
+              covers Deepanjalinagar, Chandra Layout, Nagarbhavi, and more). Live OSM / Google Places
+              run automatically and results are de-duplicated before you send them to Lead Management.
               {meta.localityCount ? (
                 <> Reference loaded: {meta.localityCount.toLocaleString()} localities.</>
               ) : null}
@@ -493,7 +477,7 @@ export default function LeadGenerator() {
           <div className="empty">{scanStep || 'Discovering clinics across localities…'}</div>
         ) : !filtered.length ? (
           <div className="empty">
-            No leads for these filters. Try another zone/locality/speciality, or turn live sources on.
+            No leads for these filters. Try another zone, locality, or speciality.
           </div>
         ) : (
           <>

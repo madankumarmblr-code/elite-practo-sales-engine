@@ -351,7 +351,7 @@ export async function discoverClinics({
     latencyMs: 80 + i * 20,
   }));
 
-  // Sheet/locality-accurate generated inventory (deduped, locality-aware)
+  // Sheet/locality inventory used only to fill localities with weak/no live coverage
   const sheetLeads = [];
   const perLocality = {};
   for (const area of areas) {
@@ -371,30 +371,43 @@ export async function discoverClinics({
     }
   }
 
+  // Always run live OSM / Places (no UI toggle) — real listings preferred
   let liveLeads = [];
   let liveScanned = [];
-  if (live !== false && live !== '0') {
-    try {
-      const liveAreas = areas.slice(0, Math.min(8, areas.length));
-      const live = await liveDiscoverAreas({
-        areas: liveAreas,
-        keyword: primaryKeyword,
-        maxAreas: liveAreas.length,
-        perArea: 8,
-      });
-      liveLeads = live.leads || [];
-      liveScanned = live.scannedSources || [];
-      for (const s of liveScanned) {
-        scannedSources.push(s);
-      }
-    } catch (err) {
-      liveScanned = [{ name: 'Live discovery', status: 'error', detail: err.message }];
-      scannedSources.push(...liveScanned);
+  try {
+    const liveAreas = areas.slice(0, Math.min(12, areas.length));
+    const live = await liveDiscoverAreas({
+      areas: liveAreas,
+      keyword: primaryKeyword,
+      maxAreas: liveAreas.length,
+      perArea: 10,
+    });
+    liveLeads = live.leads || [];
+    liveScanned = live.scannedSources || [];
+    for (const s of liveScanned) {
+      scannedSources.push(s);
     }
+  } catch (err) {
+    liveScanned = [{ name: 'Live discovery', status: 'error', detail: err.message }];
+    scannedSources.push(...liveScanned);
   }
 
-  // Prefer live rows first, then sheet-locality inventory; strict dedupe + smart channel
-  let results = dedupeLeads([...liveLeads, ...sheetLeads]).map(applySmartChannelToDiscoveryLead);
+  // Prefer live rows; only fill localities that have little/no live coverage
+  const liveCountByLocality = {};
+  for (const lead of liveLeads) {
+    const loc = lead.locality || lead.zone || '';
+    liveCountByLocality[loc] = (liveCountByLocality[loc] || 0) + 1;
+  }
+  const MIN_LIVE_PER_LOCALITY = 3;
+  const gapFillSheetLeads = sheetLeads.filter((lead) => {
+    const loc = lead.locality || lead.zone || '';
+    return (liveCountByLocality[loc] || 0) < MIN_LIVE_PER_LOCALITY;
+  });
+
+  const beforeDedupe = liveLeads.length + gapFillSheetLeads.length;
+  let results = dedupeLeads([...liveLeads, ...gapFillSheetLeads]).map(
+    applySmartChannelToDiscoveryLead
+  );
   results.sort(
     (a, b) =>
       b.score - a.score ||
@@ -423,7 +436,7 @@ export async function discoverClinics({
       localitiesScanned: localitiesCovered,
       sheetCombos: sheetTargets.length,
       fullInventory: !numericLimit,
-      liveEnabled: live !== false && live !== '0',
+      liveEnabled: true,
     },
     scannedSources,
     availableKeywords: listKeywordsFor(city, primaryZone),
@@ -432,14 +445,14 @@ export async function discoverClinics({
     summary: {
       total: results.length,
       totalAvailable: totalBeforeLimit,
-      duplicatesRemoved: liveLeads.length + sheetLeads.length - totalBeforeLimit,
+      duplicatesRemoved: Math.max(0, beforeDedupe - totalBeforeLimit),
       zonesCovered: zonesCovered.length,
       localitiesCovered: localitiesCovered.length,
       perLocality,
       withPractoProfile: withPracto,
       withoutPractoProfile: results.length - withPracto,
       liveLeads: liveLeads.length,
-      sheetLocalityLeads: sheetLeads.length,
+      sheetLocalityLeads: gapFillSheetLeads.length,
       platformsCovered: PLATFORMS.length,
       source: 'google_sheet+zone_localities+live',
     },

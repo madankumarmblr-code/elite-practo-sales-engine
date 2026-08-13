@@ -527,14 +527,20 @@ export async function liveDiscoverAreas({
   perArea = 8,
   deadlineMs = 0,
   targetCount = 0,
+  fullScan = false,
 } = {}) {
   const scanned = [];
   const leads = [];
   const onServerless = Boolean(process.env.VERCEL);
+  const wantFull = fullScan === true || fullScan === '1';
   const slice = prioritizeLiveAreas(areas, maxAreas);
   const started = Date.now();
   let timedOut = false;
+  // Soft early-stop so default Refresh returns in ~8–15s instead of waiting for limit=100
   const goal = Math.max(targetCount || 0, perArea * 3, onServerless ? 40 : 60);
+  const softStop = wantFull
+    ? goal
+    : Math.min(goal, onServerless ? Math.max(28, perArea * 2) : Math.max(36, perArea * 2));
   const zoneSpecific = Boolean(
     slice[0]?.zone && String(slice[0].zone).toLowerCase() !== 'all'
   );
@@ -542,8 +548,7 @@ export async function liveDiscoverAreas({
   const remainingMs = () => (deadlineMs > 0 ? Math.max(0, deadlineMs - (Date.now() - started)) : 60000);
   const pastDeadline = () => deadlineMs > 0 && remainingMs() < 400;
 
-  // City-level Practo: small seed when zone is specific (avoid flooding with city-wide dupes);
-  // larger multi-page pull when scanning the whole city.
+  // City-level Practo seed
   if (slice[0]?.city && !pastDeadline()) {
     try {
       const cityHit = await searchPractoWeb({
@@ -551,8 +556,8 @@ export async function liveDiscoverAreas({
         zone: slice[0].zone,
         locality: zoneSpecific ? '' : '',
         keyword,
-        limit: zoneSpecific ? Math.min(12, perArea) : Math.max(perArea, Math.min(50, goal)),
-        pages: zoneSpecific ? 1 : 4,
+        limit: zoneSpecific ? Math.min(12, perArea) : Math.max(perArea, Math.min(40, softStop)),
+        pages: zoneSpecific ? 1 : wantFull ? 4 : 2,
       });
       if (cityHit.results?.length) {
         leads.push(...cityHit.results);
@@ -574,6 +579,10 @@ export async function liveDiscoverAreas({
     }
   }
 
+  if (dedupeLeads(leads).length >= softStop) {
+    return { leads: dedupeLeads(leads), scannedSources: scanned, timedOut };
+  }
+
   for (const area of slice) {
     if (pastDeadline()) {
       timedOut = true;
@@ -588,13 +597,14 @@ export async function liveDiscoverAreas({
     const zone = area.zone || area.locality;
     const locality = area.locality || area.zone;
     const budget = remainingMs();
-    const overpassBudget = Math.min(onServerless ? 6000 : 12000, Math.max(2500, budget - 2000));
-    const practoPages = goal >= 60 ? 5 : 3;
-    const practoLimit = Math.min(80, Math.max(perArea * 2, Math.ceil(goal * 0.75)));
+    const practoPages = wantFull ? (goal >= 60 ? 5 : 3) : 2;
+    const practoLimit = Math.min(wantFull ? 80 : 36, Math.max(perArea * 2, Math.ceil(softStop * 0.75)));
 
-    // Practo (primary) + Overpass (secondary) in parallel
-    const [practoSettled, overpassSettled] = await Promise.allSettled([
-      searchPractoWeb({
+    // Practo first (fast). Only wait on Overpass when Practo is thin — Overpass 504s were
+    // stretching every locality to ~6s and made Dermatology feel stuck on "Loading…".
+    let practoCount = 0;
+    try {
+      const found = await searchPractoWeb({
         city: area.city,
         zone,
         locality,
@@ -602,25 +612,14 @@ export async function liveDiscoverAreas({
         limit: practoLimit,
         pages: practoPages,
         includeCityFallback: false,
-      }),
-      searchOverpass({
-        city: area.city,
-        zone,
-        locality,
-        keyword,
-        limit: perArea,
-        timeoutMs: overpassBudget,
-      }),
-    ]);
-
-    if (practoSettled.status === 'fulfilled') {
-      const found = practoSettled.value;
-      if (found.results?.length) {
+      });
+      practoCount = found.results?.length || 0;
+      if (practoCount) {
         leads.push(...found.results);
         scanned.push({
           name: `Practo.com · ${locality}`,
           status: 'scanned',
-          count: found.results.length,
+          count: practoCount,
         });
       } else {
         scanned.push({
@@ -630,27 +629,47 @@ export async function liveDiscoverAreas({
           detail: found.status ? `HTTP ${found.status}` : undefined,
         });
       }
-    } else {
+    } catch (err) {
       scanned.push({
         name: `Practo.com · ${locality}`,
         status: 'error',
-        detail: practoSettled.reason?.message || 'failed',
+        detail: err.message || 'failed',
       });
     }
 
-    if (overpassSettled.status === 'fulfilled') {
-      const rows = overpassSettled.value || [];
-      if (rows.length) {
-        leads.push(...rows);
-        scanned.push({ name: `OSM Overpass · ${locality}`, status: 'scanned', count: rows.length });
-      } else {
-        scanned.push({ name: `OSM Overpass · ${locality}`, status: 'empty', count: 0 });
+    const needMaps = practoCount < Math.max(4, Math.floor(perArea / 2));
+    const overpassBudget = Math.min(
+      onServerless ? (wantFull ? 5000 : 2800) : 10000,
+      Math.max(1800, budget - 1500)
+    );
+    if (needMaps && remainingMs() > overpassBudget + 500) {
+      try {
+        const rows = await searchOverpass({
+          city: area.city,
+          zone,
+          locality,
+          keyword,
+          limit: perArea,
+          timeoutMs: overpassBudget,
+        });
+        if (rows.length) {
+          leads.push(...rows);
+          scanned.push({ name: `OSM Overpass · ${locality}`, status: 'scanned', count: rows.length });
+        } else {
+          scanned.push({ name: `OSM Overpass · ${locality}`, status: 'empty', count: 0 });
+        }
+      } catch (err) {
+        scanned.push({
+          name: `OSM Overpass · ${locality}`,
+          status: 'error',
+          detail: err.message || 'failed',
+        });
       }
-    } else {
+    } else if (!needMaps) {
       scanned.push({
         name: `OSM Overpass · ${locality}`,
-        status: 'error',
-        detail: overpassSettled.reason?.message || 'failed',
+        status: 'skipped',
+        detail: 'Practo.com already returned clinics for this locality',
       });
     }
 
@@ -665,7 +684,7 @@ export async function liveDiscoverAreas({
     }
 
     // Google Places when keyed (skip if almost out of time)
-    if (remainingMs() > 2500) {
+    if (needMaps && remainingMs() > 2500) {
       try {
         const rows = await searchGooglePlaces({
           city: area.city,
@@ -683,12 +702,11 @@ export async function liveDiscoverAreas({
       }
     }
 
-    // Stop only after we have a full enough authentic set (not a tiny sample)
-    if (dedupeLeads(leads).length >= goal) break;
+    if (dedupeLeads(leads).length >= softStop) break;
   }
 
   let finalLeads = dedupeLeads(leads);
-  if (!timedOut && finalLeads.length && remainingMs() > 1500) {
+  if (!timedOut && finalLeads.length && remainingMs() > 1500 && wantFull) {
     try {
       const enriched = await enrichLeadsWithPractoWeb(finalLeads, {
         city: slice[0]?.city,

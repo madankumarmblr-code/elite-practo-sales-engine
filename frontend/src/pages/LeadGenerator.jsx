@@ -31,6 +31,7 @@ export default function LeadGenerator() {
   const [selected, setSelected] = useState({});
   const [busy, setBusy] = useState(false);
   const [scanStep, setScanStep] = useState('');
+  const [scanElapsed, setScanElapsed] = useState(0);
   const [lastError, setLastError] = useState('');
   const [practoFilter, setPractoFilter] = useState('all');
   const [zoneFilter, setZoneFilter] = useState('all');
@@ -84,7 +85,7 @@ export default function LeadGenerator() {
       setScanStep(
         fullScan
           ? `Full scan — loading more Practo.com + map clinics for ${nextCriteria.keyword}…`
-          : `Loading authentic clinics from Practo.com + maps for ${nextCriteria.keyword}…`
+          : `Loading authentic clinics from Practo.com for ${nextCriteria.keyword}…`
       );
       try {
         const data = await api.searchLeads({
@@ -94,8 +95,8 @@ export default function LeadGenerator() {
           specialty: nextCriteria.keyword,
           live: true,
           allowSynthetic: false,
-          maxLocalities: fullScan ? 24 : 14,
-          limit: fullScan ? 150 : 100,
+          maxLocalities: fullScan ? 24 : 10,
+          limit: fullScan ? 150 : 40,
           fullScan,
         });
         if (seq !== searchSeq.current) return; // stale response
@@ -145,6 +146,16 @@ export default function LeadGenerator() {
     },
     [criteria, toast]
   );
+
+  useEffect(() => {
+    if (!busy) {
+      setScanElapsed(0);
+      return undefined;
+    }
+    const started = Date.now();
+    const t = setInterval(() => setScanElapsed(Math.floor((Date.now() - started) / 1000)), 500);
+    return () => clearInterval(t);
+  }, [busy]);
 
   useEffect(() => {
     if (!ready || !criteria.city || !criteria.keyword) return undefined;
@@ -454,7 +465,7 @@ export default function LeadGenerator() {
         <div className="source-scan" style={{ marginTop: '1rem' }}>
           <div className="muted" style={{ marginBottom: 8, fontSize: '0.85rem' }}>
             {busy && scanStep
-              ? scanStep
+              ? `${scanStep}${scanElapsed ? ` (${scanElapsed}s)` : ''}`
               : `Live sources: ${(
                   scannedSources.length ? scannedSources : meta.platforms || []
                 )
@@ -599,7 +610,15 @@ export default function LeadGenerator() {
         </div>
 
         {busy && !results.length ? (
-          <div className="empty">{scanStep || 'Discovering clinics across localities…'}</div>
+          <div className="empty">
+            {scanStep || 'Discovering clinics across localities…'}
+            {scanElapsed ? ` (${scanElapsed}s)` : ''}
+            {scanElapsed >= 12 ? (
+              <div className="muted" style={{ marginTop: 8, fontSize: '0.85rem' }}>
+                Still contacting Practo.com — large specialties can take a few more seconds.
+              </div>
+            ) : null}
+          </div>
         ) : !filtered.length ? (
           <div className="empty">
             {lastError

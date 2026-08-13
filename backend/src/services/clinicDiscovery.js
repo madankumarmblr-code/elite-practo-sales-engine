@@ -385,14 +385,14 @@ export async function discoverClinics({
   const liveEnabled = live !== false && live !== '0';
   const onServerless = Boolean(process.env.VERCEL);
   const wantFull = fullScan === true || fullScan === '1';
-  const liveBudgetMs = onServerless ? (wantFull ? 45000 : 32000) : wantFull ? 90000 : 50000;
-  const maxLiveAreas = onServerless ? (wantFull ? 8 : 5) : wantFull ? 16 : 10;
-  const perArea = onServerless ? (wantFull ? 24 : 16) : wantFull ? 30 : 18;
+  const liveBudgetMs = onServerless ? (wantFull ? 45000 : 18000) : wantFull ? 90000 : 35000;
+  const maxLiveAreas = onServerless ? (wantFull ? 8 : 4) : wantFull ? 16 : 8;
+  const perArea = onServerless ? (wantFull ? 24 : 14) : wantFull ? 30 : 16;
   const targetCount =
     limit == null || limit === '' || Number(limit) <= 0
       ? wantFull
         ? 150
-        : 80
+        : 40
       : Number(limit);
 
   let liveLeads = [];
@@ -416,6 +416,7 @@ export async function discoverClinics({
           perArea,
           deadlineMs: liveBudgetMs,
           targetCount,
+          fullScan: wantFull,
         });
         liveLeads.push(...(liveResult.leads || []));
         liveScanned.push(...(liveResult.scannedSources || []));

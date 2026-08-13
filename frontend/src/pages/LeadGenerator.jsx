@@ -258,8 +258,8 @@ export default function LeadGenerator() {
         <div>
           <h1>Lead Generator</h1>
           <p>
-            Driven by the live Google Sheet — pick <strong>City → Zone → Speciality</strong>, then send
-            clinics to <strong>Lead Management</strong> for Hot/Warm/Skip, AI drafts, and Autopilot.
+            Pick <strong>City → Zone → Speciality</strong> to find clinics, then send them to{' '}
+            <strong>Lead Management</strong> for Hot/Warm/Skip, AI drafts, and Autopilot.
           </p>
         </div>
         <div className="topbar-actions">
@@ -333,14 +333,14 @@ export default function LeadGenerator() {
           <div className="muted" style={{ marginBottom: 8, fontSize: '0.85rem' }}>
             {busy && scanStep
               ? scanStep
-              : `Sources: Google Sheet + zone-localities.csv + ${(
+              : `Sources: zone localities + ${(
                   scannedSources.length ? scannedSources : meta.platforms || []
                 )
                   .map((p) => p.name || p)
                   .slice(0, 10)
                   .join(' · ')}${
                   meta.sheetSync?.lastSync
-                    ? ` · Sheet sync ${new Date(meta.sheetSync.lastSync).toLocaleString()}`
+                    ? ` · Catalog sync ${new Date(meta.sheetSync.lastSync).toLocaleString()}`
                     : ''
                 }`}
           </div>

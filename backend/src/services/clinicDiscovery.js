@@ -276,7 +276,7 @@ export async function discoverClinics({
   keywords,
   localities,
   limit = null,
-  live = true,
+  live = false,
   maxLocalities = 40,
 } = {}) {
   const kwList = asList(keywords).length ? asList(keywords) : asList(keyword || specialty);
@@ -351,7 +351,7 @@ export async function discoverClinics({
     latencyMs: 80 + i * 20,
   }));
 
-  // Sheet/locality inventory used only to fill localities with weak/no live coverage
+  // Sheet/locality inventory (fast path) + optional time-budgeted live enrichment
   const sheetLeads = [];
   const perLocality = {};
   for (const area of areas) {
@@ -371,25 +371,36 @@ export async function discoverClinics({
     }
   }
 
-  // Always run live OSM / Places (no UI toggle) — real listings preferred
+  const liveEnabled = live !== false && live !== '0';
+  const onServerless = Boolean(process.env.VERCEL);
+  // Keep well under Vercel maxDuration (60s): live OSM fan-out is the slow path
+  const liveBudgetMs = onServerless ? 16000 : 40000;
+  const maxLiveAreas = onServerless ? 3 : 8;
+  const perArea = onServerless ? 5 : 8;
+
   let liveLeads = [];
   let liveScanned = [];
-  try {
-    const liveAreas = areas.slice(0, Math.min(12, areas.length));
-    const live = await liveDiscoverAreas({
-      areas: liveAreas,
-      keyword: primaryKeyword,
-      maxAreas: liveAreas.length,
-      perArea: 10,
-    });
-    liveLeads = live.leads || [];
-    liveScanned = live.scannedSources || [];
-    for (const s of liveScanned) {
-      scannedSources.push(s);
+  let liveTimedOut = false;
+  if (liveEnabled) {
+    try {
+      const liveAreas = areas.slice(0, Math.min(maxLiveAreas, areas.length));
+      const liveResult = await liveDiscoverAreas({
+        areas: liveAreas,
+        keyword: primaryKeyword,
+        maxAreas: liveAreas.length,
+        perArea,
+        deadlineMs: liveBudgetMs,
+      });
+      liveLeads = liveResult.leads || [];
+      liveScanned = liveResult.scannedSources || [];
+      liveTimedOut = Boolean(liveResult.timedOut);
+      for (const s of liveScanned) {
+        scannedSources.push(s);
+      }
+    } catch (err) {
+      liveScanned = [{ name: 'Live discovery', status: 'error', detail: err.message }];
+      scannedSources.push(...liveScanned);
     }
-  } catch (err) {
-    liveScanned = [{ name: 'Live discovery', status: 'error', detail: err.message }];
-    scannedSources.push(...liveScanned);
   }
 
   // Prefer live rows; only fill localities that have little/no live coverage
@@ -399,10 +410,13 @@ export async function discoverClinics({
     liveCountByLocality[loc] = (liveCountByLocality[loc] || 0) + 1;
   }
   const MIN_LIVE_PER_LOCALITY = 3;
-  const gapFillSheetLeads = sheetLeads.filter((lead) => {
-    const loc = lead.locality || lead.zone || '';
-    return (liveCountByLocality[loc] || 0) < MIN_LIVE_PER_LOCALITY;
-  });
+  const gapFillSheetLeads =
+    liveLeads.length > 0
+      ? sheetLeads.filter((lead) => {
+          const loc = lead.locality || lead.zone || '';
+          return (liveCountByLocality[loc] || 0) < MIN_LIVE_PER_LOCALITY;
+        })
+      : sheetLeads;
 
   const beforeDedupe = liveLeads.length + gapFillSheetLeads.length;
   let results = dedupeLeads([...liveLeads, ...gapFillSheetLeads]).map(
@@ -436,7 +450,8 @@ export async function discoverClinics({
       localitiesScanned: localitiesCovered,
       sheetCombos: sheetTargets.length,
       fullInventory: !numericLimit,
-      liveEnabled: true,
+      liveEnabled,
+      liveTimedOut,
     },
     scannedSources,
     availableKeywords: listKeywordsFor(city, primaryZone),
@@ -453,8 +468,9 @@ export async function discoverClinics({
       withoutPractoProfile: results.length - withPracto,
       liveLeads: liveLeads.length,
       sheetLocalityLeads: gapFillSheetLeads.length,
+      liveTimedOut,
       platformsCovered: PLATFORMS.length,
-      source: 'google_sheet+zone_localities+live',
+      source: liveEnabled ? 'google_sheet+zone_localities+live' : 'google_sheet+zone_localities',
     },
     count: results.length,
     results: results.map((r) => ({

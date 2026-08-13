@@ -241,7 +241,7 @@ export function registerLeadRoutes(app) {
       keyword,
       keywords,
       limit = null,
-      live = true,
+      live = false,
       maxLocalities = 40,
     } = body;
     const kw = keyword || specialty || (Array.isArray(keywords) ? keywords[0] : null);

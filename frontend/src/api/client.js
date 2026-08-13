@@ -40,7 +40,12 @@ async function request(path, options = {}) {
   if (!res.ok) {
     if (contentType.includes('application/json')) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || 'Request failed');
+      throw new Error(err.error || err.message || 'Request failed');
+    }
+    if (res.status === 504) {
+      throw new Error(
+        'Lead search timed out on the server. Try a smaller zone, or Rescan — results will still load from locality inventory.'
+      );
     }
     throw new Error(
       res.status === 405 || res.status === 404

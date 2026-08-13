@@ -391,13 +391,34 @@ export async function searchGooglePlaces({ city, zone, locality, keyword, limit 
 /**
  * Fan out live discovery for a set of areas. Soft-fails per source.
  * Dedupes across Overpass / Nominatim / Places within the fan-out.
+ * Stops early when deadlineMs elapses so serverless handlers can return under maxDuration.
  */
-export async function liveDiscoverAreas({ areas, keyword, maxAreas = 8, perArea = 8 }) {
+export async function liveDiscoverAreas({
+  areas,
+  keyword,
+  maxAreas = 8,
+  perArea = 8,
+  deadlineMs = 0,
+} = {}) {
   const scanned = [];
   const leads = [];
   const slice = areas.slice(0, maxAreas);
+  const started = Date.now();
+  let timedOut = false;
+
+  const pastDeadline = () => deadlineMs > 0 && Date.now() - started >= deadlineMs;
 
   for (const area of slice) {
+    if (pastDeadline()) {
+      timedOut = true;
+      scanned.push({
+        name: 'Live discovery',
+        status: 'timeout',
+        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
+      });
+      break;
+    }
+
     const zone = area.zone || area.locality;
     const locality = area.locality || area.zone;
     let areaCount = 0;
@@ -422,10 +443,29 @@ export async function liveDiscoverAreas({ areas, keyword, maxAreas = 8, perArea 
       });
     }
 
+    if (pastDeadline()) {
+      timedOut = true;
+      scanned.push({
+        name: 'Live discovery',
+        status: 'timeout',
+        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
+      });
+      break;
+    }
+
     // Free Nominatim fallback if Overpass returned little
     if (areaCount < 3) {
       try {
         await new Promise((r) => setTimeout(r, 1100)); // Nominatim polite rate limit
+        if (pastDeadline()) {
+          timedOut = true;
+          scanned.push({
+            name: 'Live discovery',
+            status: 'timeout',
+            detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
+          });
+          break;
+        }
         const rows = await searchNominatim({
           city: area.city,
           zone,
@@ -439,6 +479,16 @@ export async function liveDiscoverAreas({ areas, keyword, maxAreas = 8, perArea 
       } catch (err) {
         scanned.push({ name: `Nominatim · ${locality}`, status: 'error', detail: err.message });
       }
+    }
+
+    if (pastDeadline()) {
+      timedOut = true;
+      scanned.push({
+        name: 'Live discovery',
+        status: 'timeout',
+        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
+      });
+      break;
     }
 
     // Google Places when key present
@@ -459,5 +509,5 @@ export async function liveDiscoverAreas({ areas, keyword, maxAreas = 8, perArea 
     }
   }
 
-  return { leads: dedupeLeads(leads), scannedSources: scanned };
+  return { leads: dedupeLeads(leads), scannedSources: scanned, timedOut };
 }

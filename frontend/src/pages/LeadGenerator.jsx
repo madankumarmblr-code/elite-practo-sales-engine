@@ -31,6 +31,7 @@ export default function LeadGenerator() {
   const [selected, setSelected] = useState({});
   const [busy, setBusy] = useState(false);
   const [scanStep, setScanStep] = useState('');
+  const [lastError, setLastError] = useState('');
   const [practoFilter, setPractoFilter] = useState('all');
   const [zoneFilter, setZoneFilter] = useState('all');
   const [localityFilter, setLocalityFilter] = useState('all');
@@ -74,23 +75,26 @@ export default function LeadGenerator() {
   }, []);
 
   const runDiscovery = useCallback(
-    async (nextCriteria = criteria) => {
+    async (nextCriteria = criteria, { live = false } = {}) => {
       if (!nextCriteria.city || !nextCriteria.keyword) return;
       setBusy(true);
-      setScanStep('Expanding selected zone into covered localities (internal)…');
+      setLastError('');
+      setScanStep('Expanding selected zone into covered localities…');
       try {
-        await new Promise((r) => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, 80));
         setScanStep(
-          `Searching clinics via zone localities + OSM/GMB sources for ${nextCriteria.keyword}…`
+          live
+            ? `Enriching with live maps (budgeted) for ${nextCriteria.keyword}…`
+            : `Loading clinic inventory for ${nextCriteria.keyword}…`
         );
         const data = await api.searchLeads({
           city: nextCriteria.city,
           zone: nextCriteria.zone || 'All',
           keyword: nextCriteria.keyword,
           specialty: nextCriteria.keyword,
-          live: true,
-          maxLocalities: 40,
-          limit: null,
+          live,
+          maxLocalities: live ? 8 : 40,
+          limit: live ? 60 : null,
         });
         setResults(data.results || []);
         setSummary(data.summary || null);
@@ -104,14 +108,20 @@ export default function LeadGenerator() {
           !nextCriteria.zone || nextCriteria.zone === 'All'
             ? `all zones in ${nextCriteria.city}`
             : `${nextCriteria.zone} (+ localities)`;
+        const liveNote = data.summary?.liveTimedOut
+          ? ' · live maps partially timed out (inventory kept)'
+          : live
+            ? ` · live ${data.summary?.liveLeads || 0}`
+            : '';
         toast(
           `Loaded ${data.count} unique leads · ${data.summary?.localitiesCovered || 0} localities · ${
             data.summary?.duplicatesRemoved || 0
-          } dupes removed · ${where}`
+          } dupes removed · ${where}${liveNote}`
         );
       } catch (err) {
         setResults([]);
         setSummary(null);
+        setLastError(err.message || 'Search failed');
         toast(err.message);
       } finally {
         setBusy(false);
@@ -123,7 +133,8 @@ export default function LeadGenerator() {
 
   useEffect(() => {
     if (!ready || !criteria.city || !criteria.keyword) return undefined;
-    const t = setTimeout(() => runDiscovery(criteria), 280);
+    // Auto-search uses fast inventory path so the page never hangs on live OSM
+    const t = setTimeout(() => runDiscovery(criteria, { live: false }), 280);
     return () => clearTimeout(t);
   }, [ready, criteria.city, criteria.zone, criteria.keyword]);
 
@@ -263,8 +274,22 @@ export default function LeadGenerator() {
           </p>
         </div>
         <div className="topbar-actions">
-          <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => runDiscovery(criteria)}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy}
+            onClick={() => runDiscovery(criteria, { live: false })}
+          >
             Rescan
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={busy}
+            title="Optional short OSM / Places pass (stays under the server time limit)"
+            onClick={() => runDiscovery(criteria, { live: true })}
+          >
+            Enrich with live maps
           </button>
           <button type="button" className="btn btn-primary" onClick={importSelected} disabled={busy || !selectedCount}>
             Send to Lead Management ({selectedCount})
@@ -318,10 +343,11 @@ export default function LeadGenerator() {
           <label className="field">
             How locality coverage works
             <div className="muted" style={{ fontSize: '0.85rem', lineHeight: 1.45, marginTop: 6 }}>
-              Pick a zone only — the system automatically searches every locality covered under that
-              zone from the internal Reach reference file (for example Bangalore → Vijayanagar also
-              covers Deepanjalinagar, Chandra Layout, Nagarbhavi, and more). Live OSM / Google Places
-              run automatically and results are de-duplicated before you send them to Lead Management.
+              Pick a zone — the system loads clinics from every locality under that zone in the
+              internal Reach reference (for example Bangalore → Vijayanagar also covers
+              Deepanjalinagar, Chandra Layout, Nagarbhavi, and more). Results are de-duplicated
+              before you send them to Lead Management. Use “Enrich with live maps” only when you
+              want a short optional OSM / Places pass on top of the inventory.
               {meta.localityCount ? (
                 <> Reference loaded: {meta.localityCount.toLocaleString()} localities.</>
               ) : null}
@@ -477,7 +503,11 @@ export default function LeadGenerator() {
           <div className="empty">{scanStep || 'Discovering clinics across localities…'}</div>
         ) : !filtered.length ? (
           <div className="empty">
-            No leads for these filters. Try another zone, locality, or speciality.
+            {lastError
+              ? `Search failed: ${lastError}`
+              : results.length
+                ? 'No leads match the current table filters. Clear filters or try another zone/locality.'
+                : 'No leads for these filters. Try another city, zone, or speciality — or use Rescan.'}
           </div>
         ) : (
           <>

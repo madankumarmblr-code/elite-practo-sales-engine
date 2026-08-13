@@ -330,16 +330,21 @@ export async function searchPractoWeb({
     leads.push(lead);
   };
 
-  for (const url of urls) {
+  const pageTimeoutMs = process.env.VERCEL ? 8000 : 12000;
+  const pending = urls.slice(0, Math.min(urls.length, Math.max(pageBudget, 2)));
+  const pagesHtml = await Promise.all(
+    pending.map((url) => fetchHtml(url, { timeoutMs: pageTimeoutMs }))
+  );
+  for (let i = 0; i < pagesHtml.length; i += 1) {
     if (leads.length >= limit) break;
-    const page = await fetchHtml(url, { timeoutMs: 12000 });
+    const page = pagesHtml[i];
     lastStatus = page.status;
     if (!page.ok) continue;
-    usedUrl = page.url || url;
+    usedUrl = page.url || pending[i];
 
     const entities = parseLdJsonBlocks(page.html).filter((e) => {
       const t = String(e['@type'] || '');
-      return /Dentist|Physician|MedicalClinic|Hospital|Doctor|Surgeon|Clinic/i.test(t);
+      return /Dentist|Physician|MedicalClinic|Hospital|Doctor|Surgeon|Clinic|Dermatologist/i.test(t);
     });
     for (const entity of entities) {
       pushLead(listingToLead(entity, { city, zone, locality: area, keyword }));

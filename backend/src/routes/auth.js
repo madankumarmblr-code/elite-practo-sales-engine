@@ -11,6 +11,7 @@ import {
 import { authRequired, requirePermission } from '../auth/middleware.js';
 import { issueAuthToken } from '../auth/token.js';
 import { logEvent, listEvents } from '../services/logger.js';
+import { persistDurableDbNow } from '../services/dbSnapshot.js';
 
 const now = () => new Date().toISOString();
 
@@ -147,7 +148,7 @@ export function registerAuthRoutes(app) {
     res.json(rows);
   });
 
-  app.post('/api/users', authRequired, requirePermission('users:write'), (req, res) => {
+  app.post('/api/users', authRequired, requirePermission('users:write'), async (req, res) => {
     if (!isSuperAdmin(req.user)) {
       return res.status(403).json({ error: 'Only Super Admin can create users' });
     }
@@ -212,10 +213,11 @@ export function registerAuthRoutes(app) {
       meta: { createdUserId: id, role, permissions: perms },
     });
 
+    await persistDurableDbNow();
     res.status(201).json(publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id)));
   });
 
-  app.put('/api/users/:id', authRequired, requirePermission('users:write'), (req, res) => {
+  app.put('/api/users/:id', authRequired, requirePermission('users:write'), async (req, res) => {
     if (!isSuperAdmin(req.user)) {
       return res.status(403).json({ error: 'Only Super Admin can update users' });
     }
@@ -292,10 +294,11 @@ export function registerAuthRoutes(app) {
       meta: { targetUserId: existing.id, role, permissions: perms },
     });
 
+    await persistDurableDbNow();
     res.json(publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id)));
   });
 
-  app.delete('/api/users/:id', authRequired, requirePermission('users:write'), (req, res) => {
+  app.delete('/api/users/:id', authRequired, requirePermission('users:write'), async (req, res) => {
     if (!isSuperAdmin(req.user)) {
       return res.status(403).json({ error: 'Only Super Admin can delete users' });
     }
@@ -317,6 +320,7 @@ export function registerAuthRoutes(app) {
       userId: req.user.id,
       meta: { deletedUserId: existing.id },
     });
+    await persistDurableDbNow();
     res.json({ ok: true });
   });
 

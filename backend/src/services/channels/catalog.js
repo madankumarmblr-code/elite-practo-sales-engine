@@ -376,15 +376,21 @@ export const INTEGRATION_CATALOG = [
   },
   {
     provider: 'practo',
-    label: 'Practo API',
+    label: 'Practo.com (website)',
     category: 'Marketplace',
     channel: 'discovery',
     is_default: 1,
-    pricing: 'paid',
-    availability: 'needs_key',
-    config: { baseUrl: 'https://api.practo.com', environment: 'sandbox', version: 'v1', pricing: 'paid' },
-    secrets: { apiKey: '', clientId: '', clientSecret: '' },
-    notes: 'Partner API for listing / product sync',
+    pricing: 'free',
+    availability: 'ready_free',
+    config: {
+      baseUrl: 'https://www.practo.com',
+      defaultCity: 'Bangalore',
+      specialty: 'dentist',
+      pricing: 'free',
+    },
+    secrets: {},
+    notes:
+      'Pulls clinic/doctor listing details from practo.com public pages (no partner API key)',
   },
   {
     provider: 'justdial',

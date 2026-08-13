@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { backupUser, removeUserBackup, syncUsersBackup } from '../lib/workspaceBackup';
 
 const emptyUser = {
   name: '',
@@ -25,6 +26,7 @@ export default function SuperAdmin() {
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState('users');
+  const [loadError, setLoadError] = useState('');
 
   const allowed = can('users:write') || user?.role === 'superadmin';
 
@@ -38,20 +40,25 @@ export default function SuperAdmin() {
   }, [rolesMeta.permissions]);
 
   async function load() {
+    setLoadError('');
+    // Load users first — don't let health/logs failures blank the user table
     try {
-      const [u, r, e, h] = await Promise.all([
-        api.getUsers(),
-        api.getRoles(),
-        api.getSystemEvents({ limit: 80 }),
-        api.getSystemHealth(),
-      ]);
-      setUsers(u);
-      setRolesMeta(r);
-      setEvents(e);
-      setHealth(h);
+      const u = await api.getUsers();
+      setUsers(Array.isArray(u) ? u : []);
+      syncUsersBackup(Array.isArray(u) ? u : []);
     } catch (err) {
+      setLoadError(err.message || 'Failed to load users');
       toast(err.message);
     }
+
+    const extras = await Promise.allSettled([
+      api.getRoles(),
+      api.getSystemEvents({ limit: 80 }),
+      api.getSystemHealth(),
+    ]);
+    if (extras[0].status === 'fulfilled') setRolesMeta(extras[0].value);
+    if (extras[1].status === 'fulfilled') setEvents(extras[1].value);
+    if (extras[2].status === 'fulfilled') setHealth(extras[2].value);
   }
 
   useEffect(() => {
@@ -83,7 +90,9 @@ export default function SuperAdmin() {
   }
 
   function applyRoleDefaults(roleId) {
-    const role = rolesMeta.roles.find((r) => r.id === roleId) || rolesMeta.allRoles?.find((r) => r.id === roleId);
+    const role =
+      rolesMeta.roles.find((r) => r.id === roleId) ||
+      rolesMeta.allRoles?.find((r) => r.id === roleId);
     setForm((f) => ({
       ...f,
       role: roleId,
@@ -113,9 +122,10 @@ export default function SuperAdmin() {
         permissions: form.permissions,
       };
       if (form.password) payload.password = form.password;
+      let saved;
       if (editingId) {
         if (!form.password) delete payload.password;
-        await api.updateUser(editingId, payload);
+        saved = await api.updateUser(editingId, payload);
         toast('User updated');
       } else {
         if (!form.password) {
@@ -123,12 +133,13 @@ export default function SuperAdmin() {
           setBusy(false);
           return;
         }
-        await api.createUser({ ...payload, password: form.password });
+        saved = await api.createUser({ ...payload, password: form.password });
         toast('User created');
       }
+      backupUser(saved || payload, form.password || undefined);
       setForm(emptyUser);
       setEditingId(null);
-      load();
+      await load();
     } catch (err) {
       toast(err.message);
     } finally {
@@ -139,9 +150,11 @@ export default function SuperAdmin() {
   async function removeUser(id) {
     if (!confirm('Delete this user?')) return;
     try {
+      const target = users.find((u) => u.id === id);
       await api.deleteUser(id);
+      if (target) removeUserBackup(target.username || target.email);
       toast('User deleted');
-      load();
+      await load();
     } catch (err) {
       toast(err.message);
     }
@@ -157,10 +170,18 @@ export default function SuperAdmin() {
           </p>
         </div>
         <div className="topbar-actions">
-          <button type="button" className={`btn ${tab === 'users' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setTab('users')}>
+          <button
+            type="button"
+            className={`btn ${tab === 'users' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setTab('users')}
+          >
             Users & permissions
           </button>
-          <button type="button" className={`btn ${tab === 'health' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setTab('health')}>
+          <button
+            type="button"
+            className={`btn ${tab === 'health' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setTab('health')}
+          >
             Health & logs
           </button>
           <button type="button" className="btn btn-ghost" onClick={load}>
@@ -173,11 +194,16 @@ export default function SuperAdmin() {
         <div className="grid grid-2">
           <div className="panel">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0 }}>Users</h2>
+              <h2 style={{ margin: 0 }}>Users ({users.length})</h2>
               <button type="button" className="btn btn-primary" onClick={startCreate}>
                 Add user
               </button>
             </div>
+            {loadError ? (
+              <p className="muted" style={{ color: 'var(--coral, #c45c26)' }}>
+                {loadError}
+              </p>
+            ) : null}
             <div className="table-wrap" style={{ marginTop: '1rem' }}>
               <table className="data">
                 <thead>
@@ -200,7 +226,9 @@ export default function SuperAdmin() {
                       </td>
                       <td>{u.username || '—'}</td>
                       <td>
-                        <span className={`badge ${u.role === 'superadmin' ? 'badge-coral' : 'badge-teal'}`}>
+                        <span
+                          className={`badge ${u.role === 'superadmin' ? 'badge-coral' : 'badge-teal'}`}
+                        >
                           {u.roleLabel}
                         </span>
                       </td>
@@ -210,13 +238,24 @@ export default function SuperAdmin() {
                           Edit
                         </button>
                         {u.role !== 'superadmin' ? (
-                          <button type="button" className="btn btn-danger" onClick={() => removeUser(u.id)}>
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            onClick={() => removeUser(u.id)}
+                          >
                             Delete
                           </button>
                         ) : null}
                       </td>
                     </tr>
                   ))}
+                  {!users.length && !loadError ? (
+                    <tr>
+                      <td colSpan={5} className="muted">
+                        No users loaded yet. Click Refresh, or create a user.
+                      </td>
+                    </tr>
+                  ) : null}
                 </tbody>
               </table>
             </div>
@@ -270,7 +309,10 @@ export default function SuperAdmin() {
                   onChange={(e) => applyRoleDefaults(e.target.value)}
                 >
                   {(form.role === 'superadmin'
-                    ? [{ id: 'superadmin', label: 'Super Admin', level: 1000 }, ...(rolesMeta.roles || [])]
+                    ? [
+                        { id: 'superadmin', label: 'Super Admin', level: 1000 },
+                        ...(rolesMeta.roles || []),
+                      ]
                     : rolesMeta.roles || []
                   ).map((r) => (
                     <option key={r.id} value={r.id}>
@@ -321,7 +363,14 @@ export default function SuperAdmin() {
                   {busy ? 'Saving…' : editingId ? 'Save changes' : 'Create user'}
                 </button>
                 {editingId ? (
-                  <button type="button" className="btn btn-ghost" onClick={() => { setEditingId(null); setForm(emptyUser); }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setEditingId(null);
+                      setForm(emptyUser);
+                    }}
+                  >
                     Cancel
                   </button>
                 ) : null}

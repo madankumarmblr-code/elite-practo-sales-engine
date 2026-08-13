@@ -4,6 +4,7 @@
  * against provider APIs when secrets are present.
  */
 import { catalogByProvider } from './channels/catalog.js';
+import { probePractoWeb } from './practoWeb.js';
 
 const UA = 'PractoSalesAutomation/1.0 (integration-verify)';
 
@@ -896,7 +897,6 @@ export async function verifyIntegration(row) {
       }
       case 'knowlarity_calls':
       case 'myoperator_calls':
-      case 'practo':
       case 'justdial': {
         const catalogSecrets = Object.keys(catalog?.secrets || secrets);
         if (!hasAnySecret(secrets)) {
@@ -907,6 +907,10 @@ export async function verifyIntegration(row) {
           status: 'ready',
           message: `${label} credentials saved — live dial/listing uses provider at campaign time`,
         });
+      }
+      case 'practo': {
+        const probe = await probePractoWeb(config);
+        return result(probe);
       }
       default: {
         if (catalog?.availability === 'ready_free') {

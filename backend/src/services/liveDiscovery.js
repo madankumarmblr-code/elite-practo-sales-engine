@@ -4,6 +4,7 @@
  * Key-based: Google Places when configured in api_integrations.
  */
 import db from '../db/db.js';
+import { searchPractoWeb, enrichLeadsWithPractoWeb } from './practoWeb.js';
 
 const USER_AGENT = 'PractoSalesAutomation/1.0 (clinic-lead-discovery; contact=superadmin@practo.sales)';
 
@@ -71,9 +72,43 @@ export function leadDedupeKey(lead) {
   return leadDedupeKeys(lead)[0];
 }
 
+const AUTHENTIC_SOURCES = new Set(['nominatim', 'overpass', 'google_places', 'practo_web']);
+
 /**
- * Collapse duplicates across OSM / Places / sheet inventory.
- * Keeps the richest record when keys collide (phone, placeId, name+locality).
+ * True only for live-sourced clinics (OSM / Google Places / Practo.com).
+ * Rejects synthetic "sheet_locality" inventory placeholders.
+ */
+export function isAuthenticLead(lead) {
+  if (!lead || typeof lead !== 'object') return false;
+  const src = String(lead.discoverySource || '').trim();
+  if (src === 'sheet_locality') return false;
+  if (/sheet\s*\+\s*locality|synthetic|demo|sample/i.test(String(lead.source || ''))) return false;
+  if (/zone locality expansion/i.test(String(lead.matchReason || ''))) return false;
+
+  const name = String(lead.clinicName || lead.company || lead.name || '').trim();
+  if (name.length < 3) return false;
+  if (/^(clinic|hospital|doctor|unknown|listing contact)$/i.test(name)) return false;
+
+  if (AUTHENTIC_SOURCES.has(src)) return true;
+
+  // Fallback for imported rows that lost discoverySource but still have real signals
+  const phone = normalizePhone(lead.phone || lead.owner?.phone);
+  const email = String(lead.email || lead.owner?.email || '').trim();
+  const practoUrl = String(lead.practo?.url || '');
+  const hasPracto = Boolean(lead.practo?.hasProfile && /practo\.com/i.test(practoUrl));
+  const hasPlace = Boolean(lead.placeId);
+  const hasWebsite = Boolean(lead.website) && /^https?:\/\//i.test(String(lead.website));
+  return Boolean(phone || hasPracto || hasPlace || (email.includes('@') && hasWebsite));
+}
+
+export function filterAuthenticLeads(leads) {
+  if (!Array.isArray(leads)) return [];
+  return leads.filter(isAuthenticLead);
+}
+
+/**
+ * Collapse duplicates across OSM / Places / Practo.
+ * Keeps the richest record when keys collide (phone, placeId, name+locality, Practo URL).
  */
 export function dedupeLeads(leads) {
   const keyToIndex = new Map();
@@ -81,6 +116,13 @@ export function dedupeLeads(leads) {
 
   for (const lead of leads) {
     const keys = leadDedupeKeys(lead);
+    // Practo profile URL is a strong identity
+    const practoUrl = String(lead.practo?.url || '')
+      .split('?')[0]
+      .replace(/\/$/, '')
+      .toLowerCase();
+    if (practoUrl.includes('practo.com')) keys.push(`practo:${practoUrl}`);
+
     let hitIndex = -1;
     for (const key of keys) {
       if (keyToIndex.has(key)) {
@@ -90,7 +132,21 @@ export function dedupeLeads(leads) {
     }
     if (hitIndex >= 0) {
       if (richness(lead) > richness(out[hitIndex])) {
-        out[hitIndex] = lead;
+        // Prefer authentic Practo profile data when merging
+        const prev = out[hitIndex];
+        out[hitIndex] = {
+          ...prev,
+          ...lead,
+          practo: lead.practo?.hasProfile ? lead.practo : prev.practo,
+          platforms: mergePlatforms(prev.platforms, lead.platforms),
+          score: Math.max(Number(prev.score) || 0, Number(lead.score) || 0),
+        };
+      } else if (lead.practo?.hasProfile && !out[hitIndex].practo?.hasProfile) {
+        out[hitIndex] = {
+          ...out[hitIndex],
+          practo: lead.practo,
+          platforms: mergePlatforms(out[hitIndex].platforms, lead.platforms),
+        };
       }
       for (const key of keys) keyToIndex.set(key, hitIndex);
       continue;
@@ -98,6 +154,19 @@ export function dedupeLeads(leads) {
     const idx = out.length;
     out.push(lead);
     for (const key of keys) keyToIndex.set(key, idx);
+  }
+  return out;
+}
+
+function mergePlatforms(a, b) {
+  const list = [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])];
+  const seen = new Set();
+  const out = [];
+  for (const p of list) {
+    const name = p?.name || p;
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    out.push(typeof p === 'string' ? { name: p, listed: true } : p);
   }
   return out;
 }
@@ -507,7 +576,64 @@ export async function liveDiscoverAreas({
     } catch (err) {
       scanned.push({ name: `Google Places · ${locality}`, status: 'error', detail: err.message });
     }
+
+    if (pastDeadline()) {
+      timedOut = true;
+      scanned.push({
+        name: 'Live discovery',
+        status: 'timeout',
+        detail: `Stopped after ${Math.round(deadlineMs / 1000)}s to keep search responsive`,
+      });
+      break;
+    }
+
+    // Practo.com public listings (no API key)
+    try {
+      const found = await searchPractoWeb({
+        city: area.city,
+        zone,
+        locality,
+        keyword,
+        limit: perArea,
+      });
+      if (found.results.length) {
+        leads.push(...found.results);
+        areaCount += found.results.length;
+        scanned.push({
+          name: `Practo.com · ${locality}`,
+          status: 'scanned',
+          count: found.results.length,
+        });
+      } else {
+        scanned.push({
+          name: `Practo.com · ${locality}`,
+          status: found.ok ? 'empty' : 'error',
+          count: 0,
+          detail: found.status ? `HTTP ${found.status}` : undefined,
+        });
+      }
+    } catch (err) {
+      scanned.push({ name: `Practo.com · ${locality}`, status: 'error', detail: err.message });
+    }
   }
 
-  return { leads: dedupeLeads(leads), scannedSources: scanned, timedOut };
+  let finalLeads = dedupeLeads(leads);
+  if (!timedOut && finalLeads.length) {
+    try {
+      const remaining = deadlineMs > 0 ? Math.max(0, deadlineMs - (Date.now() - started)) : 8000;
+      if (remaining > 1500) {
+        const enriched = await enrichLeadsWithPractoWeb(finalLeads, {
+          city: slice[0]?.city,
+          keyword,
+          deadlineMs: Math.min(remaining, 10000),
+        });
+        finalLeads = enriched.leads;
+        scanned.push(...enriched.scanned);
+      }
+    } catch (err) {
+      scanned.push({ name: 'Practo.com enrich', status: 'error', detail: err.message });
+    }
+  }
+
+  return { leads: dedupeLeads(finalLeads), scannedSources: scanned, timedOut };
 }

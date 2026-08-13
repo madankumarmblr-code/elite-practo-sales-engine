@@ -155,8 +155,9 @@ export default function ApiIntegrations() {
           <h1>API Integrations</h1>
           <p>
             Free, freemium, and paid connectors for WhatsApp, Gmail, Calls, AI, Discovery (OSM /
-            Places / SERP / GMB), enrichment, and webhooks. Free discovery APIs run without keys;
-            add credentials on paid providers to go live.
+            Places / SERP / GMB), enrichment, and webhooks. Use <strong>Test all integrations</strong> to
+            verify each connector. Free discovery APIs run without keys; add credentials (or set env
+            keys on the host) for paid providers.
           </p>
         </div>
         <div className="topbar-actions">

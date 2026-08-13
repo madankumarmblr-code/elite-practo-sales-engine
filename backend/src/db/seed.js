@@ -46,6 +46,97 @@ function ensureIntegrations() {
       );
     }
   }
+
+  hydrateIntegrationSecretsFromEnv();
+}
+
+/**
+ * On Vercel, SQLite under /tmp is ephemeral — hydrate common API keys from
+ * environment variables on every boot so Integrations keep working after deploys.
+ * Does not overwrite a non-empty secret already saved in the DB unless
+ * INTEGRATION_SECRETS_FORCE=1.
+ */
+function hydrateIntegrationSecretsFromEnv() {
+  const force = String(process.env.INTEGRATION_SECRETS_FORCE || '') === '1';
+  const map = [
+    { provider: 'google_maps', secret: 'apiKey', env: 'GOOGLE_MAPS_API_KEY' },
+    { provider: 'google_gemini', secret: 'apiKey', env: 'GOOGLE_GEMINI_API_KEY' },
+    { provider: 'openai', secret: 'apiKey', env: 'OPENAI_API_KEY' },
+    { provider: 'anthropic_claude', secret: 'apiKey', env: 'ANTHROPIC_API_KEY' },
+    { provider: 'groq_llm', secret: 'apiKey', env: 'GROQ_API_KEY' },
+    { provider: 'serpapi', secret: 'apiKey', env: 'SERPAPI_API_KEY' },
+    { provider: 'sendgrid_email', secret: 'apiKey', env: 'SENDGRID_API_KEY' },
+    { provider: 'resend_email', secret: 'apiKey', env: 'RESEND_API_KEY' },
+    { provider: 'hunter_email', secret: 'apiKey', env: 'HUNTER_API_KEY' },
+    { provider: 'apify', secret: 'token', env: 'APIFY_TOKEN' },
+    { provider: 'outscraper', secret: 'apiKey', env: 'OUTSCRAPER_API_KEY' },
+    {
+      provider: 'whatsapp_meta',
+      secret: 'accessToken',
+      env: 'WHATSAPP_META_ACCESS_TOKEN',
+    },
+    { provider: 'twilio_calls', secret: 'accountSid', env: 'TWILIO_ACCOUNT_SID' },
+    { provider: 'twilio_calls', secret: 'authToken', env: 'TWILIO_AUTH_TOKEN' },
+    { provider: 'whatsapp_twilio', secret: 'accountSid', env: 'TWILIO_ACCOUNT_SID' },
+    { provider: 'whatsapp_twilio', secret: 'authToken', env: 'TWILIO_AUTH_TOKEN' },
+  ];
+
+  const byProvider = new Map();
+  for (const row of map) {
+    const value = String(process.env[row.env] || '').trim();
+    if (!value) continue;
+    if (!byProvider.has(row.provider)) byProvider.set(row.provider, {});
+    byProvider.get(row.provider)[row.secret] = value;
+  }
+
+  // Optional JSON blob: { "google_maps": { "apiKey": "..." }, ... }
+  try {
+    const raw = process.env.INTEGRATION_SECRETS_JSON;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      for (const [provider, secrets] of Object.entries(parsed || {})) {
+        if (!secrets || typeof secrets !== 'object') continue;
+        if (!byProvider.has(provider)) byProvider.set(provider, {});
+        Object.assign(byProvider.get(provider), secrets);
+      }
+    }
+  } catch (err) {
+    console.warn('INTEGRATION_SECRETS_JSON parse failed:', err.message);
+  }
+
+  const update = db.prepare(
+    'UPDATE api_integrations SET secrets = ?, enabled = CASE WHEN ? = 1 THEN 1 ELSE enabled END, updated_at = ? WHERE provider = ?'
+  );
+  const ts = now();
+  let applied = 0;
+  for (const [provider, incoming] of byProvider.entries()) {
+    const row = db.prepare('SELECT secrets, enabled FROM api_integrations WHERE provider = ?').get(provider);
+    if (!row) continue;
+    let current = {};
+    try {
+      current = JSON.parse(row.secrets || '{}');
+    } catch {
+      current = {};
+    }
+    let changed = false;
+    const next = { ...current };
+    for (const [k, v] of Object.entries(incoming)) {
+      if (!v) continue;
+      if (force || !String(current[k] || '').trim()) {
+        if (next[k] !== v) {
+          next[k] = v;
+          changed = true;
+        }
+      }
+    }
+    if (!changed) continue;
+    const enable = Object.values(next).some(Boolean) ? 1 : 0;
+    update.run(JSON.stringify(next), enable, ts, provider);
+    applied += 1;
+  }
+  if (applied) {
+    console.log(`Hydrated ${applied} integration(s) from environment secrets`);
+  }
 }
 
 function ensureDefaultCampaigns() {

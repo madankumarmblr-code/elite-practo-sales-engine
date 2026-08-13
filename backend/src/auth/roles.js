@@ -17,8 +17,8 @@ export const ALL_PERMISSIONS = [
   { id: 'settings:read', label: 'Settings (view)', group: 'Modules' },
   { id: 'settings:write', label: 'Settings (edit)', group: 'Modules' },
   { id: 'api_integrations:read', label: 'API Integrations (view)', group: 'Modules' },
-  { id: 'api_integrations:write', label: 'API Integrations (edit)', group: 'Modules' },
   { id: 'export:read', label: 'Export data', group: 'Modules' },
+  { id: 'api_integrations:write', label: 'API Integrations (add / edit keys)', group: 'Super Admin' },
   { id: 'users:read', label: 'View users', group: 'Super Admin' },
   { id: 'users:write', label: 'Manage users & permissions', group: 'Super Admin' },
   { id: 'system:logs', label: 'System logs & events', group: 'Super Admin' },
@@ -50,8 +50,8 @@ export const ROLES = {
       'lead_settings:write',
       'settings:read',
       'settings:write',
+      // Workspace API keys are configured by Super Admin and apply to everyone.
       'api_integrations:read',
-      'api_integrations:write',
       'export:read',
     ],
   },
@@ -91,6 +91,8 @@ export const ROLES = {
       'autopilot:read',
       'autopilot:write',
       'settings:read',
+      // Can use Super Admin–configured integrations; cannot edit keys
+      'api_integrations:read',
       'export:read',
     ],
   },
@@ -105,6 +107,7 @@ export const ROLES = {
       'commercial_suite:read',
       'autopilot:read',
       'settings:read',
+      'api_integrations:read',
     ],
   },
 };

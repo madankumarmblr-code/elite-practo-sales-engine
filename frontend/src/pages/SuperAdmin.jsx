@@ -122,11 +122,13 @@ export default function SuperAdmin() {
         permissions: form.permissions,
       };
       if (form.password) payload.password = form.password;
+      const createdUsername = String(payload.username || '').toLowerCase();
+      const wasCreate = !editingId;
       let saved;
       if (editingId) {
         if (!form.password) delete payload.password;
         saved = await api.updateUser(editingId, payload);
-        toast('User updated');
+        toast(saved?.durableWarning || 'User updated');
       } else {
         if (!form.password) {
           toast('Password is required for new users');
@@ -134,12 +136,22 @@ export default function SuperAdmin() {
           return;
         }
         saved = await api.createUser({ ...payload, password: form.password });
-        toast('User created');
+        toast(saved?.durableWarning || 'User created');
       }
       backupUser(saved || payload, form.password || undefined);
       setForm(emptyUser);
       setEditingId(null);
       await load();
+      if (wasCreate && createdUsername) {
+        const refreshed = await api.getUsers().catch(() => null);
+        if (Array.isArray(refreshed)) {
+          setUsers(refreshed);
+          syncUsersBackup(refreshed);
+          if (!refreshed.some((u) => (u.username || '').toLowerCase() === createdUsername)) {
+            toast('User created but not yet visible — click Refresh.');
+          }
+        }
+      }
     } catch (err) {
       toast(err.message);
     } finally {
@@ -166,7 +178,8 @@ export default function SuperAdmin() {
         <div>
           <h1>Super Admin</h1>
           <p>
-            Manage users, permission levels, passwords, and verify database logs/events are working.
+            Manage users and permissions. Created users are stored in the durable workspace database.
+            Only Super Admin can edit API integration keys (they apply to all users).
           </p>
         </div>
         <div className="topbar-actions">

@@ -81,7 +81,7 @@ export default function LeadGenerator() {
       try {
         await new Promise((r) => setTimeout(r, 120));
         setScanStep(
-          `Searching clinics via sheet + OSM/GMB/website sources for ${nextCriteria.keyword}…`
+          `Searching clinics via zone localities + OSM/GMB sources for ${nextCriteria.keyword}…`
         );
         const data = await api.searchLeads({
           city: nextCriteria.city,
@@ -443,7 +443,7 @@ export default function LeadGenerator() {
           >
             <option value="all">All sources</option>
             <option value="live">Live OSM/Places only</option>
-            <option value="sheet_locality">Sheet + locality</option>
+            <option value="sheet_locality">Zone locality inventory</option>
             <option value="overpass">OSM Overpass</option>
             <option value="nominatim">Nominatim</option>
             <option value="google_places">Google Places</option>

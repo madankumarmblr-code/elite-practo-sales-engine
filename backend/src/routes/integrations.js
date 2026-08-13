@@ -13,6 +13,17 @@ function connectivityOf(row, { hasSecrets, availability, readyToRun }) {
   const testOk = row.last_test_ok == null ? null : !!row.last_test_ok;
   const message = row.last_test_message || '';
 
+  // No credentials yet — prefer amber over a stale failed check
+  if (!hasSecrets && availability === 'needs_key') {
+    return {
+      code: 'needs_key',
+      label: 'Needs key',
+      symbol: '●',
+      tone: 'amber',
+      hint: message || 'Add API credentials, then run Test',
+    };
+  }
+
   if (row.status === 'error' || testOk === false) {
     return {
       code: 'error',
@@ -37,16 +48,9 @@ function connectivityOf(row, { hasSecrets, availability, readyToRun }) {
       label: tested ? 'Ready' : 'Ready to test',
       symbol: '●',
       tone: 'teal',
-      hint: message || (availability === 'ready_free' ? 'Free connector — no key required' : 'Credentials present'),
-    };
-  }
-  if (!hasSecrets && availability === 'needs_key') {
-    return {
-      code: 'needs_key',
-      label: 'Needs key',
-      symbol: '●',
-      tone: 'amber',
-      hint: message || 'Add API credentials, then run Test',
+      hint:
+        message ||
+        (availability === 'ready_free' ? 'Free connector — no key required' : 'Credentials present'),
     };
   }
   return {
@@ -181,18 +185,28 @@ export function registerIntegrationRoutes(app) {
       if (!hasSecrets && (nextStatus === 'connected' || nextStatus === 'error')) {
         nextStatus = 'ready';
       }
+      const nextEnabled =
+        b.enabled !== undefined ? (b.enabled ? 1 : 0) : existing.enabled;
+      const nextDefault =
+        b.is_default !== undefined ? (b.is_default ? 1 : 0) : existing.is_default || 0;
+      if (nextDefault && existing.channel) {
+        db.prepare(
+          'UPDATE api_integrations SET is_default = 0, updated_at = ? WHERE channel = ? AND id != ?'
+        ).run(now(), existing.channel, req.params.id);
+      }
       db.prepare(`
         UPDATE api_integrations
-        SET label=?, category=?, enabled=?, status=?, config=?, secrets=?, notes=?, updated_at=?
+        SET label=?, category=?, enabled=?, status=?, config=?, secrets=?, notes=?, is_default=?, updated_at=?
         WHERE id=?
       `).run(
         b.label ?? existing.label,
         b.category ?? existing.category,
-        b.enabled !== undefined ? (b.enabled ? 1 : 0) : existing.enabled,
+        nextEnabled,
         nextStatus,
         JSON.stringify(config),
         JSON.stringify(nextSecrets),
         b.notes ?? existing.notes,
+        nextDefault,
         now(),
         req.params.id
       );

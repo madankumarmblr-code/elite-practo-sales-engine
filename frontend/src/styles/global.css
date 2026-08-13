@@ -434,6 +434,149 @@ table.data tr:hover td {
   50% { opacity: 1; transform: scale(1); }
 }
 
+.integ-channel-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.integ-channel-select {
+  min-width: min(280px, 100%);
+  margin: 0;
+}
+
+.integ-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.integ-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 100%;
+}
+
+.integ-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.integ-card__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.integ-card__title-row h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.integ-card__notes {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.integ-card__probe {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.integ-card__body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.integ-card__enable {
+  width: fit-content;
+}
+
+.integ-card__keys {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--surface-2, #f6f7f9);
+  border: 1px solid var(--border);
+}
+
+.integ-card__keys--free {
+  background: #eefaf4;
+  border-color: #c7ebd8;
+}
+
+.integ-card__keys-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.integ-advanced {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+}
+
+.integ-advanced > summary {
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 0.9rem;
+  list-style: none;
+}
+
+.integ-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.integ-advanced > summary::after {
+  content: '▾';
+  float: right;
+  color: var(--ink-soft);
+}
+
+.integ-advanced[open] > summary::after {
+  content: '▴';
+}
+
+.integ-advanced__body {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.integ-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+@media (max-width: 720px) {
+  .integ-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-grid {
   display: grid;
   gap: 0.75rem;

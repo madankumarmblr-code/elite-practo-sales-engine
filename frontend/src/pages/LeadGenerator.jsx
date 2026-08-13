@@ -76,13 +76,15 @@ export default function LeadGenerator() {
   }, []);
 
   const runDiscovery = useCallback(
-    async (nextCriteria = criteria) => {
+    async (nextCriteria = criteria, { fullScan = false } = {}) => {
       if (!nextCriteria.city || !nextCriteria.keyword) return;
       const seq = ++searchSeq.current;
       setBusy(true);
       setLastError('');
       setScanStep(
-        `Loading authentic clinics from Practo.com + maps for ${nextCriteria.keyword}…`
+        fullScan
+          ? `Full scan — loading more Practo.com + map clinics for ${nextCriteria.keyword}…`
+          : `Loading authentic clinics from Practo.com + maps for ${nextCriteria.keyword}…`
       );
       try {
         const data = await api.searchLeads({
@@ -92,8 +94,9 @@ export default function LeadGenerator() {
           specialty: nextCriteria.keyword,
           live: true,
           allowSynthetic: false,
-          maxLocalities: 12,
-          limit: 80,
+          maxLocalities: fullScan ? 24 : 14,
+          limit: fullScan ? 150 : 100,
+          fullScan,
         });
         if (seq !== searchSeq.current) return; // stale response
         setResults(data.results || []);
@@ -122,7 +125,9 @@ export default function LeadGenerator() {
           toast(
             `Found ${n} authentic leads · Practo ${
               data.summary?.withPractoProfile || 0
-            } · ${data.summary?.duplicatesRemoved || 0} dupes removed · ${where}${liveNote}${synth}`
+            } · ${data.summary?.duplicatesRemoved || 0} dupes removed · ${where}${
+              fullScan ? ' · full scan' : ''
+            }${liveNote}${synth}`
           );
         }
       } catch (err) {
@@ -214,6 +219,73 @@ export default function LeadGenerator() {
     }
   }
 
+  function exportDiscovery(format = 'csv') {
+    const selectedRows = results.filter((r) => selected[r.id]);
+    const rows = (selectedRows.length ? selectedRows : filtered).map((r) => ({
+      clinicName: r.clinicName || r.company || '',
+      contactName: r.owner?.name || r.name || '',
+      phone: r.phone || r.owner?.phone || '',
+      email: r.email || r.owner?.email || '',
+      city: r.city || '',
+      zone: r.zone || '',
+      locality: r.locality || '',
+      address: r.address || '',
+      specialty: r.specialty || r.keyword || '',
+      source: r.source || '',
+      discoverySource: r.discoverySource || '',
+      practoUrl: r.practo?.url || '',
+      practoRating: r.practo?.rating ?? '',
+      website: r.website || '',
+      score: r.score ?? '',
+      suggestedChannel: r.suggestedChannel || '',
+      temperature: r.temperature || '',
+    }));
+    if (!rows.length) {
+      toast('No leads to export — run a search first');
+      return;
+    }
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const base = `leads-${criteria.city || 'all'}-${criteria.zone || 'all'}-${stamp}`.replace(
+      /\s+/g,
+      '_'
+    );
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${base}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } else {
+      const keys = Object.keys(rows[0]);
+      const escape = (v) => {
+        const s = v == null ? '' : String(v);
+        if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+      };
+      const csv = [keys.join(','), ...rows.map((r) => keys.map((k) => escape(r[k])).join(','))].join(
+        '\n'
+      );
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${base}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+    toast(
+      `Exported ${rows.length} lead${rows.length === 1 ? '' : 's'} as ${format.toUpperCase()}${
+        selectedRows.length ? ' (selected)' : ' (current filters)'
+      }`
+    );
+  }
+
   const filtered = useMemo(() => {
     const q = textFilter.trim().toLowerCase();
     return results.filter((r) => {
@@ -291,6 +363,31 @@ export default function LeadGenerator() {
             onClick={() => runDiscovery(criteria)}
           >
             Refresh authentic leads
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy}
+            onClick={() => runDiscovery(criteria, { fullScan: true })}
+            title="Scan more localities and Practo pages for a larger authentic list"
+          >
+            Load full list
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy || (!filtered.length && !results.length)}
+            onClick={() => exportDiscovery('csv')}
+          >
+            Export CSV
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy || (!filtered.length && !results.length)}
+            onClick={() => exportDiscovery('json')}
+          >
+            Export JSON
           </button>
           <button type="button" className="btn btn-primary" onClick={importSelected} disabled={busy || !selectedCount}>
             Send to Lead Management ({selectedCount})

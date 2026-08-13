@@ -244,6 +244,7 @@ export function registerLeadRoutes(app) {
       live = true,
       allowSynthetic = false,
       maxLocalities = 40,
+      fullScan = false,
     } = body;
     const kw = keyword || specialty || (Array.isArray(keywords) ? keywords[0] : null);
 
@@ -266,6 +267,7 @@ export function registerLeadRoutes(app) {
         live,
         allowSynthetic: allowSynthetic === true || allowSynthetic === '1',
         maxLocalities,
+        fullScan: fullScan === true || fullScan === '1',
       });
       if (discovery.error && !discovery.results?.length) {
         return res.status(400).json({ error: discovery.error });

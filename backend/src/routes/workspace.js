@@ -1,12 +1,15 @@
 import db from '../db/db.js';
 import { requirePermission } from '../auth/middleware.js';
 import { persistDurableDbNow, durableStoreConfigured } from '../services/dbSnapshot.js';
+import bcrypt from 'bcryptjs';
+import { nanoid } from 'nanoid';
+import { ROLES, permissionsForRole } from '../auth/roles.js';
 
 const now = () => new Date().toISOString();
 
 /**
- * Re-apply Settings / Lead Settings / API Integration credentials that the
- * browser kept while Vercel /tmp SQLite was reset.
+ * Re-apply Settings / Lead Settings / API Integration credentials / users that
+ * the browser kept while Vercel /tmp SQLite was reset.
  */
 export function registerWorkspaceRoutes(app) {
   app.post(
@@ -23,6 +26,7 @@ export function registerWorkspaceRoutes(app) {
         settings: false,
         leadSettings: false,
         integrations: 0,
+        users: 0,
         durableStore: durableStoreConfigured(),
       };
 
@@ -120,6 +124,84 @@ export function registerWorkspaceRoutes(app) {
               existing.id
             );
             applied.integrations += 1;
+          }
+        }
+
+        // Restore Super Admin–created users after /tmp wipe
+        if (Array.isArray(body.users)) {
+          const byEmail = db.prepare('SELECT * FROM users WHERE lower(email) = ?');
+          const byUsername = db.prepare('SELECT * FROM users WHERE lower(username) = ?');
+          const insert = db.prepare(`
+            INSERT INTO users (id, name, email, username, password_hash, role, permissions, active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          const update = db.prepare(`
+            UPDATE users
+            SET name=?, email=?, username=?, role=?, permissions=?, active=?, updated_at=?
+            WHERE id=?
+          `);
+          const updatePassword = db.prepare(
+            'UPDATE users SET password_hash=?, updated_at=? WHERE id=?'
+          );
+
+          for (const raw of body.users) {
+            if (!raw || typeof raw !== 'object') continue;
+            const email = String(raw.email || '')
+              .toLowerCase()
+              .trim();
+            const username = String(raw.username || email.split('@')[0] || '')
+              .toLowerCase()
+              .trim()
+              .replace(/[^a-z0-9._-]/g, '');
+            if (!email || !username) continue;
+            if (raw.role === 'superadmin' || username === 'superadmin') continue;
+
+            const role = ROLES[raw.role] ? raw.role : 'agent';
+            const perms =
+              Array.isArray(raw.permissions) && raw.permissions.length
+                ? raw.permissions.filter((p) => p && p !== '*')
+                : permissionsForRole(role);
+            const active = raw.active === false ? 0 : 1;
+            const name = String(raw.name || username).trim() || username;
+            const ts = now();
+
+            const existing = byEmail.get(email) || byUsername.get(username) || null;
+
+            if (existing) {
+              if (existing.role === 'superadmin') continue;
+              update.run(
+                name,
+                email,
+                username,
+                role,
+                JSON.stringify(perms),
+                active,
+                ts,
+                existing.id
+              );
+              if (raw.password && String(raw.password).trim()) {
+                updatePassword.run(bcrypt.hashSync(String(raw.password), 10), ts, existing.id);
+              }
+              applied.users += 1;
+            } else {
+              if (!raw.password || !String(raw.password).trim()) {
+                // Cannot create a login without a password — skip until next save with password
+                continue;
+              }
+              insert.run(
+                nanoid(),
+                name,
+                email,
+                username,
+                bcrypt.hashSync(String(raw.password), 10),
+                role,
+                JSON.stringify(perms),
+                active,
+                ts,
+                ts
+              );
+              applied.users += 1;
+            }
           }
         }
       });

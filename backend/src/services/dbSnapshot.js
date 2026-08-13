@@ -510,36 +510,14 @@ export function persistDurableDb({ force = false } = {}) {
 }
 
 /**
- * Express middleware: after successful mutating API calls, snapshot the DB.
- * Uses waitUntil on Vercel so the upload can finish after the response.
+ * Express middleware placeholder.
+ *
+ * Automatic post-response persists from warm serverless instances were
+ * overwriting newer Blob snapshots (created users vanished). Critical routes
+ * call persistDurableDbNow() instead.
  */
-export function durablePersistMiddleware(req, res, next) {
-  if (!durableStoreConfigured()) return next();
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
-
-  const p = req.path || '';
-  if (
-    p === '/auth/login' ||
-    p === '/auth/logout' ||
-    p.endsWith('/test') ||
-    p.endsWith('/self-test') ||
-    p.endsWith('/test-all')
-  ) {
-    return next();
-  }
-
-  res.on('finish', () => {
-    if (res.statusCode >= 400) return;
-    const job = persistDurableDb();
-    import('@vercel/functions')
-      .then((mod) => {
-        if (typeof mod.waitUntil === 'function') mod.waitUntil(job);
-      })
-      .catch(() => {
-        /* local / non-Vercel — fire and forget */
-      });
-  });
-  next();
+export function durablePersistMiddleware(_req, _res, next) {
+  return next();
 }
 
 /** Awaited persist for critical settings/integration/user saves. */

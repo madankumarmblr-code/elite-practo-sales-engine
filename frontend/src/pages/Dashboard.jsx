@@ -56,11 +56,11 @@ export default function Dashboard() {
     <>
       <div className="topbar">
         <div>
-          <div className="eyebrow">Enterprise sales</div>
-          <h1>Practo Sales Automation</h1>
+          <div className="eyebrow">Practo commercial</div>
+          <h1>Sales Automation</h1>
           <p>
-            Pipeline health, hot clinic leads, and Autopilot across WhatsApp, Gmail, and calls —
-            built for Practo commercial teams.
+            Soft, clear workspace for clinic pipeline health, hot leads, and Autopilot across
+            WhatsApp, Gmail, and calls.
           </p>
         </div>
         <div className="topbar-actions">

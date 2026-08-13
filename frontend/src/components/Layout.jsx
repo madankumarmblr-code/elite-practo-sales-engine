@@ -61,7 +61,7 @@ export default function Layout({ toast }) {
             Signed in as <strong style={{ color: '#fff' }}>{user?.name}</strong>
             <div>{user?.email}</div>
           </div>
-          <button type="button" className="btn btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }} onClick={logout}>
+          <button type="button" className="btn btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.28)' }} onClick={logout}>
             Sign out
           </button>
         </div>

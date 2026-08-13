@@ -119,7 +119,7 @@ function IntegrationCard({
   }
 
   return (
-    <article className="integ-card">
+    <article className={`integ-card ${item.connectivity?.code === 'live' ? 'integ-card--live' : ''}`}>
       <header className="integ-card__header">
         <div>
           <div className="integ-card__title-row">

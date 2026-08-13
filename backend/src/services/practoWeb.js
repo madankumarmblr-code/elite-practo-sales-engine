@@ -213,47 +213,142 @@ function cleanPractoUrl(url) {
   }
 }
 
-export function buildListingUrls({ city, locality, keyword }) {
+export function buildListingUrls({ city, locality, keyword, pages = 1, includeCityFallback = true }) {
   const c = citySlug(city);
   const s = specialtySlug(keyword);
   const loc = slugifyPracto(locality);
+  const bases = [];
+  if (loc) bases.push(`${BASE}/${c}/${s}/${loc}`);
+  else bases.push(`${BASE}/${c}/${s}`);
+  if (loc && includeCityFallback) bases.push(`${BASE}/${c}/${s}`);
   const urls = [];
-  if (loc) urls.push(`${BASE}/${c}/${s}/${loc}`);
-  urls.push(`${BASE}/${c}/${s}`);
+  const pageCount = Math.max(1, Math.min(5, Number(pages) || 1));
+  for (const base of bases) {
+    // Paginate primary (first) base fully; city fallback only page 1 to avoid dupes
+    const maxP = bases.indexOf(base) === 0 ? pageCount : 1;
+    for (let p = 1; p <= maxP; p += 1) {
+      urls.push(p === 1 ? base : `${base}?page=${p}`);
+    }
+  }
   return [...new Set(urls)];
 }
 
 /**
- * Search Practo.com listing pages for a city / locality / specialty.
+ * Pull clinic profile links embedded in Practo listing HTML (beyond JSON-LD).
  */
-export async function searchPractoWeb({ city, zone, locality, keyword, limit = 12 } = {}) {
+function leadsFromListingHtml(html, { city, zone, locality, keyword } = {}) {
+  const leads = [];
+  const seen = new Set();
+  const re = /https?:\/\/www\.practo\.com\/[^"'\\\s]+\/(?:[Cc]linic)\/([a-z0-9-]+)/g;
+  let m;
+  while ((m = re.exec(html))) {
+    const slug = m[1];
+    const path = m[0].replace(/\\u002F/g, '/');
+    const practoUrl = cleanPractoUrl(path);
+    if (!practoUrl || seen.has(practoUrl)) continue;
+    seen.add(practoUrl);
+    const clinicName = slug
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (ch) => ch.toUpperCase())
+      .replace(/\s+\d+\s*$/, '')
+      .trim();
+    if (clinicName.length < 3) continue;
+    leads.push({
+      id: `practo-web-href-${normalizeName(clinicName)}-${normalizeName(locality || zone || '')}`.slice(0, 72),
+      clinicName,
+      specialty: keyword || '',
+      keyword: keyword || '',
+      city: city || '',
+      zone: zone || locality || '',
+      locality: locality || zone || '',
+      address: `${locality || zone || ''}, ${city || ''}`.replace(/^,\s*|,\s*$/g, ''),
+      lat: null,
+      lon: null,
+      owner: { name: 'Clinic contact', phone: '', email: '', title: 'Clinic contact' },
+      marketingHead: null,
+      practo: { hasProfile: true, url: practoUrl, rating: null, reviews: null, source: 'practo.com' },
+      platforms: [
+        { name: 'Practo', listed: true, url: practoUrl },
+        {
+          name: 'Google Maps',
+          listed: true,
+          url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            `${clinicName} ${locality || ''} ${city || ''}`
+          )}`,
+        },
+      ],
+      website: null,
+      score: 72,
+      estimatedValue: 65000,
+      suggestedChannel: 'calls',
+      matchReason: `Practo.com listing · ${city || ''} · ${locality || zone || ''} · ${keyword || ''}`.trim(),
+      source: 'Practo.com',
+      discoverySource: 'practo_web',
+      sheetMapped: true,
+    });
+  }
+  return leads;
+}
+
+/**
+ * Search Practo.com listing pages for a city / locality / specialty.
+ * Merges JSON-LD entities + clinic hrefs across multiple listing pages.
+ */
+export async function searchPractoWeb({
+  city,
+  zone,
+  locality,
+  keyword,
+  limit = 12,
+  pages = 2,
+  includeCityFallback = true,
+} = {}) {
   const area = locality || zone || '';
-  const urls = buildListingUrls({ city, locality: area, keyword });
+  const pageBudget = limit > 20 ? Math.max(2, Math.min(5, pages)) : Math.max(1, Math.min(3, pages));
+  const urls = buildListingUrls({
+    city,
+    locality: area,
+    keyword,
+    pages: pageBudget,
+    includeCityFallback: includeCityFallback !== false && !area,
+  });
   const leads = [];
   const seen = new Set();
   let lastStatus = null;
   let usedUrl = null;
+
+  const pushLead = (lead) => {
+    if (!lead) return;
+    const key =
+      (lead.practo?.url || '') +
+      '|' +
+      normalizeName(lead.clinicName) +
+      '|' +
+      normalizeName(lead.locality);
+    if (seen.has(key)) return;
+    seen.add(key);
+    leads.push(lead);
+  };
 
   for (const url of urls) {
     if (leads.length >= limit) break;
     const page = await fetchHtml(url, { timeoutMs: 12000 });
     lastStatus = page.status;
     if (!page.ok) continue;
-    usedUrl = page.url;
+    usedUrl = page.url || url;
+
     const entities = parseLdJsonBlocks(page.html).filter((e) => {
       const t = String(e['@type'] || '');
-      return /Dentist|Physician|MedicalClinic|Hospital|Physician|Doctor|Surgeon|Clinic/i.test(t);
+      return /Dentist|Physician|MedicalClinic|Hospital|Doctor|Surgeon|Clinic/i.test(t);
     });
     for (const entity of entities) {
-      const lead = listingToLead(entity, { city, zone, locality: area, keyword });
-      if (!lead) continue;
-      const key = normalizeName(lead.clinicName) + '|' + normalizeName(lead.locality);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      leads.push(lead);
+      pushLead(listingToLead(entity, { city, zone, locality: area, keyword }));
       if (leads.length >= limit) break;
     }
-    if (leads.length) break; // prefer locality-specific page when it has results
+    for (const lead of leadsFromListingHtml(page.html, { city, zone, locality: area, keyword })) {
+      pushLead(lead);
+      if (leads.length >= limit) break;
+    }
   }
 
   return {

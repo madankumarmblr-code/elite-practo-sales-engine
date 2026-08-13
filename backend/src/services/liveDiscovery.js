@@ -526,6 +526,7 @@ export async function liveDiscoverAreas({
   maxAreas = 8,
   perArea = 8,
   deadlineMs = 0,
+  targetCount = 0,
 } = {}) {
   const scanned = [];
   const leads = [];
@@ -533,19 +534,25 @@ export async function liveDiscoverAreas({
   const slice = prioritizeLiveAreas(areas, maxAreas);
   const started = Date.now();
   let timedOut = false;
+  const goal = Math.max(targetCount || 0, perArea * 3, onServerless ? 40 : 60);
+  const zoneSpecific = Boolean(
+    slice[0]?.zone && String(slice[0].zone).toLowerCase() !== 'all'
+  );
 
   const remainingMs = () => (deadlineMs > 0 ? Math.max(0, deadlineMs - (Date.now() - started)) : 60000);
   const pastDeadline = () => deadlineMs > 0 && remainingMs() < 400;
 
-  // City-level Practo first — guarantees authentic leads even if locality OSM fails
+  // City-level Practo: small seed when zone is specific (avoid flooding with city-wide dupes);
+  // larger multi-page pull when scanning the whole city.
   if (slice[0]?.city && !pastDeadline()) {
     try {
       const cityHit = await searchPractoWeb({
         city: slice[0].city,
         zone: slice[0].zone,
-        locality: '',
+        locality: zoneSpecific ? '' : '',
         keyword,
-        limit: Math.max(perArea, 10),
+        limit: zoneSpecific ? Math.min(12, perArea) : Math.max(perArea, Math.min(50, goal)),
+        pages: zoneSpecific ? 1 : 4,
       });
       if (cityHit.results?.length) {
         leads.push(...cityHit.results);
@@ -581,7 +588,9 @@ export async function liveDiscoverAreas({
     const zone = area.zone || area.locality;
     const locality = area.locality || area.zone;
     const budget = remainingMs();
-    const overpassBudget = Math.min(onServerless ? 7000 : 12000, Math.max(2500, budget - 1500));
+    const overpassBudget = Math.min(onServerless ? 6000 : 12000, Math.max(2500, budget - 2000));
+    const practoPages = goal >= 60 ? 5 : 3;
+    const practoLimit = Math.min(80, Math.max(perArea * 2, Math.ceil(goal * 0.75)));
 
     // Practo (primary) + Overpass (secondary) in parallel
     const [practoSettled, overpassSettled] = await Promise.allSettled([
@@ -590,7 +599,9 @@ export async function liveDiscoverAreas({
         zone,
         locality,
         keyword,
-        limit: perArea,
+        limit: practoLimit,
+        pages: practoPages,
+        includeCityFallback: false,
       }),
       searchOverpass({
         city: area.city,
@@ -672,8 +683,8 @@ export async function liveDiscoverAreas({
       }
     }
 
-    // Enough authentic leads — stop early so the UI stays responsive
-    if (dedupeLeads(leads).length >= Math.max(perArea * 2, 16)) break;
+    // Stop only after we have a full enough authentic set (not a tiny sample)
+    if (dedupeLeads(leads).length >= goal) break;
   }
 
   let finalLeads = dedupeLeads(leads);

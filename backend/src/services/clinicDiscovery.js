@@ -284,6 +284,7 @@ export async function discoverClinics({
   live = true,
   allowSynthetic = false,
   maxLocalities = 40,
+  fullScan = false,
 } = {}) {
   const kwList = asList(keywords).length ? asList(keywords) : asList(keyword || specialty);
   const zoneList = asList(zones).length ? asList(zones) : asList(zone);
@@ -383,9 +384,16 @@ export async function discoverClinics({
 
   const liveEnabled = live !== false && live !== '0';
   const onServerless = Boolean(process.env.VERCEL);
-  const liveBudgetMs = onServerless ? 28000 : 50000;
-  const maxLiveAreas = onServerless ? 4 : 10;
-  const perArea = onServerless ? 10 : 12;
+  const wantFull = fullScan === true || fullScan === '1';
+  const liveBudgetMs = onServerless ? (wantFull ? 45000 : 32000) : wantFull ? 90000 : 50000;
+  const maxLiveAreas = onServerless ? (wantFull ? 8 : 5) : wantFull ? 16 : 10;
+  const perArea = onServerless ? (wantFull ? 24 : 16) : wantFull ? 30 : 18;
+  const targetCount =
+    limit == null || limit === '' || Number(limit) <= 0
+      ? wantFull
+        ? 150
+        : 80
+      : Number(limit);
 
   let liveLeads = [];
   let liveScanned = [];
@@ -407,6 +415,7 @@ export async function discoverClinics({
           maxAreas: kwAreas.length,
           perArea,
           deadlineMs: liveBudgetMs,
+          targetCount,
         });
         liveLeads.push(...(liveResult.leads || []));
         liveScanned.push(...(liveResult.scannedSources || []));
@@ -469,6 +478,8 @@ export async function discoverClinics({
       liveEnabled,
       liveTimedOut,
       authenticOnly: !allowSynthetic,
+      fullScan: wantFull,
+      targetCount,
     },
     scannedSources,
     availableKeywords: listKeywordsFor(city, primaryZone),

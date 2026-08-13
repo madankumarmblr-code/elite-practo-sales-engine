@@ -1,45 +1,64 @@
-# Vercel — static UI deploy
+# Vercel deploy (UI + API)
 
-Deploys the **Vite React frontend** to Vercel. Express + SQLite does **not** run on Vercel — host the API with Docker/VPS (see HOSTING.md).
+## Demo login
 
-## One-click / Git deploy
+| Field | Value |
+|-------|--------|
+| User ID | `superadmin` |
+| Password | `SuperAdmin@123` |
 
-1. Import the GitHub repo in [Vercel](https://vercel.com/new)
-2. Leave **Root Directory** empty (repo root)
-3. Vercel reads `vercel.json` automatically:
+## How deploy works
+
+`vercel.json` does **not** use `outputDirectory` (that mode is static-only and breaks `/api`).
+
+Instead the build:
+
+1. Builds Vite → `frontend/dist`
+2. Copies it to `public/` (static CDN)
+3. Deploys `api/index.js` as a serverless Express function
+4. Rewrites `/api/*` → `/api` and SPA routes → `/index.html`
+
+## Dashboard settings
 
 | Setting | Value |
 |---------|--------|
-| Install | `npm install --ignore-scripts && node node_modules/esbuild/install.js` |
-| Build | `npm run build` |
-| Output | `frontend/dist` |
+| **Root Directory** | **empty** (repo root — never `backend`) |
+| Framework | Other / leave default (`vercel.json` controls build) |
 
-4. Deploy
+After deploy, open `/api/health` — it must return JSON `{ "ok": true }`, not the HTML app.
 
-SPA routes (`/login`, `/leads`, …) are covered by the rewrite to `index.html`.
-
-## Optional: point UI at a hosted API
-
-In Vercel → Project → Settings → Environment Variables:
-
-| Name | Value |
-|------|--------|
-| `VITE_API_BASE` | `https://api.yourdomain.com` |
-
-Redeploy after saving. On the API host set `CORS_ORIGIN` to your Vercel URL (e.g. `https://practo-sales-automation.vercel.app`).
-
-## Local preview of the production build
+## Deploy
 
 ```bash
-npm install
-npm run build
-npx serve frontend/dist
+npm i -g vercel
+vercel link --project practo-sales-automation-1
+vercel build --prod
+vercel deploy --prebuilt --prod
 ```
 
-## Full app (API + UI)
+Or import the GitHub repo at [vercel.com/new](https://vercel.com/new) and set Production Branch to this fullstack branch / `main` after merge.
 
-Use Docker on a VPS instead of Vercel:
+## Production check (salesmaster.live)
 
-```bash
-docker compose up -d --build
-```
+| Check | Expected |
+|-------|----------|
+| `https://www.salesmaster.live/api/health` | JSON `{ "ok": true, ... }` |
+| Login | `superadmin` / `SuperAdmin@123` → Dashboard |
+| If `/api/health` returns HTML | API function is missing — redeploy with this branch (Root Directory empty) |
+
+## Notes
+
+- SQLite on Vercel still boots from `/tmp` (ephemeral per instance).
+- **Settings / API Integrations stick in two ways:**
+  1. **Browser backup (always):** saves are kept in localStorage and re-applied on login after a cold start (works without extra config).
+  2. **Vercel Blob (recommended for multi-device):** create a [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) store and set:
+
+  | Name | Value |
+  |------|--------|
+  | `BLOB_READ_WRITE_TOKEN` | from the Blob store (also auto-injected when you link Blob in the project) |
+
+  After deploy, `/api/health` should show `"durableStore": true`.
+- You can still set `OPENAI_API_KEY` / `GOOGLE_MAPS_API_KEY` / etc. (see `.env.example`) as a backup hydration path.
+- First API request after a cold start can be slower (restore + seed + sheet sync).
+- Custom domain `salesmaster.live` / `www.salesmaster.live` is on project `practo-sales-automation-1`.
+- For fully durable CRM without Blob, host with Docker/VPS (`DATA_DIR` volume) — see HOSTING.md.

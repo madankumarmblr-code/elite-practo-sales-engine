@@ -3,6 +3,7 @@ import db from '../db/db.js';
 import { channelMeta, personalizeTemplate } from './channels/catalog.js';
 import { getDialogue, productLabel } from './channels/dialogues.js';
 import { createOutreachRecord } from './outreach.js';
+import { pickSmartChannel } from './aiAssist.js';
 
 const now = () => new Date().toISOString();
 
@@ -61,7 +62,18 @@ export function listCampaigns({ channel } = {}) {
   return rows.map(parseCampaign);
 }
 
-function audienceForChannel(channel, limit) {
+function audienceForChannel(channel, limit, leadIds) {
+  if (Array.isArray(leadIds) && leadIds.length) {
+    const placeholders = leadIds.map(() => '?').join(',');
+    return db
+      .prepare(
+        `SELECT * FROM leads
+         WHERE id IN (${placeholders}) AND status = 'open'
+         ORDER BY score DESC`
+      )
+      .all(...leadIds)
+      .slice(0, limit);
+  }
   const meta = channelMeta(channel);
   if (meta.requires === 'email') {
     return db
@@ -128,7 +140,7 @@ function maybeAiPolish(text, channel) {
  * Execute a campaign in dry_run or live mode.
  * Live still queues locally when provider secrets are missing (ready-to-wire).
  */
-export function runCampaign(campaignId, { mode, limit } = {}) {
+export function runCampaign(campaignId, { mode, limit, leadIds } = {}) {
   resetDailyCountersIfNeeded();
   const campaign = parseCampaign(
     db.prepare('SELECT * FROM autopilot_campaigns WHERE id = ?').get(campaignId)
@@ -150,7 +162,7 @@ export function runCampaign(campaignId, { mode, limit } = {}) {
   }
 
   const batch = Math.min(limit || 8, remaining, 25);
-  const leads = audienceForChannel(campaign.channel, batch);
+  const leads = audienceForChannel(campaign.channel, batch, leadIds);
   if (!leads.length) {
     return {
       campaignId: campaign.id,
@@ -158,7 +170,9 @@ export function runCampaign(campaignId, { mode, limit } = {}) {
       mode: runMode,
       executed: 0,
       actions: [],
-      message: `No open leads with ${meta.requires} for ${meta.short}. Import leads first.`,
+      message: leadIds?.length
+        ? 'None of the selected leads are open / eligible for this channel.'
+        : `No open leads with ${meta.requires} for ${meta.short}. Import leads first.`,
       integration: null,
     };
   }
@@ -312,6 +326,87 @@ export function runCampaign(campaignId, { mode, limit } = {}) {
     message: `${verb} ${actions.length} ${meta.short} outreaches${
       integration ? ` via ${integration.label}` : ''
     }`,
+  };
+}
+
+/**
+ * One-click Autopilot for explicit lead IDs, grouped by smart channel.
+ */
+export function runLeadsAutopilot({
+  leadIds = [],
+  mode = 'dry_run',
+  product = 'prime',
+  channel: forcedChannel = null,
+} = {}) {
+  if (!Array.isArray(leadIds) || !leadIds.length) {
+    const err = new Error('leadIds required');
+    err.status = 400;
+    throw err;
+  }
+
+  const placeholders = leadIds.map(() => '?').join(',');
+  const leads = db
+    .prepare(`SELECT * FROM leads WHERE id IN (${placeholders})`)
+    .all(...leadIds);
+
+  const groups = { whatsapp: [], gmail: [], calls: [] };
+  for (const lead of leads) {
+    if (lead.status === 'closed' || lead.temperature === 'skip') continue;
+    const ch =
+      forcedChannel ||
+      lead.preferred_channel ||
+      pickSmartChannel(lead).channel;
+    if (!groups[ch]) groups[ch] = [];
+    groups[ch].push(lead.id);
+  }
+
+  const runs = [];
+  for (const [channel, ids] of Object.entries(groups)) {
+    if (!ids.length) continue;
+    const meta = channelMeta(channel);
+    const dialogueId =
+      channel === 'whatsapp'
+        ? 'wa_prime_intro'
+        : channel === 'gmail'
+          ? 'gm_prime_nurture'
+          : 'call_prime_qualify';
+    const dialogue = getDialogue(dialogueId);
+    const id = nanoid();
+    const ts = now();
+    const name = `Lead Gen · ${meta.short} · ${new Date().toLocaleString('en-IN')}`;
+    db.prepare(`
+      INSERT INTO autopilot_campaigns (
+        id, name, channel, status, goal, message_template, daily_limit, sent_today, success_rate,
+        integration_id, subject, channel_config, ai_personalize, run_mode, last_run_day,
+        product_pitch, dialogue_id, created_at, updated_at
+      ) VALUES (?, ?, ?, 'active', ?, ?, ?, 0, 0, NULL, ?, '{}', 1, ?, NULL, ?, ?, ?, ?)
+    `).run(
+      id,
+      name,
+      channel,
+      `One-click from Lead Generator (${ids.length} leads)`,
+      dialogue?.body || meta.defaultTemplate,
+      Math.max(ids.length, meta.defaultDailyLimit),
+      dialogue?.subject || meta.defaultSubject,
+      mode,
+      product,
+      dialogue?.id || '',
+      ts,
+      ts
+    );
+    const result = runCampaign(id, { mode, limit: ids.length, leadIds: ids });
+    runs.push({ channel, campaignId: id, leadIds: ids, ...result });
+  }
+
+  return {
+    ok: true,
+    mode,
+    product,
+    totalLeads: leads.length,
+    runs,
+    message: runs.length
+      ? `Launched ${runs.length} Autopilot channel run(s) for ${leads.length} lead(s)`
+      : 'No eligible open leads to run',
   };
 }
 

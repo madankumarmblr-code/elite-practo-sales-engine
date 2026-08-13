@@ -3,6 +3,7 @@ import path from "path";
 import { parseCsv } from "./csvParse.js";
 import { getCachedCsvPath, syncSheetFromGoogle, getSheetSyncMeta } from "./sheetSync.js";
 import { getDataDir } from "../config.js";
+import { getZoneLocalityMeta, listLocalities } from "./zoneLocalities.js";
 
 const LEGACY_CSV = path.join(getDataDir(), "locations.csv");
 /** @type {{ byCity: Map<string, Map<string, Set<string>>>, rows: object[], source: string } | null} */
@@ -12,6 +13,7 @@ function normalizeHeader(h) {
   return String(h || "")
     .trim()
     .toLowerCase()
+    .replace(/::.*$/, "") // support city::multi-filter style headers
     .replace(/\s+/g, " ");
 }
 
@@ -152,6 +154,7 @@ export function listSpecialities(city, zone) {
 export function getLocationsMeta() {
   const index = getLocationsIndex();
   const sync = getSheetSyncMeta();
+  const localityMeta = getZoneLocalityMeta();
   const cities = listCities();
   /** @type {Record<string, string[]>} */
   const zonesByCity = {};
@@ -164,16 +167,28 @@ export function getLocationsMeta() {
   const allKeywords = new Set();
   let comboCount = 0;
 
-  for (const city of cities) {
-    const zones = listZones(city);
+  // Merge sheet cities with locality-reference cities
+  const citySet = new Set([...cities, ...Object.keys(localityMeta.zonesByCity || {})]);
+  const mergedCities = [...citySet].sort((a, b) => a.localeCompare(b));
+
+  for (const city of mergedCities) {
+    const sheetZones = listZones(city);
+    const localityZones = localityMeta.zonesByCity?.[city] || [];
+    const zones = [...new Set([...sheetZones, ...localityZones])].sort((a, b) => a.localeCompare(b));
     zonesByCity[city] = zones;
     zoneMetaByCity[city] = {};
     const cityKw = new Set();
     for (const zone of zones) {
-      zoneMetaByCity[city][zone] = null;
+      const locs = listLocalities(city, zone);
+      zoneMetaByCity[city][zone] = {
+        type: locs.length ? "ZONE" : null,
+        localityCount: locs.length,
+      };
       const kws = listKeywords(city, zone);
-      keywordsByCityZone[`${city}||${zone}`] = kws;
-      for (const kw of kws) {
+      // If sheet has no specialty for this locality-only zone, inherit city keywords
+      const effectiveKws = kws.length ? kws : listKeywords(city, "All");
+      keywordsByCityZone[`${city}||${zone}`] = effectiveKws;
+      for (const kw of effectiveKws) {
         cityKw.add(kw);
         allKeywords.add(kw);
         comboCount += 1;
@@ -184,8 +199,8 @@ export function getLocationsMeta() {
 
   return {
     source: index.source,
-    cityCount: cities.length,
-    cities,
+    cityCount: mergedCities.length,
+    cities: mergedCities,
     rows: index.rows.length,
     comboCount,
     catalogSize: comboCount,
@@ -193,6 +208,8 @@ export function getLocationsMeta() {
     zoneMetaByCity,
     keywordsByCity,
     keywordsByCityZone,
+    localitiesByCityZone: localityMeta.localitiesByCityZone,
+    localityCount: localityMeta.localityCount,
     keywords: [...allKeywords].sort((a, b) => a.localeCompare(b)),
     specialties: [...allKeywords].sort((a, b) => a.localeCompare(b)),
     sheetSync: sync,
@@ -201,16 +218,14 @@ export function getLocationsMeta() {
 
 export function resolveDiscoveryTargets({ city, zone, keyword }) {
   const index = getLocationsIndex();
-  if (!index.byCity.size) {
-    throw new Error("Location sheet is empty. Wait for Google Sheet sync or check the published CSV URL.");
-  }
+  const localityMeta = getZoneLocalityMeta();
 
   const cities = city && city !== "All"
     ? [city]
-    : listCities();
+    : [...new Set([...listCities(), ...Object.keys(localityMeta.zonesByCity || {})])];
 
-  if (!cities.length) {
-    throw new Error("No cities found in the synced sheet.");
+  if (!cities.length && !index.byCity.size) {
+    throw new Error("Location sheet is empty. Wait for Google Sheet sync or check the published CSV URL.");
   }
 
   /** @type {{ city: string, zone: string, keyword: string, zoneType: string|null }[]} */
@@ -218,21 +233,25 @@ export function resolveDiscoveryTargets({ city, zone, keyword }) {
 
   for (const c of cities) {
     const zoneMap = index.byCity.get(c);
-    if (!zoneMap) continue;
+    const localityZones = localityMeta.zonesByCity?.[c] || [];
+    const zoneNames = zone && zone !== "All"
+      ? [zone]
+      : [...new Set([...(zoneMap ? zoneMap.keys() : []), ...localityZones])];
 
-    const zones = zone && zone !== "All"
-      ? (zoneMap.has(zone) ? [zone] : [])
-      : [...zoneMap.keys()];
+    if (!zoneNames.length) continue;
 
-    if (!zones.length) continue;
-
-    for (const z of zones) {
-      const kws = zoneMap.get(z) || new Set();
+    for (const z of zoneNames) {
+      const kws = zoneMap?.get(z) || new Set();
       let keywords = [...kws];
-      if (keyword && keyword !== "All") {
-        keywords = keywords.filter((k) => k.toLowerCase() === String(keyword).toLowerCase());
+      if (!keywords.length) {
+        // Inherit city-level specialties from sheet when zone only exists in locality file
+        keywords = listKeywords(c, "All");
       }
-      if (!keywords.length && keyword && keyword !== "All") continue;
+      if (keyword && keyword !== "All") {
+        const wanted = String(keyword).toLowerCase();
+        keywords = keywords.filter((k) => k.toLowerCase() === wanted);
+        if (!keywords.length) keywords = [keyword];
+      }
       if (!keywords.length) keywords = [keyword && keyword !== "All" ? keyword : "clinic"];
 
       for (const kw of keywords) {

@@ -20,7 +20,9 @@ function ensureIntegrations() {
   `);
 
   for (const p of INTEGRATION_CATALOG) {
-    const existing = db.prepare('SELECT id FROM api_integrations WHERE provider = ?').get(p.provider);
+    const existing = db.prepare('SELECT id, config, secrets, enabled FROM api_integrations WHERE provider = ?').get(
+      p.provider
+    );
     if (existing) {
       updateMeta.run(
         p.label,
@@ -31,6 +33,29 @@ function ensureIntegrations() {
         ts,
         p.provider
       );
+      // Migrate Practo partner-API config → practo.com website defaults
+      if (p.provider === 'practo') {
+        let cfg = {};
+        try {
+          cfg = JSON.parse(existing.config || '{}');
+        } catch {
+          cfg = {};
+        }
+        const nextCfg = {
+          ...cfg,
+          baseUrl: 'https://www.practo.com',
+          defaultCity: cfg.defaultCity || p.config.defaultCity || 'Bangalore',
+          specialty: cfg.specialty || p.config.specialty || 'dentist',
+          pricing: 'free',
+        };
+        delete nextCfg.environment;
+        delete nextCfg.version;
+        db.prepare(
+          `UPDATE api_integrations
+           SET config = ?, secrets = '{}', enabled = 1, status = CASE WHEN status = 'error' THEN 'ready' ELSE status END, updated_at = ?
+           WHERE provider = 'practo'`
+        ).run(JSON.stringify(nextCfg), ts);
+      }
     } else {
       insert.run(
         nanoid(),
@@ -45,6 +70,97 @@ function ensureIntegrations() {
         p.is_default ? 1 : 0
       );
     }
+  }
+
+  hydrateIntegrationSecretsFromEnv();
+}
+
+/**
+ * On Vercel, SQLite under /tmp is ephemeral — hydrate common API keys from
+ * environment variables on every boot so Integrations keep working after deploys.
+ * Does not overwrite a non-empty secret already saved in the DB unless
+ * INTEGRATION_SECRETS_FORCE=1.
+ */
+function hydrateIntegrationSecretsFromEnv() {
+  const force = String(process.env.INTEGRATION_SECRETS_FORCE || '') === '1';
+  const map = [
+    { provider: 'google_maps', secret: 'apiKey', env: 'GOOGLE_MAPS_API_KEY' },
+    { provider: 'google_gemini', secret: 'apiKey', env: 'GOOGLE_GEMINI_API_KEY' },
+    { provider: 'openai', secret: 'apiKey', env: 'OPENAI_API_KEY' },
+    { provider: 'anthropic_claude', secret: 'apiKey', env: 'ANTHROPIC_API_KEY' },
+    { provider: 'groq_llm', secret: 'apiKey', env: 'GROQ_API_KEY' },
+    { provider: 'serpapi', secret: 'apiKey', env: 'SERPAPI_API_KEY' },
+    { provider: 'sendgrid_email', secret: 'apiKey', env: 'SENDGRID_API_KEY' },
+    { provider: 'resend_email', secret: 'apiKey', env: 'RESEND_API_KEY' },
+    { provider: 'hunter_email', secret: 'apiKey', env: 'HUNTER_API_KEY' },
+    { provider: 'apify', secret: 'token', env: 'APIFY_TOKEN' },
+    { provider: 'outscraper', secret: 'apiKey', env: 'OUTSCRAPER_API_KEY' },
+    {
+      provider: 'whatsapp_meta',
+      secret: 'accessToken',
+      env: 'WHATSAPP_META_ACCESS_TOKEN',
+    },
+    { provider: 'twilio_calls', secret: 'accountSid', env: 'TWILIO_ACCOUNT_SID' },
+    { provider: 'twilio_calls', secret: 'authToken', env: 'TWILIO_AUTH_TOKEN' },
+    { provider: 'whatsapp_twilio', secret: 'accountSid', env: 'TWILIO_ACCOUNT_SID' },
+    { provider: 'whatsapp_twilio', secret: 'authToken', env: 'TWILIO_AUTH_TOKEN' },
+  ];
+
+  const byProvider = new Map();
+  for (const row of map) {
+    const value = String(process.env[row.env] || '').trim();
+    if (!value) continue;
+    if (!byProvider.has(row.provider)) byProvider.set(row.provider, {});
+    byProvider.get(row.provider)[row.secret] = value;
+  }
+
+  // Optional JSON blob: { "google_maps": { "apiKey": "..." }, ... }
+  try {
+    const raw = process.env.INTEGRATION_SECRETS_JSON;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      for (const [provider, secrets] of Object.entries(parsed || {})) {
+        if (!secrets || typeof secrets !== 'object') continue;
+        if (!byProvider.has(provider)) byProvider.set(provider, {});
+        Object.assign(byProvider.get(provider), secrets);
+      }
+    }
+  } catch (err) {
+    console.warn('INTEGRATION_SECRETS_JSON parse failed:', err.message);
+  }
+
+  const update = db.prepare(
+    'UPDATE api_integrations SET secrets = ?, enabled = CASE WHEN ? = 1 THEN 1 ELSE enabled END, updated_at = ? WHERE provider = ?'
+  );
+  const ts = now();
+  let applied = 0;
+  for (const [provider, incoming] of byProvider.entries()) {
+    const row = db.prepare('SELECT secrets, enabled FROM api_integrations WHERE provider = ?').get(provider);
+    if (!row) continue;
+    let current = {};
+    try {
+      current = JSON.parse(row.secrets || '{}');
+    } catch {
+      current = {};
+    }
+    let changed = false;
+    const next = { ...current };
+    for (const [k, v] of Object.entries(incoming)) {
+      if (!v) continue;
+      if (force || !String(current[k] || '').trim()) {
+        if (next[k] !== v) {
+          next[k] = v;
+          changed = true;
+        }
+      }
+    }
+    if (!changed) continue;
+    const enable = Object.values(next).some(Boolean) ? 1 : 0;
+    update.run(JSON.stringify(next), enable, ts, provider);
+    applied += 1;
+  }
+  if (applied) {
+    console.log(`Hydrated ${applied} integration(s) from environment secrets`);
   }
 }
 
@@ -80,6 +196,25 @@ function ensureDefaultCampaigns() {
       ts,
       ts
     );
+  }
+}
+
+/** Remove synthetic / demo inventory leads left from older builds. */
+function purgeSyntheticLeads() {
+  try {
+    const del = db.prepare(`
+      DELETE FROM leads
+      WHERE lower(coalesce(source, '')) LIKE '%sheet + locality%'
+         OR lower(coalesce(source, '')) LIKE '%locality reference%'
+         OR lower(coalesce(notes, '')) LIKE '%discovery source: sheet_locality%'
+         OR lower(coalesce(notes, '')) LIKE '%zone locality expansion:%'
+    `);
+    const info = del.run();
+    if (info.changes) {
+      console.log(`Purged ${info.changes} synthetic/demo lead(s)`);
+    }
+  } catch (err) {
+    console.warn('Synthetic lead purge skipped:', err.message);
   }
 }
 
@@ -203,7 +338,13 @@ export function bootstrap() {
   const appCount = db.prepare('SELECT COUNT(*) as c FROM app_settings').get().c;
   if (appCount === 0) {
     const appSettings = {
-      profile: { company: 'Practo Enterprise', timezone: 'Asia/Kolkata' },
+      profile: {
+        orgName: 'Practo Enterprise',
+        company: 'Practo Enterprise',
+        workspace: 'Enterprise Sales',
+        timezone: 'Asia/Kolkata',
+        currency: 'INR',
+      },
       ai: {
         model: 'gpt-sales-assist',
         tone: 'consultative',
@@ -224,6 +365,7 @@ export function bootstrap() {
 
   ensureIntegrations();
   ensureDefaultCampaigns();
+  purgeSyntheticLeads();
 
   const ts = now();
   const presetEmails = [
@@ -241,8 +383,12 @@ export function bootstrap() {
     .prepare("SELECT * FROM users WHERE role = 'superadmin' OR username = 'superadmin' OR email = ?")
     .get('superadmin@practo.sales');
 
+  const demoPassword = process.env.SUPERADMIN_PASSWORD || 'SuperAdmin@123';
+  const passwordHash = bcrypt.hashSync(demoPassword, 10);
+
   if (!superAdmin) {
-    const id = nanoid();
+    // Stable id so signed tokens still resolve after serverless /tmp DB rebuilds
+    const id = 'user_superadmin';
     db.prepare(`
       INSERT INTO users (id, name, email, username, password_hash, role, permissions, active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, 'superadmin', ?, 1, ?, ?)
@@ -251,26 +397,31 @@ export function bootstrap() {
       'Super Admin',
       'superadmin@practo.sales',
       'superadmin',
-      bcrypt.hashSync('SuperAdmin@123', 10),
+      passwordHash,
       JSON.stringify(permissionsForRole('superadmin')),
       ts,
       ts
     );
     console.log('Created Super Admin user');
-    console.log('  username: superadmin');
-    console.log('  email:    superadmin@practo.sales');
-    console.log('  password: SuperAdmin@123');
   } else {
+    // Keep demo credentials predictable across local / Docker / Vercel boots
     db.prepare(`
       UPDATE users
       SET role = 'superadmin',
-          username = COALESCE(NULLIF(username, ''), 'superadmin'),
+          username = 'superadmin',
+          email = 'superadmin@practo.sales',
+          password_hash = ?,
           permissions = ?,
           active = 1,
           updated_at = ?
       WHERE id = ?
-    `).run(JSON.stringify(permissionsForRole('superadmin')), ts, superAdmin.id);
+    `).run(passwordHash, JSON.stringify(permissionsForRole('superadmin')), ts, superAdmin.id);
   }
+
+  console.log('Super Admin ready');
+  console.log('  User ID:  superadmin');
+  console.log('  Email:    superadmin@practo.sales');
+  console.log(`  Password: ${demoPassword}`);
 
   console.log('Bootstrap complete — integrations & AI pilots ready; Super Admin ready');
 }

@@ -107,9 +107,10 @@ Create real users under **Super Admin** and rotate this password in production.
 1. `npm run build` succeeds (or `docker compose build`)
 2. `/api/health` returns `{ ok: true }`
 3. Persist `DATA_DIR` / Docker volume so the DB survives restarts
-4. Point DNS + HTTPS at the host
-5. Add live WhatsApp / Gmail / Calls API credentials under **API Integrations**
-6. Confirm Google Sheet still publishes as CSV
+4. On **Vercel**, also set `BLOB_READ_WRITE_TOKEN` so Settings / API Integrations survive cold starts (`durableStore: true` on `/api/health`)
+5. Point DNS + HTTPS at the host
+6. Add live WhatsApp / Gmail / Calls API credentials under **API Integrations**
+7. Confirm Google Sheet still publishes as CSV
 
 ## Architecture (hosted)
 
@@ -119,20 +120,12 @@ Browser ──► :8080 ──► Express
                         └─ /*         React SPA (frontend/dist)
 ```
 
-## Option D — Vercel (UI only)
+## Option D — Vercel (UI + API)
 
 See **[VERCEL.md](./VERCEL.md)**.
 
-Import the GitHub repo in Vercel. Root `vercel.json` already sets install/build/output and SPA rewrites.
+Import the repo with **Root Directory empty**. After deploy, `/api/health` must return JSON.
 
-### API still needs a Node host
+Demo login: `superadmin` / `SuperAdmin@123`
 
-Vercel only hosts the static UI. Host the API with Docker / VPS (Options A–C), then set a Vercel env var:
-
-```bash
-VITE_API_BASE=https://api.yourdomain.com
-```
-
-On the API host, set `CORS_ORIGIN` to your Vercel URL.
-
-For a **working app in one place**, prefer Docker (Option A).
+SQLite on Vercel uses `/tmp` (ephemeral). Prefer Docker (Option A) for durable data.

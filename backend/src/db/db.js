@@ -176,5 +176,19 @@ if (!integCols.includes('channel')) {
 if (!integCols.includes('is_default')) {
   db.exec(`ALTER TABLE api_integrations ADD COLUMN is_default INTEGER DEFAULT 0`);
 }
+if (!integCols.includes('last_test_message')) {
+  db.exec(`ALTER TABLE api_integrations ADD COLUMN last_test_message TEXT DEFAULT ''`);
+}
+if (!integCols.includes('last_test_ok')) {
+  db.exec(`ALTER TABLE api_integrations ADD COLUMN last_test_ok INTEGER`);
+}
+
+const leadCols = db.prepare('PRAGMA table_info(leads)').all().map((c) => c.name);
+if (!leadCols.includes('temperature')) {
+  db.exec(`ALTER TABLE leads ADD COLUMN temperature TEXT DEFAULT ''`);
+}
+if (!leadCols.includes('preferred_channel')) {
+  db.exec(`ALTER TABLE leads ADD COLUMN preferred_channel TEXT DEFAULT ''`);
+}
 
 export default db;

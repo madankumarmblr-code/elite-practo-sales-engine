@@ -1,6 +1,8 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { api } from '../api/client';
+import { readWorkspaceBackup } from '../lib/workspaceBackup';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: '◈', perm: 'dashboard:read' },
@@ -16,14 +18,46 @@ const links = [
 
 export default function Layout({ toast }) {
   const [open, setOpen] = useState(false);
+  const [bootstrapped, setBootstrapped] = useState(false);
   const location = useLocation();
   const { user, can, logout, loading, isAuthenticated } = useAuth();
+  const rehydrated = useRef(false);
 
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
 
-  if (loading) {
+  // Re-apply browser-backed Settings / API keys after Vercel /tmp resets
+  // before child pages fetch, so saves appear to stick.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      rehydrated.current = false;
+      setBootstrapped(false);
+      return;
+    }
+    if (rehydrated.current) {
+      setBootstrapped(true);
+      return;
+    }
+    rehydrated.current = true;
+    let cancelled = false;
+    (async () => {
+      const backup = readWorkspaceBackup();
+      if (backup) {
+        try {
+          await api.rehydrateWorkspace(backup);
+        } catch {
+          /* non-fatal */
+        }
+      }
+      if (!cancelled) setBootstrapped(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  if (loading || (isAuthenticated && !bootstrapped)) {
     return <div className="login-page"><div className="muted">Loading workspace…</div></div>;
   }
 
@@ -44,8 +78,8 @@ export default function Layout({ toast }) {
         <div className="brand">
           <img src="/practo-logo-light.svg" alt="Practo" className="practo-logo" />
           <div className="brand-text">
-            <strong>Sales Automation</strong>
-            <small>{user?.roleLabel}{user?.username ? ` · @${user.username}` : ''}</small>
+            <strong>Salesmaster</strong>
+            <small>{user?.roleLabel || 'Enterprise'}</small>
           </div>
         </div>
         <nav className="nav">
@@ -61,7 +95,7 @@ export default function Layout({ toast }) {
             Signed in as <strong style={{ color: '#fff' }}>{user?.name}</strong>
             <div>{user?.email}</div>
           </div>
-          <button type="button" className="btn btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }} onClick={logout}>
+          <button type="button" className="btn btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.28)' }} onClick={logout}>
             Sign out
           </button>
         </div>

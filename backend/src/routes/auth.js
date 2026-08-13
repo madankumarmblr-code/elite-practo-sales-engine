@@ -9,9 +9,10 @@ import {
   isSuperAdmin,
 } from '../auth/roles.js';
 import { authRequired, requirePermission } from '../auth/middleware.js';
+import { issueAuthToken } from '../auth/token.js';
 import { logEvent, listEvents } from '../services/logger.js';
+import { persistDurableDbNow } from '../services/dbSnapshot.js';
 
-const SESSION_DAYS = 7;
 const now = () => new Date().toISOString();
 
 function publicUser(row) {
@@ -73,11 +74,15 @@ export function registerAuthRoutes(app) {
       return res.status(401).json({ error: 'Invalid user ID or password' });
     }
 
-    const token = nanoid(48);
-    const expires = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
-    db.prepare(
-      'INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
-    ).run(token, user.id, now(), expires);
+    const issued = issueAuthToken(user);
+    // Best-effort local session row (ignored on Vercel multi-isolate; signed token is source of truth)
+    try {
+      db.prepare(
+        'INSERT OR REPLACE INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
+      ).run(issued.token, user.id, now(), issued.expiresAt);
+    } catch {
+      /* ignore */
+    }
 
     logEvent({
       type: 'info',
@@ -89,14 +94,18 @@ export function registerAuthRoutes(app) {
     });
 
     res.json({
-      token,
-      expiresAt: expires,
+      token: issued.token,
+      expiresAt: issued.expiresAt,
       user: publicUser(user),
     });
   });
 
   app.post('/api/auth/logout', authRequired, (req, res) => {
-    db.prepare('DELETE FROM sessions WHERE token = ?').run(req.token);
+    try {
+      db.prepare('DELETE FROM sessions WHERE token = ?').run(req.token);
+    } catch {
+      /* ignore */
+    }
     logEvent({
       type: 'info',
       category: 'auth',
@@ -108,8 +117,27 @@ export function registerAuthRoutes(app) {
   });
 
   app.get('/api/auth/me', authRequired, (req, res) => {
-    const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-    res.json(publicUser(row));
+    const row =
+      db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id) ||
+      db
+        .prepare('SELECT * FROM users WHERE lower(email) = ?')
+        .get(String(req.user.email || '').toLowerCase());
+    if (row) return res.json(publicUser(row));
+    // Signed-token fallback when this isolate's SQLite was freshly seeded
+    res.json({
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      username: req.user.username || '',
+      role: req.user.role,
+      roleLabel: ROLES[req.user.role]?.label || req.user.role,
+      level: ROLES[req.user.role]?.level || 0,
+      permissions: req.user.permissions || [],
+      active: true,
+      isSuperAdmin: req.user.role === 'superadmin',
+      createdAt: null,
+      updatedAt: null,
+    });
   });
 
   app.get('/api/users', authRequired, requirePermission('users:read'), (_req, res) => {
@@ -120,7 +148,7 @@ export function registerAuthRoutes(app) {
     res.json(rows);
   });
 
-  app.post('/api/users', authRequired, requirePermission('users:write'), (req, res) => {
+  app.post('/api/users', authRequired, requirePermission('users:write'), async (req, res) => {
     if (!isSuperAdmin(req.user)) {
       return res.status(403).json({ error: 'Only Super Admin can create users' });
     }
@@ -185,10 +213,11 @@ export function registerAuthRoutes(app) {
       meta: { createdUserId: id, role, permissions: perms },
     });
 
+    await persistDurableDbNow();
     res.status(201).json(publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id)));
   });
 
-  app.put('/api/users/:id', authRequired, requirePermission('users:write'), (req, res) => {
+  app.put('/api/users/:id', authRequired, requirePermission('users:write'), async (req, res) => {
     if (!isSuperAdmin(req.user)) {
       return res.status(403).json({ error: 'Only Super Admin can update users' });
     }
@@ -265,10 +294,11 @@ export function registerAuthRoutes(app) {
       meta: { targetUserId: existing.id, role, permissions: perms },
     });
 
+    await persistDurableDbNow();
     res.json(publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id)));
   });
 
-  app.delete('/api/users/:id', authRequired, requirePermission('users:write'), (req, res) => {
+  app.delete('/api/users/:id', authRequired, requirePermission('users:write'), async (req, res) => {
     if (!isSuperAdmin(req.user)) {
       return res.status(403).json({ error: 'Only Super Admin can delete users' });
     }
@@ -290,6 +320,7 @@ export function registerAuthRoutes(app) {
       userId: req.user.id,
       meta: { deletedUserId: existing.id },
     });
+    await persistDurableDbNow();
     res.json({ ok: true });
   });
 

@@ -19,10 +19,15 @@ async function request(path, options = {}) {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch {
+    throw new Error('Cannot reach API. Check that the server is running.');
+  }
 
   if (res.status === 401 && !path.startsWith('/api/auth/login')) {
     setToken('');
@@ -31,15 +36,30 @@ async function request(path, options = {}) {
     }
   }
 
+  const contentType = res.headers.get('Content-Type') || '';
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Request failed');
+    if (contentType.includes('application/json')) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || err.message || 'Request failed');
+    }
+    if (res.status === 504) {
+      throw new Error(
+        'Lead search timed out on the server. Try a smaller zone, or Rescan — results will still load from locality inventory.'
+      );
+    }
+    throw new Error(
+      res.status === 405 || res.status === 404
+        ? 'API is not available on this deployment. Redeploy with the fullstack Vercel config.'
+        : `Request failed (${res.status})`
+    );
   }
 
   const disposition = res.headers.get('Content-Disposition') || '';
-  const contentType = res.headers.get('Content-Type') || '';
   if (disposition.includes('attachment') || contentType.includes('text/csv')) {
     return res;
+  }
+  if (!contentType.includes('application/json')) {
+    throw new Error('API returned a non-JSON response. The serverless API may not be deployed.');
   }
   return res.json();
 }
@@ -97,6 +117,19 @@ export const api = {
   },
   importLeads: (leads) =>
     request('/api/lead-generator/import', { method: 'POST', body: JSON.stringify({ leads }) }),
+  bulkQualifyLeads: (leadIds, temperature) =>
+    request('/api/leads/bulk-qualify', {
+      method: 'POST',
+      body: JSON.stringify({ leadIds, temperature }),
+    }),
+  aiDraft: (body) => request('/api/ai/draft', { method: 'POST', body: JSON.stringify(body) }),
+  aiFollowUp: (body) =>
+    request('/api/ai/follow-up', { method: 'POST', body: JSON.stringify(body) }),
+  aiReplies: (body) => request('/api/ai/replies', { method: 'POST', body: JSON.stringify(body) }),
+  aiChannel: (lead) =>
+    request('/api/ai/channel', { method: 'POST', body: JSON.stringify({ lead }) }),
+  runAutopilotForLeads: (body) =>
+    request('/api/autopilot/run-leads', { method: 'POST', body: JSON.stringify(body) }),
   getSheetStatus: () => request('/api/sheet/status'),
   syncSheet: () => request('/api/sheet/sync', { method: 'POST' }),
   getCommercialMeta: () => request('/api/commercial/meta'),
@@ -165,6 +198,8 @@ export const api = {
     request(`/api/lead-settings/sources/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   getSettings: () => request('/api/settings'),
   updateSettings: (body) => request('/api/settings', { method: 'PUT', body: JSON.stringify(body) }),
+  rehydrateWorkspace: (body) =>
+    request('/api/workspace/rehydrate', { method: 'POST', body: JSON.stringify(body) }),
   getStages: () => request('/api/pipeline/stages'),
   getIntegrations: (params = {}) => {
     const qs = new URLSearchParams(
@@ -172,9 +207,11 @@ export const api = {
     ).toString();
     return request(`/api/integrations${qs ? `?${qs}` : ''}`);
   },
+  getIntegrationsCatalog: () => request('/api/integrations/catalog'),
   updateIntegration: (id, body) =>
     request(`/api/integrations/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   testIntegration: (id) => request(`/api/integrations/${id}/test`, { method: 'POST' }),
+  testAllIntegrations: () => request('/api/integrations/test-all', { method: 'POST' }),
   createIntegration: (body) =>
     request('/api/integrations', { method: 'POST', body: JSON.stringify(body) }),
 };

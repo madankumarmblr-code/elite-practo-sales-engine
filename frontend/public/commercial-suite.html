@@ -554,12 +554,29 @@
         emailTemp: `Dear Doctor,\n\nThank you for taking the time to discuss Practo's digital solutions for your clinic.\n\nSummary of Services:\n[ITEMS]\nNet Payable Amount: ₹[NET_AMOUNT]\n\nPlease review the proposal and reply if you have any questions.\n\nBest Regards,\n[SENDER_NAME]\nPracto Enterprise Team`
     };
 
+    var parentAuthToken = '';
+
+    window.addEventListener('message', function(event) {
+        if (event.origin !== window.location.origin) return;
+        if (event.data && event.data.type === 'practo-sales-auth' && event.data.token) {
+            parentAuthToken = String(event.data.token);
+            try { localStorage.setItem('practo_sales_token', parentAuthToken); } catch (e) {}
+            if (!sheetData.length) fetchSheetData(appSettings.sheetUrl, false, true);
+        }
+    });
+
     window.onload = function() {
         // Auth handled by Sales Automation parent app — no suite login
         document.getElementById('invoiceDate').innerText = 'Issued: ' + new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
         
         loadSettings(); 
-        addReachBlock(); 
+        addReachBlock();
+
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'practo-sales-auth-request' }, window.location.origin);
+            }
+        } catch (e) {}
         
         // Always auto-sync from backend-cached Google Sheet (no CSV upload)
         fetchSheetData(appSettings.sheetUrl);
@@ -572,9 +589,9 @@
 
     function getSalesAuthToken() {
         try {
-            return localStorage.getItem('practo_sales_token') || '';
+            return parentAuthToken || localStorage.getItem('practo_sales_token') || '';
         } catch (e) {
-            return '';
+            return parentAuthToken || '';
         }
     }
 

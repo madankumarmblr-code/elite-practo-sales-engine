@@ -214,7 +214,7 @@ export default function Login() {
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="username or email"
+              placeholder="User ID or email"
               value={form.login}
               onChange={(e) => setForm({ ...form, login: e.target.value })}
             />
@@ -229,6 +229,7 @@ export default function Login() {
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
+              placeholder="Password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />

@@ -167,7 +167,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
 
   if (!loading && isAuthenticated) {
-    return <Navigate to="/lead-generator" replace />;
+    return <Navigate to="/pulse" replace />;
   }
 
   async function onSubmit(e) {
@@ -176,7 +176,7 @@ export default function Login() {
     setError('');
     try {
       await login({ login: form.login, password: form.password });
-      navigate('/lead-generator');
+      navigate('/pulse');
     } catch (err) {
       setError(err.message);
     } finally {

@@ -5,6 +5,7 @@
 export const PRODUCTS = [
   { id: 'prime', label: 'Practo Prime', blurb: 'Assured appointments & premium clinic badge' },
   { id: 'reach', label: 'Practo Reach', blurb: 'Top-slot visibility by city / zone / speciality' },
+  { id: 'ray', label: 'Practo Ray', blurb: 'Practice management — EMR, billing, appointments' },
   { id: 'video', label: 'Video Shoot', blurb: 'Complimentary clinic profile shoot' },
   { id: 'prime_reach', label: 'Prime + Reach', blurb: 'Bundled growth plan' },
   { id: 'full_suite', label: 'Full Enterprise Suite', blurb: 'Prime + Reach + Video' },

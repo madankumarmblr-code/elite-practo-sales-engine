@@ -15,6 +15,7 @@ import { registerExportRoutes } from './routes/export.js';
 import { registerImportRoutes } from './routes/import.js';
 import { registerCommercialRoutes } from './routes/commercial.js';
 import { registerWorkspaceRoutes } from './routes/workspace.js';
+import { registerConversionRoutes } from './routes/conversion.js';
 import { logEvent } from './services/logger.js';
 import { syncSheetFromGoogle } from './services/sheetSync.js';
 import { reloadLocationsIndex } from './services/locations.js';
@@ -23,7 +24,19 @@ import {
   durablePersistMiddleware,
   durableStoreConfigured,
 } from './services/dbSnapshot.js';
+import { getConversionEngineHealth } from './services/conversion/healthStatus.js';
 import './services/outreach.js';
+
+/** Public conversion / webhook paths (no session required; may still check webhook secret). */
+const PUBLIC_API_PATHS = new Set([
+  '/health',
+  '/auth/login',
+  '/v1/status',
+  '/v1/health',
+  '/v1/leads/ingest',
+  '/v1/whatsapp/inbound',
+  '/v1/proposals/generate',
+]);
 
 /**
  * Build the Express app.
@@ -38,6 +51,7 @@ export function createApp(options = {}) {
   app.disable('x-powered-by');
   app.use(cors({ origin: process.env.CORS_ORIGIN || true }));
   app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ extended: true }));
 
   if (warmSheet) {
     let boot;
@@ -70,15 +84,25 @@ export function createApp(options = {}) {
       vercel: Boolean(process.env.VERCEL),
       durableStore: durableStoreConfigured(),
       time: new Date().toISOString(),
+      conversion: getConversionEngineHealth(),
     });
   });
 
+  // Root aliases requested by conversion-engine contract
+  app.get(['/health', '/status'], (_req, res) => {
+    res.json(getConversionEngineHealth());
+  });
+
   registerAuthRoutes(app);
+  // Conversion routes include public webhook endpoints — register before auth gate
+  registerConversionRoutes(app);
 
   app.use('/api', (req, res, next) => {
-    if (req.path === '/health' || req.path === '/auth/login') {
+    if (PUBLIC_API_PATHS.has(req.path)) {
       return next();
     }
+    // Meta WhatsApp verify uses GET on inbound
+    if (req.path === '/v1/whatsapp/inbound') return next();
     return authRequired(req, res, next);
   });
 

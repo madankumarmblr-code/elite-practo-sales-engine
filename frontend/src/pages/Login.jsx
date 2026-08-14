@@ -199,7 +199,6 @@ export default function Login() {
   });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [showForm, setShowForm] = useState(false);
 
   if (!loading && isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -219,6 +218,11 @@ export default function Login() {
     }
   }
 
+  function focusSignIn() {
+    document.getElementById('sign-in')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.querySelector('.nx-form input[name="username"]')?.focus();
+  }
+
   return (
     <div className="nx-page">
       <AmbientStage />
@@ -233,7 +237,7 @@ export default function Login() {
           <a href="#outreach">Outreach</a>
           <a href="#pipeline">Pipeline</a>
         </nav>
-        <button type="button" className="nx-nav-cta" onClick={() => setShowForm(true)}>
+        <button type="button" className="nx-nav-cta" onClick={focusSignIn}>
           Sign in
         </button>
       </header>
@@ -254,53 +258,41 @@ export default function Login() {
           </p>
 
           <div className="nx-cta" id="sign-in">
-            {!showForm ? (
-              <div className="nx-cta-row">
-                <button type="button" className="nx-btn-primary" onClick={() => setShowForm(true)}>
-                  Sign in to workspace
-                </button>
-                <a className="nx-btn-ghost" href="#discover">
-                  See how it works
-                </a>
-              </div>
-            ) : (
-              <form className="nx-form" onSubmit={onSubmit}>
-                <label className="nx-field">
-                  <span>User ID / Email</span>
-                  <input
-                    required
-                    name="username"
-                    autoComplete="username"
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    placeholder="User ID or email"
-                    value={form.login}
-                    onChange={(e) => setForm({ ...form, login: e.target.value })}
-                    autoFocus
-                  />
-                </label>
-                <label className="nx-field">
-                  <span>Password</span>
-                  <input
-                    type="password"
-                    name="password"
-                    required
-                    autoComplete="current-password"
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    placeholder="Password"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  />
-                </label>
-                {error ? <div className="nx-error">{error}</div> : null}
-                <button type="submit" className="nx-btn-primary nx-submit" disabled={busy}>
-                  {busy ? 'Signing in…' : 'Enter workspace'}
-                </button>
-              </form>
-            )}
+            <form className="nx-form" onSubmit={onSubmit}>
+              <label className="nx-field">
+                <span>User ID / Email</span>
+                <input
+                  required
+                  name="username"
+                  autoComplete="username"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="User ID or email"
+                  value={form.login}
+                  onChange={(e) => setForm({ ...form, login: e.target.value })}
+                />
+              </label>
+              <label className="nx-field">
+                <span>Password</span>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  autoComplete="current-password"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                />
+              </label>
+              {error ? <div className="nx-error">{error}</div> : null}
+              <button type="submit" className="nx-btn-primary nx-submit" disabled={busy}>
+                {busy ? 'Signing in…' : 'Enter workspace'}
+              </button>
+            </form>
           </div>
         </div>
 

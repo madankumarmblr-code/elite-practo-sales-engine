@@ -22,6 +22,7 @@ export default function PulseLayout() {
         <div className="pulse-brand">
           <strong>PractoPulse</strong>
           <small>B2B Sales Engine</small>
+          <span className="pulse-build-stamp">Build Aug 14 · Lead Engine + Autopilot</span>
         </div>
         <nav className="pulse-nav">
           {links.map((l) => (

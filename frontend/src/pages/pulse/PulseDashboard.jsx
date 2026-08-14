@@ -56,6 +56,11 @@ export default function PulseDashboard() {
         <p>PractoPulse motion command center for Reach &amp; Prime inside sales.</p>
       </header>
 
+      <div className="pulse-banner pulse-motion-rise" style={{ marginBottom: 16 }}>
+        Live now: Lead Engine (multi-select) · AI Autopilot message/call logs · Server &amp; API
+        Status · Super Admin users · Dashboard motion
+      </div>
+
       <div className="pulse-kpis">
         <MotionKpi label="Pipeline leads" value={leads.length} tone="teal" />
         <MotionKpi label="Reach-fit" value={reach} tone="blue" />

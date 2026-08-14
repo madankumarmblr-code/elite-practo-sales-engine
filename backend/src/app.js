@@ -143,4 +143,3 @@ export function createApp(options = {}) {
   return app;
 }
 
-export default createApp;

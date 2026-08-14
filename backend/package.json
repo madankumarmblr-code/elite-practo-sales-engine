@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
-    "@vercel/functions": "^2.2.13",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",

@@ -116,13 +116,6 @@ a {
   flex-shrink: 0;
 }
 
-.practo-logo-lg {
-  height: 28px;
-  width: auto;
-  display: block;
-  margin-bottom: 0.85rem;
-}
-
 .brand-text strong {
   display: block;
   font-family: var(--font-display);
@@ -290,10 +283,6 @@ a {
 
 .grid-4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.grid-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .grid-2 {
@@ -1013,7 +1002,6 @@ label.field textarea:focus {
 
 @media (max-width: 1100px) {
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .grid-3 { grid-template-columns: 1fr 1fr; }
   .bento-kpi { grid-column: span 6; }
   .bento-main, .bento-side { grid-column: 1 / -1; }
 }
@@ -1045,7 +1033,6 @@ label.field textarea:focus {
   }
 
   .grid-2,
-  .grid-3,
   .form-grid.two,
   .form-grid.three {
     grid-template-columns: 1fr;
@@ -1230,17 +1217,6 @@ label.field textarea:focus {
   min-height: 46px;
 }
 
-.login-brand h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  letter-spacing: -0.03em;
-}
-
-.login-brand p {
-  margin: 0.4rem 0 0;
-  color: var(--muted);
-}
-
 .login-error {
   background: #fff1ef;
   color: var(--danger);
@@ -1342,51 +1318,6 @@ label.field textarea:focus {
   }
 }
 
-.role-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
-  margin: 1.15rem 0;
-}
-
-.role-card {
-  text-align: left;
-  border: 1px solid var(--line-strong);
-  background: #fff;
-  border-radius: 16px;
-  padding: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.role-card strong {
-  font-family: var(--font-display);
-}
-
-.role-card span {
-  font-size: 0.78rem;
-  color: var(--teal);
-  font-weight: 700;
-}
-
-.role-card small {
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.35;
-}
-
-.role-card:hover {
-  transform: translateY(-1px);
-}
-
-.role-card.active {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(15, 159, 138, 0.15);
-}
-
 .export-grid {
   display: grid;
   gap: 0.55rem;
@@ -1406,9 +1337,6 @@ label.field textarea:focus {
 }
 
 @media (max-width: 700px) {
-  .role-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .commercial-suite-page {
@@ -1461,12 +1389,6 @@ label.field textarea:focus {
   box-shadow: 0 0 0 3px rgba(15, 159, 138, 0.12);
 }
 
-.pilot-hero-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 1.25rem;
-}
-
 .view-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -1494,7 +1416,4 @@ label.field textarea:focus {
 
 @media (max-width: 900px) {
   .pilot-tabs,
-  .pilot-hero-grid {
-    grid-template-columns: 1fr;
-  }
 }

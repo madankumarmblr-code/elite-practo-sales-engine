@@ -104,15 +104,6 @@ export function getLocationsIndex() {
   return cache;
 }
 
-export async function ensureLocationsSynced() {
-  try {
-    await syncSheetFromGoogle({ force: false });
-  } catch (err) {
-    console.warn("[locations] Initial sheet sync failed:", err.message);
-  }
-  return reloadLocationsIndex();
-}
-
 export function listCities() {
   const { byCity } = getLocationsIndex();
   return [...byCity.keys()].sort((a, b) => a.localeCompare(b));
@@ -146,10 +137,6 @@ export function listKeywordsFor(city, zone) {
   return listKeywords(city, zone);
 }
 
-/** @deprecated Prefer listKeywords — aliases specialty/keyword */
-export function listSpecialities(city, zone) {
-  return listKeywords(city, zone);
-}
 
 export function getLocationsMeta() {
   const index = getLocationsIndex();

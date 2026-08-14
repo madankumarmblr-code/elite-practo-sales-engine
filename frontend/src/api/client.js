@@ -44,7 +44,7 @@ async function request(path, options = {}) {
     }
     if (res.status === 504) {
       throw new Error(
-        'Lead search timed out on the server. Try a smaller zone, or Rescan — results will still load from locality inventory.'
+        'Lead search timed out on the server. Try a smaller zone or Refresh again — Practo.com may be slow.'
       );
     }
     throw new Error(

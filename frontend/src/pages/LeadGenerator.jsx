@@ -94,7 +94,6 @@ export default function LeadGenerator() {
           keyword: nextCriteria.keyword,
           specialty: nextCriteria.keyword,
           live: true,
-          allowSynthetic: false,
           maxLocalities: fullScan ? 24 : 10,
           limit: fullScan ? 150 : 40,
           fullScan,
@@ -311,7 +310,7 @@ export default function LeadGenerator() {
       if (sourceFilter !== 'all') {
         const src = r.discoverySource || '';
         if (sourceFilter === 'live') {
-          if (!['nominatim', 'overpass', 'google_places', 'practo_web'].includes(src)) return false;
+          if (!['overpass', 'google_places', 'practo_web'].includes(src)) return false;
         } else if (src !== sourceFilter) return false;
       }
       if (contactFilter === 'phone' && !(r.phone || r.owner?.phone)) return false;
@@ -581,7 +580,6 @@ export default function LeadGenerator() {
             <option value="live">Live OSM/Places/Practo</option>
             <option value="practo_web">Practo.com</option>
             <option value="overpass">OSM Overpass</option>
-            <option value="nominatim">Nominatim</option>
             <option value="google_places">Google Places</option>
           </select>
           <select

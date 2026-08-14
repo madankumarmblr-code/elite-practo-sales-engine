@@ -366,51 +366,6 @@ export async function searchPractoWeb({
 }
 
 /**
- * Fetch a single Practo clinic/doctor profile page for richer details (rating, specialty).
- */
-export async function fetchPractoDetails(profileUrl) {
-  const url = cleanPractoUrl(profileUrl);
-  if (!url) return null;
-  const page = await fetchHtml(url, { timeoutMs: 12000 });
-  if (!page.ok) {
-    return { ok: false, status: page.status, url, error: `HTTP ${page.status}` };
-  }
-  const entities = parseLdJsonBlocks(page.html);
-  const clinic =
-    entities.find((e) => /MedicalClinic|Hospital|Dentist|Physician/i.test(String(e['@type'] || ''))) ||
-    entities.find((e) => e.aggregateRating) ||
-    null;
-
-  // Some clinic pages embed a list of entities
-  let best = clinic;
-  for (const e of entities) {
-    if (e?.aggregateRating && (!best || !best.aggregateRating)) best = e;
-  }
-
-  const rating = ratingFromEntity(best);
-  const reviews = reviewCountFromEntity(best);
-  return {
-    ok: true,
-    status: page.status,
-    url,
-    name: best?.name || null,
-    specialty: best?.medicalSpecialty || best?.['@type'] || null,
-    rating,
-    reviews,
-    telephone: best?.telephone || null,
-    address: addressLine(best?.address),
-    description: best?.description || null,
-    practo: {
-      hasProfile: true,
-      url,
-      rating,
-      reviews,
-      source: 'practo.com',
-    },
-  };
-}
-
-/**
  * Connectivity probe used by API Integrations "Test".
  */
 export async function probePractoWeb(config = {}) {
@@ -525,4 +480,3 @@ export async function enrichLeadsWithPractoWeb(leads, { city, keyword, deadlineM
   return { leads: out, scanned };
 }
 
-export { normalizeName as normalizePractoName };

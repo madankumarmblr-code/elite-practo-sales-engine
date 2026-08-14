@@ -83,10 +83,6 @@ export function loadCommercialInventory({ forceSync = false } = {}) {
   return { rows: mapRows(raw), meta: getSheetSyncMeta() };
 }
 
-export async function getCommercialInventoryFresh() {
-  await syncSheetFromGoogle({ force: false });
-  return loadCommercialInventory();
-}
 
 export function getCommercialFilters(rows) {
   const cities = new Set();

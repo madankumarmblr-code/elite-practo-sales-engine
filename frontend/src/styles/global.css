@@ -1415,5 +1415,7 @@ label.field textarea:focus {
 }
 
 @media (max-width: 900px) {
-  .pilot-tabs,
+  .pilot-tabs {
+    grid-template-columns: 1fr;
+  }
 }

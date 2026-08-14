@@ -167,7 +167,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
 
   if (!loading && isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/lead-generator" replace />;
   }
 
   async function onSubmit(e) {
@@ -175,8 +175,8 @@ export default function Login() {
     setBusy(true);
     setError('');
     try {
-      const user = await login({ login: form.login, password: form.password });
-      navigate(user?.role === 'superadmin' ? '/super-admin' : '/');
+      await login({ login: form.login, password: form.password });
+      navigate('/lead-generator');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -191,11 +191,11 @@ export default function Login() {
       <div className="login-shell">
         <div className="login-hero">
           <img src="/practo-logo.svg" alt="Practo" className="login-logo" />
-          <p className="login-kicker">Clinic outreach, orchestrated</p>
-          <h1 className="login-title">Sales Automation</h1>
+          <p className="login-kicker">Clinic discovery &amp; commercials</p>
+          <h1 className="login-title">Salesmaster</h1>
           <p className="login-lede">
-            Sign in to run lead discovery, commercial proposals, and AI pilots across WhatsApp,
-            Gmail, and calls.
+            Sign in to discover authentic Practo clinic leads and build Commercial Proposal Suite
+            offers.
           </p>
         </div>
 

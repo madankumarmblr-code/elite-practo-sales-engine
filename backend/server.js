@@ -1,5 +1,4 @@
 /**
- * Alias entrypoint for the Practo Lead Conversion Engine.
- * Prefer `npm run start -w backend` / `src/index.js` in production.
+ * Alias entrypoint. Prefer `npm run start -w backend` / `src/index.js`.
  */
 import '../src/index.js';

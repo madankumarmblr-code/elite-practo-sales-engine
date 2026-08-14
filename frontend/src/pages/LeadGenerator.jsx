@@ -217,9 +217,8 @@ export default function LeadGenerator() {
     try {
       const data = await api.importLeads(leads);
       toast(
-        `Imported ${data.imported} into Lead Management` +
-          (data.skipped ? ` · skipped ${data.skipped} duplicates` : '') +
-          ' · open Lead Management for Hot/Warm/Skip, AI draft, Autopilot'
+        `Saved ${data.imported} lead(s)` +
+          (data.skipped ? ` · skipped ${data.skipped} duplicates` : '')
       );
       setSelected({});
     } catch (err) {
@@ -361,8 +360,7 @@ export default function LeadGenerator() {
           <h1>Lead Generator</h1>
           <p>
             Pick <strong>City → Zone → Speciality</strong> to load authentic clinics from{' '}
-            <strong>Practo.com</strong> and live maps (duplicates removed), then send them to{' '}
-            <strong>Lead Management</strong>.
+            <strong>Practo.com</strong> and live maps (duplicates removed), then export CSV/JSON.
           </p>
         </div>
         <div className="topbar-actions">
@@ -400,7 +398,7 @@ export default function LeadGenerator() {
             Export JSON
           </button>
           <button type="button" className="btn btn-primary" onClick={importSelected} disabled={busy || !selectedCount}>
-            Send to Lead Management ({selectedCount})
+            Save selected ({selectedCount})
           </button>
         </div>
       </div>
@@ -453,7 +451,7 @@ export default function LeadGenerator() {
             <div className="muted" style={{ fontSize: '0.85rem', lineHeight: 1.45, marginTop: 6 }}>
               Pick a zone — we scan localities under that zone and pull real clinics from Practo.com,
               OpenStreetMap, and Google Places (when configured). Sample/demo inventory rows are
-              excluded. Results are de-duplicated before you send them to Lead Management.
+              excluded. Results are de-duplicated before you export or save them.
               {meta.localityCount ? (
                 <> Reference localities: {meta.localityCount.toLocaleString()}.</>
               ) : null}

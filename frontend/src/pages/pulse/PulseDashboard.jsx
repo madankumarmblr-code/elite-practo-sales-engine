@@ -55,10 +55,13 @@ export default function PulseDashboard() {
           <h2>Next actions</h2>
           <div className="pulse-actions">
             <Link className="pulse-btn" to="/pulse/leads">
-              Open Lead Finder
+              Open Lead Engine
             </Link>
-            <Link className="pulse-btn ghost" to="/pulse/outreach">
-              Outreach
+            <Link className="pulse-btn ghost" to="/pulse/autopilot">
+              AI Autopilot
+            </Link>
+            <Link className="pulse-btn ghost" to="/pulse/status">
+              Server Status
             </Link>
             <Link className="pulse-btn navy" to="/commercial-suite">
               Commercial Suite

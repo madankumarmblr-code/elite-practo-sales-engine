@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
-import LeadGenerator from './pages/LeadGenerator';
 import CommercialSuite from './pages/CommercialSuite';
 import Login from './pages/Login';
 import PulseLayout from './pages/pulse/PulseLayout';
@@ -11,6 +10,8 @@ import PulseOutreach from './pages/pulse/PulseOutreach';
 import PulsePitch from './pages/pulse/PulsePitch';
 import PulseMeetings from './pages/pulse/PulseMeetings';
 import PulseSettings from './pages/pulse/PulseSettings';
+import PulseStatus from './pages/pulse/PulseStatus';
+import PulseAutopilot from './pages/pulse/PulseAutopilot';
 import { ToastContext } from './hooks/useToast';
 import { AuthProvider } from './hooks/useAuth';
 
@@ -36,9 +37,11 @@ export default function App() {
               <Route path="outreach" element={<PulseOutreach />} />
               <Route path="pitch" element={<PulsePitch />} />
               <Route path="meetings" element={<PulseMeetings />} />
+              <Route path="autopilot" element={<PulseAutopilot />} />
+              <Route path="status" element={<PulseStatus />} />
               <Route path="settings" element={<PulseSettings />} />
             </Route>
-            <Route path="/lead-generator" element={<LeadGenerator />} />
+            <Route path="/lead-generator" element={<Navigate to="/pulse/leads" replace />} />
             <Route path="/commercial-suite" element={<CommercialSuite />} />
             <Route path="*" element={<Navigate to="/pulse" replace />} />
           </Route>

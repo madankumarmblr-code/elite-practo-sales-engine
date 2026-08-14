@@ -1,27 +1,17 @@
-import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../api/client';
 import { readWorkspaceBackup } from '../lib/workspaceBackup';
 
-const links = [
-  { to: '/pulse', label: 'PractoPulse', icon: '◈', perm: 'lead_generator:read' },
-  { to: '/pulse/leads', label: 'Lead Engine', icon: '✦', perm: 'lead_generator:read' },
-  { to: '/commercial-suite', label: 'Commercial Suite', icon: '◎', perm: 'commercial_suite:read' },
-  { to: '/superadmin', label: 'Super Admin', icon: '♛', perm: 'users:write' },
-];
-
+/**
+ * Auth gate + workspace rehydrate.
+ * All authenticated pages render inside PractoPulse (PulseLayout) — one UI shell.
+ */
 export default function Layout({ toast }) {
-  const [open, setOpen] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
-  const location = useLocation();
-  const { user, can, logout, loading, isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const rehydrated = useRef(false);
-  const isPulse = location.pathname.startsWith('/pulse');
-
-  useEffect(() => {
-    setOpen(false);
-  }, [location.pathname]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -63,63 +53,10 @@ export default function Layout({ toast }) {
     return <Navigate to="/login" replace />;
   }
 
-  const visible = links.filter((l) => can(l.perm) || can('*'));
-
-  // PractoPulse uses its own full-bleed dark shell
-  if (isPulse) {
-    return (
-      <>
-        <Outlet />
-        {toast ? <div className="toast">{toast}</div> : null}
-      </>
-    );
-  }
-
   return (
-    <div className="app-shell">
-      <aside className={`sidebar ${open ? 'open' : ''}`}>
-        <div className="brand">
-          <img src="/practo-logo-light.svg" alt="Practo" className="practo-logo" />
-          <div className="brand-text">
-            <strong>Salesmaster</strong>
-            <small>{user?.roleLabel || 'Enterprise'}</small>
-          </div>
-        </div>
-        <nav className="nav">
-          {visible.map((l) => (
-            <NavLink key={l.to} to={l.to}>
-              <span className="nav-icon">{l.icon}</span>
-              {l.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="sidebar-foot">
-          <div style={{ marginBottom: 8 }}>
-            Signed in as <strong style={{ color: '#fff' }}>{user?.name}</strong>
-            <div>{user?.email}</div>
-          </div>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.28)' }}
-            onClick={logout}
-          >
-            Sign out
-          </button>
-        </div>
-      </aside>
-      <div className="main">
-        <button
-          type="button"
-          className="btn btn-secondary mobile-toggle"
-          onClick={() => setOpen((v) => !v)}
-          style={{ marginBottom: '0.75rem' }}
-        >
-          Menu
-        </button>
-        <Outlet />
-      </div>
+    <>
+      <Outlet />
       {toast ? <div className="toast">{toast}</div> : null}
-    </div>
+    </>
   );
 }

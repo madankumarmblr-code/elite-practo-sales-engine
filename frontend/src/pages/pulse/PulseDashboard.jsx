@@ -89,11 +89,14 @@ export default function PulseDashboard() {
             <Link className="pulse-btn ghost" to="/pulse/autopilot">
               AI Autopilot logs
             </Link>
+            <Link className="pulse-btn ghost" to="/pulse/commercial">
+              Commercial Suite
+            </Link>
             <Link className="pulse-btn ghost" to="/pulse/status">
               Server &amp; API Status
             </Link>
-            <Link className="pulse-btn navy" to="/commercial-suite">
-              Commercial Suite
+            <Link className="pulse-btn navy" to="/pulse/settings">
+              Settings &amp; API keys
             </Link>
           </div>
           {status ? (

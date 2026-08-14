@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate } from 'react-router-dom';
 import { backupUser, removeUserBackup, syncUsersBackup } from '../lib/workspaceBackup';
 
 const emptyUser = {
@@ -41,7 +41,6 @@ export default function SuperAdmin() {
 
   async function load() {
     setLoadError('');
-    // Load users first — don't let health/logs failures blank the user table
     try {
       const u = await api.getUsers();
       setUsers(Array.isArray(u) ? u : []);
@@ -57,7 +56,10 @@ export default function SuperAdmin() {
       api.getSystemHealth(),
     ]);
     if (extras[0].status === 'fulfilled') setRolesMeta(extras[0].value);
-    if (extras[1].status === 'fulfilled') setEvents(extras[1].value);
+    if (extras[1].status === 'fulfilled') {
+      const ev = extras[1].value;
+      setEvents(Array.isArray(ev) ? ev : []);
+    }
     if (extras[2].status === 'fulfilled') setHealth(extras[2].value);
   }
 
@@ -173,52 +175,47 @@ export default function SuperAdmin() {
   }
 
   return (
-    <>
-      <div className="topbar">
+    <div className="pulse-page">
+      <header className="pulse-head row">
         <div>
           <h1>Super Admin</h1>
           <p>
-            Manage users and permissions. Created users are stored in the durable workspace database.
-            Only Super Admin can edit API integration keys (they apply to all users).
+            Create users by permission level. Same PractoPulse UI — durable workspace database.
           </p>
         </div>
-        <div className="topbar-actions">
+        <div className="pulse-actions">
           <button
             type="button"
-            className={`btn ${tab === 'users' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`pulse-btn ${tab === 'users' ? '' : 'ghost'}`}
             onClick={() => setTab('users')}
           >
-            Users & permissions
+            Users &amp; permissions
           </button>
           <button
             type="button"
-            className={`btn ${tab === 'health' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`pulse-btn ${tab === 'health' ? '' : 'ghost'}`}
             onClick={() => setTab('health')}
           >
-            Health & logs
+            Health &amp; logs
           </button>
-          <button type="button" className="btn btn-ghost" onClick={load}>
+          <button type="button" className="pulse-btn ghost" onClick={load}>
             Refresh
           </button>
         </div>
-      </div>
+      </header>
 
       {tab === 'users' ? (
-        <div className="grid grid-2">
-          <div className="panel">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="pulse-grid-2">
+          <section className="pulse-card">
+            <div className="pulse-head row" style={{ marginBottom: 12 }}>
               <h2 style={{ margin: 0 }}>Users ({users.length})</h2>
-              <button type="button" className="btn btn-primary" onClick={startCreate}>
+              <button type="button" className="pulse-btn" onClick={startCreate}>
                 Add user
               </button>
             </div>
-            {loadError ? (
-              <p className="muted" style={{ color: 'var(--coral, #c45c26)' }}>
-                {loadError}
-              </p>
-            ) : null}
-            <div className="table-wrap" style={{ marginTop: '1rem' }}>
-              <table className="data">
+            {loadError ? <p className="pulse-banner">{loadError}</p> : null}
+            <div className="pulse-table-wrap">
+              <table className="pulse-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -233,29 +230,19 @@ export default function SuperAdmin() {
                     <tr key={u.id}>
                       <td>
                         <strong>{u.name}</strong>
-                        <div className="muted" style={{ fontSize: '0.8rem' }}>
-                          {u.email}
-                        </div>
+                        <div className="muted">{u.email}</div>
                       </td>
                       <td>{u.username || '—'}</td>
                       <td>
-                        <span
-                          className={`badge ${u.role === 'superadmin' ? 'badge-coral' : 'badge-teal'}`}
-                        >
-                          {u.roleLabel}
-                        </span>
+                        <span className="pulse-chip">{u.roleLabel || u.role}</span>
                       </td>
                       <td>{u.active ? 'Yes' : 'No'}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <button type="button" className="btn btn-ghost" onClick={() => startEdit(u)}>
+                      <td className="pulse-row-actions">
+                        <button type="button" onClick={() => startEdit(u)}>
                           Edit
                         </button>
                         {u.role !== 'superadmin' ? (
-                          <button
-                            type="button"
-                            className="btn btn-danger"
-                            onClick={() => removeUser(u.id)}
-                          >
+                          <button type="button" className="navy" onClick={() => removeUser(u.id)}>
                             Delete
                           </button>
                         ) : null}
@@ -264,7 +251,7 @@ export default function SuperAdmin() {
                   ))}
                   {!users.length && !loadError ? (
                     <tr>
-                      <td colSpan={5} className="muted">
+                      <td colSpan={5} className="empty">
                         No users loaded yet. Click Refresh, or create a user.
                       </td>
                     </tr>
@@ -272,12 +259,12 @@ export default function SuperAdmin() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </section>
 
-          <div className="panel">
+          <section className="pulse-card">
             <h2>{editingId ? 'Edit user' : 'Create user'}</h2>
-            <form className="form-grid" onSubmit={saveUser}>
-              <label className="field">
+            <form className="pulse-admin-form" onSubmit={saveUser}>
+              <label>
                 Full name
                 <input
                   required
@@ -285,8 +272,8 @@ export default function SuperAdmin() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </label>
-              <div className="form-grid two">
-                <label className="field">
+              <div className="pulse-filters" style={{ padding: 0, background: 'transparent' }}>
+                <label>
                   User ID
                   <input
                     required
@@ -295,7 +282,7 @@ export default function SuperAdmin() {
                     placeholder="e.g. sales.agent1"
                   />
                 </label>
-                <label className="field">
+                <label>
                   Email
                   <input
                     type="email"
@@ -305,7 +292,7 @@ export default function SuperAdmin() {
                   />
                 </label>
               </div>
-              <label className="field">
+              <label>
                 Password {editingId ? '(leave blank to keep)' : ''}
                 <input
                   type="password"
@@ -314,7 +301,7 @@ export default function SuperAdmin() {
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                 />
               </label>
-              <label className="field">
+              <label>
                 Permission level (role)
                 <select
                   value={form.role}
@@ -334,27 +321,27 @@ export default function SuperAdmin() {
                   ))}
                 </select>
               </label>
-              <label className="switch">
+              <label className="pulse-check">
                 <input
                   type="checkbox"
                   checked={!!form.active}
                   disabled={form.role === 'superadmin'}
                   onChange={(e) => setForm({ ...form, active: e.target.checked })}
                 />
-                Active
+                Active account
               </label>
 
               {form.role !== 'superadmin' ? (
                 <div>
-                  <h3 style={{ margin: '0.5rem 0' }}>Fine-grained permissions</h3>
+                  <h3 style={{ margin: '0.5rem 0', fontSize: '0.95rem' }}>Fine-grained permissions</h3>
                   {Object.entries(permissionGroups)
                     .filter(([g]) => g !== 'Super Admin')
                     .map(([group, perms]) => (
                       <div key={group} style={{ marginBottom: '0.75rem' }}>
-                        <strong style={{ fontSize: '0.85rem' }}>{group}</strong>
-                        <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+                        <strong style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{group}</strong>
+                        <div className="pulse-perm-grid">
                           {perms.map((p) => (
-                            <label className="switch" key={p.id}>
+                            <label className="pulse-check" key={p.id}>
                               <input
                                 type="checkbox"
                                 checked={form.permissions.includes(p.id)}
@@ -371,14 +358,14 @@ export default function SuperAdmin() {
                 <p className="muted">Super Admin always has full access.</p>
               )}
 
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="submit" className="btn btn-primary" disabled={busy}>
+              <div className="pulse-actions">
+                <button type="submit" className="pulse-btn" disabled={busy}>
                   {busy ? 'Saving…' : editingId ? 'Save changes' : 'Create user'}
                 </button>
                 {editingId ? (
                   <button
                     type="button"
-                    className="btn btn-ghost"
+                    className="pulse-btn ghost"
                     onClick={() => {
                       setEditingId(null);
                       setForm(emptyUser);
@@ -389,26 +376,26 @@ export default function SuperAdmin() {
                 ) : null}
               </div>
             </form>
-          </div>
+          </section>
         </div>
       ) : (
-        <div className="grid grid-2">
-          <div className="panel">
-            <h2>Database & system health</h2>
+        <div className="pulse-grid-2">
+          <section className="pulse-card">
+            <h2>Database &amp; system health</h2>
             {!health ? (
               <div className="muted">Loading…</div>
             ) : (
               <>
                 <div style={{ marginBottom: '0.85rem' }}>
-                  <span className={`badge ${health.ok ? 'badge-green' : 'badge-coral'}`}>
-                    {health.ok ? 'Healthy' : 'Issues detected'}
+                  <span className={`pulse-status-pill ${health.ok ? 'ok' : 'warn'}`}>
+                    {health.ok ? 'Healthy' : 'Issues'}
                   </span>
                   <span className="muted" style={{ marginLeft: 8, fontSize: '0.85rem' }}>
                     {health.time}
                   </span>
                 </div>
-                <div className="table-wrap">
-                  <table className="data">
+                <div className="pulse-table-wrap">
+                  <table className="pulse-table">
                     <thead>
                       <tr>
                         <th>Check</th>
@@ -417,36 +404,35 @@ export default function SuperAdmin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {health.checks.map((c) => (
+                      {(health.checks || []).map((c) => (
                         <tr key={c.name}>
                           <td>{c.name}</td>
                           <td>
-                            <span className={`badge ${c.ok ? 'badge-green' : 'badge-coral'}`}>
+                            <span className={`pulse-status-pill ${c.ok ? 'ok' : 'warn'}`}>
                               {c.ok ? 'OK' : 'FAIL'}
                             </span>
                           </td>
-                          <td>{c.detail}</td>
+                          <td className="muted">{c.detail}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <h3>Table counts</h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <div className="pulse-actions" style={{ marginTop: 12, flexWrap: 'wrap' }}>
                   {Object.entries(health.counts || {}).map(([k, v]) => (
-                    <span key={k} className="badge badge-blue">
+                    <span key={k} className="pulse-chip">
                       {k}: {v}
                     </span>
                   ))}
                 </div>
               </>
             )}
-          </div>
+          </section>
 
-          <div className="panel">
-            <h2>System events & API logs</h2>
-            <div className="table-wrap" style={{ maxHeight: 520, overflow: 'auto' }}>
-              <table className="data">
+          <section className="pulse-card">
+            <h2>System events &amp; API logs</h2>
+            <div className="pulse-table-wrap" style={{ maxHeight: 520, overflow: 'auto' }}>
+              <table className="pulse-table">
                 <thead>
                   <tr>
                     <th>When</th>
@@ -458,17 +444,13 @@ export default function SuperAdmin() {
                 <tbody>
                   {events.map((ev) => (
                     <tr key={ev.id}>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                      <td className="muted" style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
                         {new Date(ev.created_at).toLocaleString()}
                       </td>
                       <td>
                         <span
-                          className={`badge ${
-                            ev.type === 'error'
-                              ? 'badge-coral'
-                              : ev.type === 'warn'
-                                ? 'badge-amber'
-                                : 'badge-teal'
+                          className={`pulse-status-pill ${
+                            ev.type === 'error' ? 'warn' : ev.type === 'warn' ? 'idle' : 'ok'
                           }`}
                         >
                           {ev.type}
@@ -485,7 +467,7 @@ export default function SuperAdmin() {
                   ))}
                   {!events.length ? (
                     <tr>
-                      <td colSpan={4} className="muted">
+                      <td colSpan={4} className="empty">
                         No events yet — use the app to generate logs.
                       </td>
                     </tr>
@@ -493,9 +475,9 @@ export default function SuperAdmin() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </section>
         </div>
       )}
-    </>
+    </div>
   );
 }

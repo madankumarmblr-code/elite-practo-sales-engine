@@ -19,3 +19,6 @@ data/
 .vercel/
 .env.local
 .env.*.local
+.next/
+practopulse/.next/
+practopulse/node_modules/

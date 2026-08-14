@@ -1,14 +1,20 @@
 # Practo Sales Automation
 
-Full-stack suite focused on **Lead Generator** (city → zone → speciality search) and **Commercial Proposal Suite**.
+Full-stack suite with:
 
-## Features
+1. **Classic app** (`frontend` + `backend`) — Lead Generator + Commercial Proposal Suite on https://www.salesmaster.live
+2. **PractoPulse** (`practopulse`) — Next.js B2B sales engine for Reach & Prime inside sales (Apify / Clay / Smartlead / HeyReach / Claude / Gamma / …)
 
-- **Lead Generator** — Google Sheet search values + authentic Practo.com / maps discovery, export CSV/JSON
-- **Commercial Suite** — Prime / Reach / Video proposals with live sheet inventory
-- **Simple login** — user ID / email + password
+## PractoPulse (new)
 
-## Local development
+```bash
+npm install
+npm run dev:pulse
+```
+
+Open http://localhost:3000 — see `practopulse/README.md`.
+
+## Classic Lead Generator + Commercial Suite
 
 ```bash
 npm install
@@ -36,24 +42,12 @@ npm run build
 NODE_ENV=production PORT=8080 npm start
 ```
 
-Full steps, Nginx, env vars, Vercel, and systemd: see **[HOSTING.md](./HOSTING.md)** and **[VERCEL.md](./VERCEL.md)**.
+Full steps: **[HOSTING.md](./HOSTING.md)** and **[VERCEL.md](./VERCEL.md)**.
 
-> **Vercel:** Import with Root Directory empty. After deploy, `/api/health` must return JSON. Login: `superadmin` / `SuperAdmin@123`. Prefer Docker for durable data.
-
-### Super Admin login
+### Super Admin login (classic app)
 
 | Field | Value |
 |------|-------|
 | User ID | `superadmin` |
 | Email | `superadmin@practo.sales` |
 | Password | `SuperAdmin@123` |
-
-Change this password after go-live.
-
-## Inventory source (Google Sheet)
-
-Auto-syncs every 15 minutes from the published CSV (no manual CSV upload):
-
-`https://docs.google.com/spreadsheets/d/e/2PACX-1vQTl9Yrc0MVODAlLUTrHvOCJZxrm7bpEMV3xAX1d3UYiXQIeGySyOe8t1Jk8evBTQg2rSeC8akfGfxr/pub?gid=305008958&single=true&output=csv`
-
-Cached under `DATA_DIR` (default `backend/data/locations-sheet.csv`). Manual refresh: `POST /api/sheet/sync`.

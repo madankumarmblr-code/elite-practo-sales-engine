@@ -142,6 +142,69 @@ export default function PulseSettings() {
       </section>
 
       <section className="pulse-card" style={{ marginBottom: 16 }}>
+        <h2>Channel tests</h2>
+        <p className="muted" style={{ marginBottom: 12 }}>
+          Test WhatsApp, Gmail, and AI Calls. Results land in Autopilot → Sent messages / Call logs.
+        </p>
+        <div className="pulse-actions">
+          <button
+            type="button"
+            className="pulse-btn ghost"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await api.pulseTestChannel({ channel: 'whatsapp' });
+                toast(r.message);
+              } catch (e) {
+                toast(e.message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Test WhatsApp
+          </button>
+          <button
+            type="button"
+            className="pulse-btn ghost"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await api.pulseTestChannel({ channel: 'gmail' });
+                toast(r.message);
+              } catch (e) {
+                toast(e.message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Test Gmail
+          </button>
+          <button
+            type="button"
+            className="pulse-btn navy"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await api.pulseTestChannel({ channel: 'calls' });
+                toast(r.message);
+              } catch (e) {
+                toast(e.message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Test AI Call
+          </button>
+        </div>
+      </section>
+
+      <section className="pulse-card" style={{ marginBottom: 16 }}>
         <h2>API webhooks</h2>
         <p className="muted" style={{ marginBottom: 12 }}>
           When leads are pushed to Autopilot, these URLs receive a JSON payload (

@@ -1896,3 +1896,97 @@ label.field textarea:focus {
   background: rgba(251, 191, 36, 0.15);
   color: #fbbf24;
 }
+
+.pulse-motion-page {
+  position: relative;
+}
+
+.pulse-motion-bg {
+  pointer-events: none;
+  position: absolute;
+  inset: -1rem -1rem auto;
+  height: 220px;
+  background:
+    radial-gradient(ellipse 60% 80% at 20% 40%, rgba(45, 212, 191, 0.18), transparent 70%),
+    radial-gradient(ellipse 50% 70% at 80% 30%, rgba(56, 189, 248, 0.14), transparent 70%),
+    radial-gradient(ellipse 40% 60% at 50% 90%, rgba(251, 191, 36, 0.08), transparent 70%);
+  animation: pulse-orb-drift 12s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+.pulse-motion-page > *:not(.pulse-motion-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.pulse-motion-rise {
+  animation: pulse-rise-in 0.7s ease-out both;
+}
+
+.pulse-motion-rise.delay-1 {
+  animation-delay: 0.12s;
+}
+
+.pulse-motion-kpi {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  border: 1px solid transparent;
+}
+
+.pulse-motion-kpi:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+.pulse-motion-kpi.tone-teal {
+  border-color: rgba(45, 212, 191, 0.25);
+  background: linear-gradient(145deg, rgba(45, 212, 191, 0.12), rgba(15, 23, 42, 0.4));
+}
+
+.pulse-motion-kpi.tone-blue {
+  border-color: rgba(56, 189, 248, 0.25);
+  background: linear-gradient(145deg, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.4));
+}
+
+.pulse-motion-kpi.tone-amber {
+  border-color: rgba(251, 191, 36, 0.25);
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.1), rgba(15, 23, 42, 0.4));
+}
+
+.pulse-feature-card {
+  transition: transform 0.28s ease, border-color 0.28s ease;
+}
+
+.pulse-feature-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(45, 212, 191, 0.35);
+}
+
+@keyframes pulse-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-orb-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(12px, -8px, 0) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-motion-bg,
+  .pulse-motion-rise,
+  .pulse-motion-kpi,
+  .pulse-feature-card {
+    animation: none !important;
+    transition: none !important;
+  }
+}

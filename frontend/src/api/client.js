@@ -102,6 +102,7 @@ export const api = {
   pulseDiscover: (body) =>
     request('/api/pulse/discover', { method: 'POST', body: JSON.stringify(body) }),
   pulseStatus: () => request('/api/pulse/status'),
+  pulseDbProbe: () => request('/api/pulse/db-probe'),
   pulseSettings: () => request('/api/pulse/settings'),
   pulseSaveSettings: (settings) =>
     request('/api/pulse/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
@@ -112,6 +113,21 @@ export const api = {
   pulseAutopilot: () => request('/api/pulse/autopilot'),
   pulseAutopilotPush: (body) =>
     request('/api/pulse/autopilot/push', { method: 'POST', body: JSON.stringify(body) }),
+  pulseMessages: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+    ).toString();
+    return request(`/api/pulse/logs/messages${qs ? `?${qs}` : ''}`);
+  },
+  pulseCallLogs: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+    ).toString();
+    return request(`/api/pulse/logs/calls${qs ? `?${qs}` : ''}`);
+  },
+  pulseTestChannel: (body) =>
+    request('/api/pulse/channels/test', { method: 'POST', body: JSON.stringify(body) }),
+  pulseTestAllChannels: () => request('/api/pulse/channels/test-all', { method: 'POST' }),
   pulsePitch: (body) =>
     request('/api/pulse/pitch', { method: 'POST', body: JSON.stringify(body) }),
   pulseSmartlead: (body) =>
@@ -122,4 +138,19 @@ export const api = {
     request('/api/pulse/demo', { method: 'POST', body: JSON.stringify(body) }),
   pulseFireflies: (body) =>
     request('/api/pulse/fireflies', { method: 'POST', body: JSON.stringify(body) }),
+
+  getUsers: () => request('/api/users'),
+  createUser: (body) => request('/api/users', { method: 'POST', body: JSON.stringify(body) }),
+  updateUser: (id, body) =>
+    request(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteUser: (id) => request(`/api/users/${id}`, { method: 'DELETE' }),
+  getRoles: () => request('/api/auth/roles'),
+  getSystemEvents: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+    ).toString();
+    return request(`/api/system/events${qs ? `?${qs}` : ''}`);
+  },
+  getSystemHealth: () => request('/api/system/health'),
+  getApiHealth: () => request('/api/health'),
 };

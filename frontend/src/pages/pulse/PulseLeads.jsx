@@ -60,8 +60,8 @@ export default function PulseLeads() {
   const [meta, setMeta] = useState(DEFAULT_META);
   const [criteria, setCriteria] = useState({
     city: '',
-    zone: 'All',
-    keyword: '',
+    zones: [],
+    keywords: [],
     product: 'BOTH',
   });
   const [leads, setLeads] = useState([]);
@@ -83,11 +83,22 @@ export default function PulseLeads() {
   const zones = useMemo(() => meta.zonesByCity[criteria.city] || [], [meta, criteria.city]);
   const keywords = useMemo(() => {
     if (!criteria.city) return meta.keywords || meta.specialties || [];
-    if (criteria.zone && criteria.zone !== 'All') {
-      return meta.keywordsByCityZone[`${criteria.city}||${criteria.zone}`] || [];
+    if (criteria.zones.length === 1) {
+      return (
+        meta.keywordsByCityZone[`${criteria.city}||${criteria.zones[0]}`] ||
+        meta.keywordsByCity[criteria.city] ||
+        []
+      );
+    }
+    if (criteria.zones.length > 1) {
+      const set = new Set();
+      for (const z of criteria.zones) {
+        for (const k of meta.keywordsByCityZone[`${criteria.city}||${z}`] || []) set.add(k);
+      }
+      if (set.size) return [...set];
     }
     return meta.keywordsByCity[criteria.city] || meta.keywords || meta.specialties || [];
-  }, [meta, criteria.city, criteria.zone]);
+  }, [meta, criteria.city, criteria.zones]);
 
   useEffect(() => {
     api
@@ -103,11 +114,11 @@ export default function PulseLeads() {
           ? 'General Dentistry'
           : cityKeywords[0] || '';
         const cityZones = data.zonesByCity?.[city] || [];
-        const defaultZone = cityZones.includes('Vijayanagar') ? 'Vijayanagar' : 'All';
+        const defaultZone = cityZones.includes('Vijayanagar') ? 'Vijayanagar' : null;
         setCriteria({
           city,
-          zone: defaultZone,
-          keyword,
+          zones: defaultZone ? [defaultZone] : [],
+          keywords: keyword ? [keyword] : [],
           product: 'BOTH',
         });
         if (data.autopilotLevels?.length) setAutopilotLevel('sequence');
@@ -118,21 +129,24 @@ export default function PulseLeads() {
 
   const runDiscover = useCallback(
     async (nextCriteria = criteria, { fullScan = false } = {}) => {
-      if (!nextCriteria.city || !nextCriteria.keyword) return;
+      if (!nextCriteria.city || !nextCriteria.keywords?.length) return;
       const seq = ++searchSeq.current;
+      const kwLabel = nextCriteria.keywords.join(', ');
       setBusy(true);
       setScanStep(
         fullScan
-          ? `Full scan — Practo.com + maps for ${nextCriteria.keyword}…`
-          : `Loading authentic clinics for ${nextCriteria.keyword}…`
+          ? `Full scan — Practo.com + maps for ${kwLabel}…`
+          : `Loading authentic clinics for ${kwLabel}…`
       );
       setMessage('');
       try {
         const data = await api.pulseDiscover({
           city: nextCriteria.city,
-          zone: nextCriteria.zone || 'All',
-          keyword: nextCriteria.keyword,
-          specialty: nextCriteria.keyword,
+          zone: nextCriteria.zones?.[0] || 'All',
+          zones: nextCriteria.zones?.length ? nextCriteria.zones : undefined,
+          keyword: nextCriteria.keywords[0],
+          keywords: nextCriteria.keywords,
+          specialty: nextCriteria.keywords[0],
           product: nextCriteria.product || 'BOTH',
           live: true,
           maxLocalities: fullScan ? 24 : 10,
@@ -180,30 +194,40 @@ export default function PulseLeads() {
   }, [busy]);
 
   useEffect(() => {
-    if (!ready || !criteria.city || !criteria.keyword) return undefined;
+    if (!ready || !criteria.city || !criteria.keywords?.length) return undefined;
     const t = setTimeout(() => runDiscover(criteria), 320);
     return () => clearTimeout(t);
-  }, [ready, criteria.city, criteria.zone, criteria.keyword, criteria.product]);
+  }, [ready, criteria.city, criteria.zones, criteria.keywords, criteria.product]);
 
   function updateCity(city) {
     const cityKeywords = meta.keywordsByCity[city] || meta.keywords || [];
-    const keyword = cityKeywords.includes(criteria.keyword)
-      ? criteria.keyword
-      : cityKeywords.includes('General Dentistry')
-        ? 'General Dentistry'
-        : cityKeywords[0] || '';
-    setCriteria({ ...criteria, city, zone: 'All', keyword });
+    const keepKw = criteria.keywords.filter((k) => cityKeywords.includes(k));
+    const keyword =
+      keepKw[0] ||
+      (cityKeywords.includes('General Dentistry') ? 'General Dentistry' : cityKeywords[0] || '');
+    setCriteria({
+      city,
+      zones: [],
+      keywords: keyword ? [keyword] : [],
+      product: criteria.product,
+    });
   }
 
-  function updateZone(zone) {
-    const nextKeywords =
-      zone && zone !== 'All'
-        ? meta.keywordsByCityZone[`${criteria.city}||${zone}`] || []
-        : meta.keywordsByCity[criteria.city] || [];
-    const keyword = nextKeywords.includes(criteria.keyword)
-      ? criteria.keyword
-      : nextKeywords[0] || criteria.keyword;
-    setCriteria({ ...criteria, zone, keyword });
+  function toggleZone(zone) {
+    setCriteria((c) => {
+      const has = c.zones.includes(zone);
+      const zones = has ? c.zones.filter((z) => z !== zone) : [...c.zones, zone];
+      return { ...c, zones };
+    });
+  }
+
+  function toggleKeyword(kw) {
+    setCriteria((c) => {
+      const has = c.keywords.includes(kw);
+      if (has && c.keywords.length === 1) return c;
+      const keywords = has ? c.keywords.filter((k) => k !== kw) : [...c.keywords, kw];
+      return { ...c, keywords };
+    });
   }
 
   const filtered = useMemo(() => {
@@ -339,7 +363,14 @@ export default function PulseLeads() {
       toast('No leads to export');
       return;
     }
-    exportRows(rows, criteria, format);
+    exportRows(
+      rows,
+      {
+        city: criteria.city,
+        zone: criteria.zones?.join('+') || 'all',
+      },
+      format
+    );
     toast(`Exported ${rows.length} as ${format.toUpperCase()}`);
   }
 
@@ -368,34 +399,6 @@ export default function PulseLeads() {
           </select>
         </label>
         <label>
-          Zone
-          <select value={criteria.zone} onChange={(e) => updateZone(e.target.value)}>
-            <option value="All">All mapped zones</option>
-            {zones.map((z) => {
-              const count = meta.zoneMetaByCity?.[criteria.city]?.[z]?.localityCount;
-              return (
-                <option key={z} value={z}>
-                  {z}
-                  {count ? ` (${count})` : ''}
-                </option>
-              );
-            })}
-          </select>
-        </label>
-        <label>
-          Specialty
-          <select
-            value={criteria.keyword}
-            onChange={(e) => setCriteria({ ...criteria, keyword: e.target.value })}
-          >
-            {keywords.map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
           Product fit
           <select
             value={criteria.product}
@@ -418,6 +421,42 @@ export default function PulseLeads() {
           </select>
         </label>
       </section>
+
+      <div style={{ marginBottom: 10 }}>
+        <div className="muted" style={{ fontSize: '0.82rem', marginBottom: 6 }}>
+          Zones (multi-select) — none = all zones · selected: {criteria.zones.length || 'All'}
+        </div>
+        <div className="pulse-specs">
+          {zones.map((z) => (
+            <button
+              key={z}
+              type="button"
+              className={criteria.zones.includes(z) ? 'on' : ''}
+              onClick={() => toggleZone(z)}
+            >
+              {z}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div className="muted" style={{ fontSize: '0.82rem', marginBottom: 6 }}>
+          Specialties (multi-select) · {criteria.keywords.length} selected
+        </div>
+        <div className="pulse-specs">
+          {keywords.slice(0, 40).map((k) => (
+            <button
+              key={k}
+              type="button"
+              className={criteria.keywords.includes(k) ? 'on' : ''}
+              onClick={() => toggleKeyword(k)}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="pulse-actions" style={{ marginBottom: 12 }}>
         <button

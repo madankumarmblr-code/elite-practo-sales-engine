@@ -3,6 +3,7 @@ import { Navigate, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import CommercialSuite from './pages/CommercialSuite';
 import Login from './pages/Login';
+import SuperAdmin from './pages/SuperAdmin';
 import PulseLayout from './pages/pulse/PulseLayout';
 import PulseDashboard from './pages/pulse/PulseDashboard';
 import PulseLeads from './pages/pulse/PulseLeads';
@@ -43,6 +44,8 @@ export default function App() {
             </Route>
             <Route path="/lead-generator" element={<Navigate to="/pulse/leads" replace />} />
             <Route path="/commercial-suite" element={<CommercialSuite />} />
+            <Route path="/superadmin" element={<SuperAdmin />} />
+            <Route path="/users" element={<Navigate to="/superadmin" replace />} />
             <Route path="*" element={<Navigate to="/pulse" replace />} />
           </Route>
         </Routes>

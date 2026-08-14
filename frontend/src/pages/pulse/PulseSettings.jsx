@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
+import AutomationWorkflow from '../../components/AutomationWorkflow';
 
 const KEY_FIELDS = [
   {
@@ -154,6 +155,47 @@ export default function PulseSettings() {
           surface for the whole sales engine.
         </p>
       </header>
+
+      <div style={{ marginBottom: 16 }}>
+        <AutomationWorkflow
+          compact
+          status={{
+            webhooks: [
+              { id: 'n8n', configured: Boolean(settings.N8N_WEBHOOK_URL) },
+            ],
+          }}
+        />
+      </div>
+
+      <section className="pulse-card px-glass" style={{ marginBottom: 16 }}>
+        <h2>n8n workflow recipe</h2>
+        <p className="muted" style={{ marginBottom: 10 }}>
+          Recommended automation graph for Practo inside sales:
+        </p>
+        <ol className="px-recipe">
+          <li>
+            <strong>Webhook</strong> — listen on <code>N8N_WEBHOOK_URL</code> for{' '}
+            <code>pulse.autopilot.push</code>
+          </li>
+          <li>
+            <strong>Switch</strong> — route by <code>recommendedProduct</code> (REACH / PRIME /
+            HYBRID)
+          </li>
+          <li>
+            <strong>WhatsApp / Gmail / Voice</strong> — send channel templates; store message IDs
+          </li>
+          <li>
+            <strong>CRM upsert</strong> — HubSpot / Sheets / Salesforce with clinic + score
+          </li>
+          <li>
+            <strong>Slack</strong> — notify AE when Full Autopilot call completes
+          </li>
+        </ol>
+        <p className="muted" style={{ marginTop: 10, fontSize: '0.82rem' }}>
+          Paste your production n8n webhook below, save, then use Test webhooks or push leads from
+          Lead Engine.
+        </p>
+      </section>
 
       <section className="pulse-card" style={{ marginBottom: 16 }}>
         <h2>AI Autopilot</h2>

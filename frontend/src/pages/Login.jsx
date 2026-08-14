@@ -2,34 +2,29 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-function LoginBackdrop() {
+function HealthcareStage() {
   const canvasRef = useRef(null);
-  const pointer = useRef({ x: 0.55, y: 0.4, tx: 0.55, ty: 0.4 });
-  const reducedMotion = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     const ctx = canvas.getContext('2d');
     if (!ctx) return undefined;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    reducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    const nodes = Array.from({ length: 52 }, (_, i) => {
-      const seed = i * 1.618;
-      return {
-        x: (Math.sin(seed * 3.1) * 0.5 + 0.5) * 0.92 + 0.04,
-        y: (Math.cos(seed * 2.4) * 0.5 + 0.5) * 0.86 + 0.07,
-        r: 1.6 + (i % 5) * 0.65,
-        phase: seed,
-        speed: 0.15 + (i % 7) * 0.04,
-      };
-    });
-
-    let raf = 0;
     let w = 0;
     let h = 0;
     let dpr = 1;
+    let raf = 0;
+    let t0 = performance.now();
+
+    const particles = Array.from({ length: 36 }, (_, i) => ({
+      x: Math.random(),
+      y: Math.random(),
+      r: 1.2 + (i % 4) * 0.7,
+      s: 0.08 + (i % 5) * 0.03,
+      p: i * 0.7,
+    }));
 
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -42,116 +37,70 @@ function LoginBackdrop() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    function onMove(e) {
-      pointer.current.tx = e.clientX / w;
-      pointer.current.ty = e.clientY / h;
+    function drawEcg(time) {
+      const midY = h * 0.58;
+      const amp = Math.min(42, h * 0.05);
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(45, 212, 191, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(45, 212, 191, 0.45)';
+      ctx.shadowBlur = 12;
+      for (let x = 0; x <= w; x += 3) {
+        const u = (x / w) * 8 + time * 1.4;
+        const beat =
+          Math.sin(u * Math.PI * 2) * 0.15 +
+          Math.exp(-Math.pow(((u % 1) - 0.35) * 12, 2)) * 1.8 -
+          Math.exp(-Math.pow(((u % 1) - 0.42) * 18, 2)) * 2.4 +
+          Math.exp(-Math.pow(((u % 1) - 0.48) * 14, 2)) * 1.1;
+        const y = midY - beat * amp;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
     }
 
-    function onLeave() {
-      pointer.current.tx = 0.55;
-      pointer.current.ty = 0.4;
-    }
-
-    function frame(t) {
-      const time = t * 0.001;
-      const p = pointer.current;
-      p.x += (p.tx - p.x) * 0.06;
-      p.y += (p.ty - p.y) * 0.06;
-
+    function frame(now) {
+      const time = (now - t0) * 0.001;
       ctx.clearRect(0, 0, w, h);
 
-      // Soft depth wash that tracks the pointer
-      const gx = p.x * w;
-      const gy = p.y * h;
-      const wash = ctx.createRadialGradient(gx, gy, 40, gx, gy, Math.max(w, h) * 0.72);
-      wash.addColorStop(0, 'rgba(44, 183, 223, 0.3)');
-      wash.addColorStop(0.35, 'rgba(15, 159, 138, 0.14)');
-      wash.addColorStop(1, 'rgba(38, 48, 119, 0)');
-      ctx.fillStyle = wash;
+      const g = ctx.createRadialGradient(w * 0.7, h * 0.25, 40, w * 0.55, h * 0.4, w * 0.7);
+      g.addColorStop(0, 'rgba(45, 212, 191, 0.18)');
+      g.addColorStop(0.45, 'rgba(14, 116, 144, 0.1)');
+      g.addColorStop(1, 'rgba(2, 12, 27, 0)');
+      ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
 
-      const positions = nodes.map((n, i) => {
-        const drift = reducedMotion.current ? 0 : Math.sin(time * n.speed + n.phase) * 0.012;
-        const pullX = (p.x - 0.5) * 0.04 * ((i % 3) - 1);
-        const pullY = (p.y - 0.5) * 0.035 * ((i % 4) - 1.5);
-        return {
-          x: (n.x + drift + pullX) * w,
-          y: (n.y + Math.cos(time * n.speed * 0.8 + n.phase) * (reducedMotion.current ? 0 : 0.01) + pullY) * h,
-          r: n.r,
-        };
-      });
+      if (!reduced) drawEcg(time);
 
-      // Connection lattice
-      ctx.lineWidth = 1.15;
-      for (let i = 0; i < positions.length; i += 1) {
-        for (let j = i + 1; j < positions.length; j += 1) {
-          const a = positions[i];
-          const b = positions[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > 190) continue;
-          const alpha = (1 - dist / 190) * 0.38;
-          ctx.strokeStyle = `rgba(38, 48, 119, ${alpha})`;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
-        }
-      }
-
-      // Nodes
-      for (const pt of positions) {
-        const near = Math.hypot(pt.x - gx, pt.y - gy);
-        const boost = Math.max(0, 1 - near / 300);
+      for (const p of particles) {
+        const x = ((p.x + (reduced ? 0 : time * p.s * 0.02)) % 1) * w;
+        const y = (p.y + Math.sin(time * p.s + p.p) * 0.02) * h;
         ctx.beginPath();
-        ctx.fillStyle = `rgba(44, 183, 223, ${0.42 + boost * 0.5})`;
-        ctx.arc(pt.x, pt.y, pt.r + boost * 2.1, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(94, 234, 212, ${0.25 + (p.r % 2) * 0.15})`;
+        ctx.arc(x, y, p.r, 0, Math.PI * 2);
         ctx.fill();
-        if (boost > 0.15) {
-          ctx.beginPath();
-          ctx.fillStyle = `rgba(15, 159, 138, ${boost * 0.28})`;
-          ctx.arc(pt.x, pt.y, pt.r + 7 + boost * 10, 0, Math.PI * 2);
-          ctx.fill();
-        }
       }
-
-      // Cursor comet trail ring
-      ctx.beginPath();
-      ctx.strokeStyle = 'rgba(44, 183, 223, 0.45)';
-      ctx.lineWidth = 1.4;
-      ctx.arc(gx, gy, 58, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.strokeStyle = 'rgba(38, 48, 119, 0.22)';
-      ctx.arc(gx, gy, 98, 0, Math.PI * 2);
-      ctx.stroke();
 
       raf = requestAnimationFrame(frame);
     }
 
     resize();
     window.addEventListener('resize', resize);
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerleave', onLeave);
     raf = requestAnimationFrame(frame);
-
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerleave', onLeave);
     };
   }, []);
 
   return (
-    <div className="login-stage" aria-hidden="true">
-      <div className="login-aurora login-aurora-a" />
-      <div className="login-aurora login-aurora-b" />
-      <div className="login-aurora login-aurora-c" />
-      <div className="login-grid" />
-      <canvas ref={canvasRef} className="login-network" />
-      <div className="login-vignette" />
+    <div className="px-login-stage" aria-hidden="true">
+      <div className="px-login-orb px-login-orb-a" />
+      <div className="px-login-orb px-login-orb-b" />
+      <div className="px-login-mesh" />
+      <canvas ref={canvasRef} className="px-login-canvas" />
+      <div className="px-login-vignette" />
     </div>
   );
 }
@@ -159,10 +108,7 @@ function LoginBackdrop() {
 export default function Login() {
   const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    login: '',
-    password: '',
-  });
+  const [form, setForm] = useState({ login: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -185,27 +131,30 @@ export default function Login() {
   }
 
   return (
-    <div className="login-page">
-      <LoginBackdrop />
-
-      <div className="login-shell">
-        <div className="login-hero">
-          <img src="/practo-logo.svg" alt="Practo" className="login-logo" />
-          <p className="login-kicker">Clinic discovery &amp; commercials</p>
-          <h1 className="login-title">Salesmaster</h1>
-          <p className="login-lede">
-            Sign in to discover authentic Practo clinic leads and build Commercial Proposal Suite
-            offers.
+    <div className="px-login">
+      <HealthcareStage />
+      <div className="px-login-shell">
+        <section className="px-login-brand">
+          <img src="/practo-logo-light.svg" alt="Practo" className="px-login-logo" />
+          <p className="px-login-eyebrow">Healthcare sales automation</p>
+          <h1 className="px-login-title">PractoPulse</h1>
+          <p className="px-login-lede">
+            Discover authentic clinics, classify Reach &amp; Prime fit, and push WhatsApp, Gmail,
+            and AI calls through n8n Autopilot — built for Practo inside sales.
           </p>
-        </div>
+          <ul className="px-login-points">
+            <li>Lead Engine · Practo.com discovery</li>
+            <li>AI Autopilot · messages &amp; call logs</li>
+            <li>Commercial Suite · live inventory</li>
+          </ul>
+        </section>
 
-        <form className="login-card" onSubmit={onSubmit}>
-          <div className="login-card-head">
-            <h2>Welcome back</h2>
-            <p>Use your user ID or email and password.</p>
+        <form className="px-login-card" onSubmit={onSubmit}>
+          <div className="px-login-card-head">
+            <h2>Sign in</h2>
+            <p>User ID or email · secure workspace access</p>
           </div>
-
-          <label className="field">
+          <label className="px-field">
             User ID / Email
             <input
               required
@@ -214,30 +163,28 @@ export default function Login() {
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="User ID or email"
+              placeholder="superadmin or email"
               value={form.login}
               onChange={(e) => setForm({ ...form, login: e.target.value })}
             />
           </label>
-          <label className="field">
+          <label className="px-field">
             Password
             <input
               type="password"
               name="password"
               required
               autoComplete="current-password"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
               placeholder="Password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
           </label>
-          {error ? <div className="login-error">{error}</div> : null}
-          <button type="submit" className="btn btn-primary login-submit" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
+          {error ? <div className="px-login-error">{error}</div> : null}
+          <button type="submit" className="px-login-submit" disabled={busy}>
+            {busy ? 'Signing in…' : 'Enter PractoPulse'}
           </button>
+          <p className="px-login-foot">Reach · Prime · n8n Autopilot</p>
         </form>
       </div>
     </div>

@@ -73,10 +73,6 @@ export function getZoneLocalityIndex() {
   return cache;
 }
 
-export function reloadZoneLocalities() {
-  cache = null;
-  return getZoneLocalityIndex();
-}
 
 export function listLocalities(city, zone) {
   const index = getZoneLocalityIndex();

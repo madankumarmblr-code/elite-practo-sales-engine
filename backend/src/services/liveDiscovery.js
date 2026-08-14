@@ -68,10 +68,6 @@ export function leadDedupeKeys(lead) {
   return keys;
 }
 
-export function leadDedupeKey(lead) {
-  return leadDedupeKeys(lead)[0];
-}
-
 const AUTHENTIC_SOURCES = new Set(['nominatim', 'overpass', 'google_places', 'practo_web']);
 
 /**
@@ -184,74 +180,6 @@ async function fetchJson(url, { timeoutMs = 8000, headers = {} } = {}) {
   } finally {
     clearTimeout(timer);
   }
-}
-
-/**
- * Free Nominatim search — place shortlist for a locality + specialty.
- */
-export async function searchNominatim({ city, zone, locality, keyword, limit = 8 }) {
-  const area = locality || zone;
-  const q = `${keyword} clinic ${area} ${city} India`;
-  const url =
-    'https://nominatim.openstreetmap.org/search?' +
-    new URLSearchParams({
-      q,
-      format: 'jsonv2',
-      addressdetails: '1',
-      limit: String(limit),
-      countrycodes: 'in',
-    });
-  const rows = await fetchJson(url, { timeoutMs: 7000 });
-  if (!Array.isArray(rows)) return [];
-  return rows.map((r, i) => {
-    const name = r.display_name?.split(',')[0] || r.name || `${keyword} Clinic`;
-    const address = r.display_name || `${area}, ${city}`;
-    return {
-      id: `osm-nom-${r.place_id || i}`,
-      clinicName: name,
-      specialty: keyword,
-      keyword,
-      city,
-      zone: zone || locality,
-      locality: area,
-      address,
-      lat: r.lat ? Number(r.lat) : null,
-      lon: r.lon ? Number(r.lon) : null,
-      owner: {
-        name: 'Listing contact',
-        phone: '',
-        email: '',
-        title: 'Clinic contact',
-      },
-      marketingHead: null,
-      practo: { hasProfile: false, url: null, rating: null },
-      platforms: [
-        {
-          name: 'OpenStreetMap',
-          listed: true,
-          url: `https://www.openstreetmap.org/${r.osm_type || 'node'}/${r.osm_id || ''}`,
-        },
-        {
-          name: 'Google Maps',
-          listed: true,
-          url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
-        },
-        {
-          name: 'Google My Business',
-          listed: true,
-          url: `https://www.google.com/maps/search/${encodeURIComponent(`${name} ${locality} ${city}`)}`,
-        },
-      ],
-      website: null,
-      score: 62 + Math.min(20, Math.round(Number(r.importance || 0) * 40)),
-      estimatedValue: 55000,
-      suggestedChannel: 'whatsapp',
-      matchReason: `OSM Nominatim · ${city} · ${locality} · ${keyword}`,
-      source: 'OpenStreetMap Nominatim (free)',
-      discoverySource: 'nominatim',
-      sheetMapped: true,
-    };
-  });
 }
 
 /**

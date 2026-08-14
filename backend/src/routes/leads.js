@@ -242,7 +242,6 @@ export function registerLeadRoutes(app) {
       keywords,
       limit = null,
       live = true,
-      allowSynthetic = false,
       maxLocalities = 40,
       fullScan = false,
     } = body;
@@ -265,7 +264,6 @@ export function registerLeadRoutes(app) {
         keywords,
         limit,
         live,
-        allowSynthetic: allowSynthetic === true || allowSynthetic === '1',
         maxLocalities,
         fullScan: fullScan === true || fullScan === '1',
       });

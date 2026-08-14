@@ -71,27 +71,6 @@ function writeLocalRev(db, rev) {
   ).run(REV_SETTING_KEY, JSON.stringify(rev));
 }
 
-/**
- * Advance local durable revision after confirming we are not behind Blob.
- * @returns {{ rev: number, stale?: boolean, remoteRev?: number }}
- */
-export async function bumpDurableRevisionSync() {
-  const { default: db } = await import('../db/db.js');
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  let remoteRev = 0;
-  if (durableStoreConfigured() && token) {
-    const blob = await blobClient();
-    remoteRev = await readRemoteRev(blob, token);
-  }
-  const cur = readLocalRev(db);
-  if (remoteRev > cur) {
-    return { rev: cur, stale: true, remoteRev };
-  }
-  const next = Math.max(cur, remoteRev) + 1;
-  writeLocalRev(db, next);
-  return { rev: next, stale: false, remoteRev };
-}
-
 async function readRemoteRev(blob, token) {
   try {
     const meta = await blob.head(REV_PATHNAME, { token });

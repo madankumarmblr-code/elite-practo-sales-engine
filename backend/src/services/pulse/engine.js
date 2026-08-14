@@ -284,6 +284,7 @@ export function getServerStatus() {
     { id: 'anthropic', label: 'Claude / Anthropic', ...maskSecret(settings.ANTHROPIC_API_KEY) },
     { id: 'gamma', label: 'Gamma', ...maskSecret(settings.GAMMA_API_KEY) },
     { id: 'fireflies', label: 'Fireflies', ...maskSecret(settings.FIREFLIES_API_KEY) },
+    { id: 'elevenlabs', label: 'ElevenLabs (AI calls)', ...maskSecret(settings.ELEVENLABS_API_KEY) },
   ];
   const webhooks = [
     { id: 'n8n', label: 'n8n / automation', configured: Boolean(settings.N8N_WEBHOOK_URL) },
@@ -297,15 +298,28 @@ export function getServerStatus() {
   ];
 
   let leadCount = 0;
+  let messageCount = 0;
+  let callCount = 0;
+  let dbProbe = { ok: false };
   try {
+    // Dynamic require-style import avoided; use sync probe inline
+    const row = db.prepare('SELECT 1 AS ok').get();
+    dbProbe = { ok: row?.ok === 1, latencyMs: 0, driver: 'better-sqlite3' };
     leadCount = db.prepare('SELECT COUNT(*) AS c FROM leads').get()?.c || 0;
-  } catch {
-    leadCount = 0;
+    try {
+      messageCount = db.prepare('SELECT COUNT(*) AS c FROM outreach_messages').get()?.c || 0;
+      callCount = db.prepare('SELECT COUNT(*) AS c FROM call_logs').get()?.c || 0;
+    } catch {
+      messageCount = 0;
+      callCount = 0;
+    }
+  } catch (err) {
+    dbProbe = { ok: false, error: err.message };
   }
 
   const jobs = queue.jobs || [];
   return {
-    ok: true,
+    ok: Boolean(dbProbe.ok),
     service: 'practopulse',
     env: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     uptimeSec: Math.floor((Date.now() - STARTED_AT) / 1000),
@@ -314,11 +328,43 @@ export function getServerStatus() {
       rssMb: Math.round(mem.rss / 1024 / 1024),
       heapMb: Math.round(mem.heapUsed / 1024 / 1024),
     },
-    database: { ok: true, leadsStored: leadCount },
+    database: {
+      ok: Boolean(dbProbe.ok),
+      leadsStored: leadCount,
+      outreachMessages: messageCount,
+      callLogs: callCount,
+      probe: dbProbe,
+    },
+    api: {
+      ok: true,
+      endpoints: [
+        '/api/health',
+        '/api/pulse/status',
+        '/api/pulse/discover',
+        '/api/pulse/autopilot',
+        '/api/pulse/channels/test',
+        '/api/system/health',
+      ],
+    },
     components: [
       { id: 'api', label: 'API server', status: 'online' },
+      {
+        id: 'database',
+        label: 'SQLite database',
+        status: dbProbe.ok ? 'online' : 'error',
+      },
       { id: 'discovery', label: 'Lead discovery', status: 'online' },
       { id: 'pulse', label: 'PractoPulse engine', status: 'online' },
+      {
+        id: 'whatsapp',
+        label: 'WhatsApp Autopilot',
+        status: messageCount ? 'active' : 'ready',
+      },
+      {
+        id: 'ai_calls',
+        label: 'AI Autopilot calls',
+        status: callCount ? 'active' : 'ready',
+      },
       {
         id: 'autopilot',
         label: 'AI Autopilot',
@@ -332,6 +378,26 @@ export function getServerStatus() {
     ],
     integrations,
     webhooks,
+    channels: [
+      {
+        id: 'whatsapp',
+        label: 'WhatsApp',
+        testable: true,
+        configured: Boolean(settings.SMARTLEAD_API_KEY || settings.N8N_WEBHOOK_URL),
+      },
+      {
+        id: 'gmail',
+        label: 'Gmail',
+        testable: true,
+        configured: Boolean(settings.GOOGLE_CALENDAR_CLIENT_ID || settings.N8N_WEBHOOK_URL),
+      },
+      {
+        id: 'calls',
+        label: 'AI Calls',
+        testable: true,
+        configured: Boolean(settings.ELEVENLABS_API_KEY || settings.N8N_WEBHOOK_URL),
+      },
+    ],
     autopilot: {
       level: settings.AUTOPILOT_LEVEL || 'assist',
       queued: jobs.filter((j) => j.status === 'queued').length,
@@ -339,6 +405,8 @@ export function getServerStatus() {
       done: jobs.filter((j) => j.status === 'done' || j.status === 'pushed').length,
       failed: jobs.filter((j) => j.status === 'failed').length,
       total: jobs.length,
+      messagesLogged: messageCount,
+      callsLogged: callCount,
     },
   };
 }
@@ -405,10 +473,14 @@ export async function pushToAutopilot({ leads = [], level, channels = {} } = {})
     return { pushed: 0, jobs: [], message: 'No leads to push' };
   }
 
+  // Lazy import to avoid circular deps at module load
+  const { logAutopilotOutreach } = await import('./channelTests.js');
+
   const queue = getAutopilotQueue();
   const jobs = [...(queue.jobs || [])];
   const created = [];
   const ts = new Date().toISOString();
+  const outreachSummary = { messages: 0, calls: 0 };
 
   for (const lead of mapped) {
     const job = {
@@ -433,6 +505,7 @@ export async function pushToAutopilot({ leads = [], level, channels = {} } = {})
       steps.push({ id: 'pitch', status: 'done', detail: pitch.message, pitchDeckUrl: pitch.pitchDeckUrl });
       job.pitchDeckUrl = pitch.pitchDeckUrl;
     }
+    steps.push({ id: 'whatsapp', status: 'queued', detail: 'WhatsApp Autopilot message' });
     if (
       (settings.AUTOPILOT_AUTO_SMARTLEAD || channels.smartlead || autopilotLevel === 'full') &&
       autopilotLevel !== 'assist'
@@ -449,17 +522,26 @@ export async function pushToAutopilot({ leads = [], level, channels = {} } = {})
     ) {
       steps.push({ id: 'heyreach', status: 'queued', detail: 'LinkedIn DM sequence' });
     }
-    if ((settings.AUTOPILOT_AUTO_DEMO || channels.demo) && autopilotLevel === 'full') {
+    if (autopilotLevel === 'sequence' || autopilotLevel === 'full') {
+      steps.push({ id: 'gmail', status: 'queued', detail: 'Gmail follow-up' });
+    }
+    if ((settings.AUTOPILOT_AUTO_DEMO || channels.demo || channels.calls) && autopilotLevel === 'full') {
+      steps.push({ id: 'ai_call', status: 'queued', detail: 'AI voice call + recording' });
       steps.push({ id: 'demo', status: 'queued', detail: 'Hold calendar slot' });
     }
 
     job.steps = steps;
     job.status = autopilotLevel === 'assist' ? 'pushed' : 'running';
+
+    const logged = logAutopilotOutreach({ lead, jobId: job.id, level: autopilotLevel });
+    outreachSummary.messages += logged.messages.length;
+    outreachSummary.calls += logged.calls.length;
+    job.outreach = logged;
+
     created.push(job);
     jobs.unshift(job);
   }
 
-  // Cap queue size
   const trimmed = { jobs: jobs.slice(0, 200) };
   saveAutopilotQueue(trimmed);
 
@@ -495,11 +577,10 @@ export async function pushToAutopilot({ leads = [], level, channels = {} } = {})
     custom: await postWebhook(settings.CUSTOM_WEBHOOK_URL, payload, settings.WEBHOOK_SECRET),
   };
 
-  // Advance simulated steps for sequence/full
   if (autopilotLevel !== 'assist') {
     for (const job of created) {
       job.steps = job.steps.map((s) =>
-        s.status === 'queued' ? { ...s, status: 'done', detail: `${s.detail} · simulated` } : s
+        s.status === 'queued' ? { ...s, status: 'done', detail: `${s.detail} · logged` } : s
       );
       job.status = 'done';
       job.updatedAt = new Date().toISOString();
@@ -515,7 +596,8 @@ export async function pushToAutopilot({ leads = [], level, channels = {} } = {})
     level: autopilotLevel,
     jobs: created,
     webhooks: webhookResults,
-    message: `Pushed ${created.length} lead(s) to AI Autopilot (${autopilotLevel})`,
+    outreach: outreachSummary,
+    message: `Pushed ${created.length} lead(s) to AI Autopilot (${autopilotLevel}) · ${outreachSummary.messages} msg · ${outreachSummary.calls} call(s)`,
   };
 }
 

@@ -193,6 +193,44 @@ if (!leadCols.includes('preferred_channel')) {
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_at);
+
+  CREATE TABLE IF NOT EXISTS outreach_messages (
+    id TEXT PRIMARY KEY,
+    lead_id TEXT,
+    job_id TEXT,
+    channel TEXT NOT NULL,
+    provider TEXT DEFAULT '',
+    direction TEXT DEFAULT 'outbound',
+    to_address TEXT DEFAULT '',
+    from_address TEXT DEFAULT '',
+    body TEXT DEFAULT '',
+    status TEXT DEFAULT 'queued',
+    provider_message_id TEXT DEFAULT '',
+    meta TEXT DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS call_logs (
+    id TEXT PRIMARY KEY,
+    lead_id TEXT,
+    job_id TEXT,
+    channel TEXT DEFAULT 'calls',
+    direction TEXT DEFAULT 'outbound',
+    phone TEXT DEFAULT '',
+    status TEXT DEFAULT 'queued',
+    duration_sec INTEGER DEFAULT 0,
+    recording_url TEXT DEFAULT '',
+    transcript TEXT DEFAULT '',
+    summary TEXT DEFAULT '',
+    provider TEXT DEFAULT '',
+    meta TEXT DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_outreach_created ON outreach_messages(created_at);
+  CREATE INDEX IF NOT EXISTS idx_call_logs_created ON call_logs(created_at);
 `);
 
 export default db;

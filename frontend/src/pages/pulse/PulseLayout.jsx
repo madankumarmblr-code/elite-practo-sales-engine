@@ -8,12 +8,13 @@ const links = [
   { to: '/pulse/pitch', label: 'Pitch Studio' },
   { to: '/pulse/meetings', label: 'Meetings' },
   { to: '/pulse/autopilot', label: 'AI Autopilot' },
-  { to: '/pulse/status', label: 'Server Status' },
+  { to: '/pulse/status', label: 'Server & API Status' },
   { to: '/pulse/settings', label: 'Settings' },
 ];
 
 export default function PulseLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
+  const isSuper = can('users:write') || user?.role === 'superadmin';
 
   return (
     <div className="pulse-shell pulse-shell-full">
@@ -28,6 +29,9 @@ export default function PulseLayout() {
               {l.label}
             </NavLink>
           ))}
+          {isSuper ? (
+            <NavLink to="/superadmin">Super Admin</NavLink>
+          ) : null}
         </nav>
         <div className="pulse-side-links">
           <Link to="/commercial-suite">Commercial Suite</Link>

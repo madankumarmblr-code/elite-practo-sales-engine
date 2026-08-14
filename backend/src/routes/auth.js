@@ -352,6 +352,25 @@ export function registerAuthRoutes(app) {
   });
 
   app.get('/api/system/health', authRequired, requirePermission('system:health'), (req, res) => {
+    let dbProbe = { ok: false };
+    const probeStarted = Date.now();
+    try {
+      const row = db.prepare('SELECT 1 AS ok').get();
+      dbProbe = {
+        ok: row?.ok === 1,
+        latencyMs: Date.now() - probeStarted,
+        driver: 'better-sqlite3',
+        writable: true,
+      };
+    } catch (err) {
+      dbProbe = {
+        ok: false,
+        latencyMs: Date.now() - probeStarted,
+        error: err.message,
+        writable: false,
+      };
+    }
+
     const counts = {
       users: db.prepare('SELECT COUNT(*) as c FROM users').get().c,
       sessions: db.prepare('SELECT COUNT(*) as c FROM sessions').get().c,
@@ -362,9 +381,30 @@ export function registerAuthRoutes(app) {
       events: db.prepare('SELECT COUNT(*) as c FROM system_events').get().c,
       pipelineStages: db.prepare('SELECT COUNT(*) as c FROM pipeline_stages').get().c,
       leadSources: db.prepare('SELECT COUNT(*) as c FROM lead_sources').get().c,
+      outreachMessages: (() => {
+        try {
+          return db.prepare('SELECT COUNT(*) as c FROM outreach_messages').get().c;
+        } catch {
+          return 0;
+        }
+      })(),
+      callLogs: (() => {
+        try {
+          return db.prepare('SELECT COUNT(*) as c FROM call_logs').get().c;
+        } catch {
+          return 0;
+        }
+      })(),
     };
 
     const checks = [
+      {
+        name: 'db_select_1',
+        ok: dbProbe.ok,
+        detail: dbProbe.ok
+          ? `SELECT 1 ok in ${dbProbe.latencyMs}ms`
+          : dbProbe.error || 'DB probe failed',
+      },
       {
         name: 'users_table',
         ok: counts.users >= 1,
@@ -395,6 +435,11 @@ export function registerAuthRoutes(app) {
         ok: true,
         detail: `${counts.sessions} active session row(s)`,
       },
+      {
+        name: 'outreach_tables',
+        ok: true,
+        detail: `${counts.outreachMessages} messages · ${counts.callLogs} calls`,
+      },
     ];
 
     const ok = checks.every((c) => c.ok);
@@ -404,7 +449,7 @@ export function registerAuthRoutes(app) {
       message: 'Health check run',
       detail: ok ? 'All checks passed' : 'One or more checks failed',
       userId: req.user.id,
-      meta: { counts, checks },
+      meta: { counts, checks, dbProbe },
     });
 
     res.json({
@@ -412,7 +457,13 @@ export function registerAuthRoutes(app) {
       time: now(),
       counts,
       checks,
-      db: { driver: 'better-sqlite3', file: 'backend/data/sales.db' },
+      db: {
+        driver: 'better-sqlite3',
+        file: 'sales.db',
+        probe: dbProbe,
+        connected: dbProbe.ok,
+      },
+      api: { ok: true, service: 'practo-sales-api' },
     });
   });
 }

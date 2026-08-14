@@ -8,6 +8,7 @@ const links = [
   { to: '/pulse', label: 'PractoPulse', icon: '◈', perm: 'lead_generator:read' },
   { to: '/pulse/leads', label: 'Lead Engine', icon: '✦', perm: 'lead_generator:read' },
   { to: '/commercial-suite', label: 'Commercial Suite', icon: '◎', perm: 'commercial_suite:read' },
+  { to: '/superadmin', label: 'Super Admin', icon: '♛', perm: 'users:write' },
 ];
 
 export default function Layout({ toast }) {

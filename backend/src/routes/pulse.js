@@ -16,6 +16,12 @@ import {
   MEDICAL_SPECIALTIES,
   DEFAULT_PULSE_SETTINGS,
 } from '../services/pulse/engine.js';
+import {
+  testChannel,
+  listOutreachMessages,
+  listCallLogs,
+  probeDatabase,
+} from '../services/pulse/channelTests.js';
 
 export function registerPulseRoutes(app) {
   app.get('/api/pulse/meta', (_req, res) => {
@@ -121,23 +127,29 @@ export function registerPulseRoutes(app) {
       fullScan = false,
       product = 'BOTH',
     } = body;
-    const kw = keyword || specialty || (Array.isArray(keywords) ? keywords[0] : null);
+    const kwList = Array.isArray(keywords) ? keywords.filter(Boolean) : [];
+    const zoneList = Array.isArray(zones) ? zones.filter(Boolean) : [];
+    const kw =
+      keyword ||
+      specialty ||
+      kwList[0] ||
+      (Array.isArray(keywords) ? keywords[0] : null);
 
-    if (!city || !kw) {
+    if (!city || (!kw && !kwList.length)) {
       return res.status(400).json({
-        error: 'Select city and specialty/keyword (zone can be All)',
+        error: 'Select city and specialty/keyword (zone can be All; multi-select supported)',
       });
     }
 
     try {
       const discovery = await discoverClinics({
         city,
-        zone,
-        zones,
+        zone: zoneList.length ? zoneList[0] : zone,
+        zones: zoneList.length ? zoneList : undefined,
         localities,
         specialty: kw,
         keyword: kw,
-        keywords,
+        keywords: kwList.length ? kwList : undefined,
         limit,
         live,
         maxLocalities,
@@ -242,5 +254,49 @@ export function registerPulseRoutes(app) {
     } catch (err) {
       res.status(500).json({ error: err.message || 'Autopilot push failed' });
     }
+  });
+
+  app.get('/api/pulse/logs/messages', (req, res) => {
+    const channel = req.query.channel ? String(req.query.channel) : undefined;
+    const limit = Number(req.query.limit) || 50;
+    const messages = listOutreachMessages({ channel, limit });
+    res.json({ messages, count: messages.length });
+  });
+
+  app.get('/api/pulse/logs/calls', (req, res) => {
+    const limit = Number(req.query.limit) || 50;
+    const calls = listCallLogs({ limit });
+    res.json({ calls, count: calls.length });
+  });
+
+  app.post('/api/pulse/channels/test', async (req, res) => {
+    try {
+      const channel = req.body?.channel || req.query.channel;
+      if (!channel) {
+        return res.status(400).json({ error: 'channel required (whatsapp | gmail | calls)' });
+      }
+      const result = await testChannel(channel, req.body || {});
+      if (!result.ok) return res.status(400).json(result);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Channel test failed' });
+    }
+  });
+
+  app.post('/api/pulse/channels/test-all', async (_req, res) => {
+    try {
+      const results = {
+        whatsapp: await testChannel('whatsapp'),
+        gmail: await testChannel('gmail'),
+        calls: await testChannel('calls'),
+      };
+      res.json({ results, message: 'All channel tests complete' });
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Channel tests failed' });
+    }
+  });
+
+  app.get('/api/pulse/db-probe', (_req, res) => {
+    res.json({ database: probeDatabase(), time: new Date().toISOString() });
   });
 }

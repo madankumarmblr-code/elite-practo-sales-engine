@@ -10,6 +10,7 @@ Full-stack sales automation suite for clinic and healthcare outreach — **ready
 - **Commercial Suite** — Prime / Reach / Video proposals with live sheet inventory
 - **Autopilot AI** — separate WhatsApp, Gmail, Calls pilots + records & dialogues
 - **API Integrations** — multi-provider connectors with self-test
+- **Lead Conversion Engine** — ingest webhook → WhatsApp AI autopilot → **Commercial Proposal Suite only** (Ray / Prime / Reach), with `city_location` + `speciality` preserved end-to-end
 
 ## Local development
 
@@ -20,6 +21,18 @@ npm run dev
 
 - Web: http://localhost:5173
 - API: http://localhost:4000/api/health
+- Conversion status: http://localhost:4000/api/v1/status
+
+### Conversion API (v1)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/api/v1/leads/ingest` | Ingest Practo lead (`PRACTO_RAY` / `PRACTO_PRIME` / `PRACTO_REACH`) + auto WhatsApp pitch |
+| `POST` | `/api/v1/whatsapp/inbound` | Stateful WhatsApp autopilot replies |
+| `POST` | `/api/v1/proposals/generate` | **Commercial Proposal Suite only** (no Basic/Standard/Gold tiers) |
+| `GET` | `/api/v1/status` or `/status` | Component health |
+
+Protect webhooks with `LEAD_INGEST_SECRET` (`X-Webhook-Secret` header). Importable n8n workflow: `integrations/n8n/practo-lead-conversion.json`.
 
 ## Host (production)
 

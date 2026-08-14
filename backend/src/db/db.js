@@ -191,4 +191,39 @@ if (!leadCols.includes('preferred_channel')) {
   db.exec(`ALTER TABLE leads ADD COLUMN preferred_channel TEXT DEFAULT ''`);
 }
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS conversion_leads (
+    id TEXT PRIMARY KEY,
+    external_lead_id TEXT NOT NULL UNIQUE,
+    crm_lead_id TEXT,
+    doctor_name TEXT,
+    clinic_name TEXT,
+    email TEXT,
+    phone TEXT,
+    city_location TEXT NOT NULL,
+    speciality TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    status TEXT DEFAULT 'NEW',
+    conversation_state TEXT DEFAULT '{}',
+    last_pitch TEXT DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (crm_lead_id) REFERENCES leads(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS whatsapp_messages (
+    id TEXT PRIMARY KEY,
+    conversion_lead_id TEXT NOT NULL,
+    direction TEXT NOT NULL,
+    body TEXT NOT NULL,
+    meta TEXT DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (conversion_lead_id) REFERENCES conversion_leads(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_conversion_leads_phone ON conversion_leads(phone);
+  CREATE INDEX IF NOT EXISTS idx_conversion_leads_product ON conversion_leads(product_id);
+  CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_lead ON whatsapp_messages(conversion_lead_id);
+`);
+
 export default db;

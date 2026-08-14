@@ -1,0 +1,258 @@
+{
+  "name": "Practo Lead → WhatsApp Autopilot → Commercial Proposal Suite",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "practo-lead-ingest",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-ingest",
+      "name": "Webhook Ingest",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "practo-lead-ingest"
+    },
+    {
+      "parameters": {
+        "functionCode": "const b = items[0].json.body || items[0].json;\nconst city_location = b.city_location;\nconst speciality = b.speciality;\nif (!city_location || !speciality) {\n  throw new Error('city_location and speciality are required and must be preserved');\n}\nconst product_id = String(b.product_id || '').toUpperCase();\nif (!['PRACTO_RAY','PRACTO_PRIME','PRACTO_REACH'].includes(product_id)) {\n  throw new Error('product_id must be PRACTO_RAY | PRACTO_PRIME | PRACTO_REACH');\n}\nreturn [{ json: { ...b, city_location, speciality, product_id } }];"
+      },
+      "id": "validate-context",
+      "name": "Preserve City & Speciality",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PRACTO_API_BASE}}/api/v1/leads/ingest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{$env.LEAD_INGEST_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      },
+      "id": "api-ingest",
+      "name": "API Lead Ingest + Pitch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.autopilot && $json.autopilot.message}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "has-pitch",
+      "name": "Has WhatsApp Pitch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [780, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.WHATSAPP_SEND_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.WHATSAPP_API_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({ to: $('Preserve City & Speciality').item.json.phone, text: $json.autopilot.message, city_location: $('Preserve City & Speciality').item.json.city_location, speciality: $('Preserve City & Speciality').item.json.speciality, product_id: $('Preserve City & Speciality').item.json.product_id })}}",
+        "options": {}
+      },
+      "id": "wa-send",
+      "name": "WhatsApp Send Pitch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1040, -80]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "practo-whatsapp-inbound",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-wa-inbound",
+      "name": "WhatsApp Inbound Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 280],
+      "webhookId": "practo-whatsapp-inbound"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PRACTO_API_BASE}}/api/v1/whatsapp/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{$env.LEAD_INGEST_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json.body || $json)}}",
+        "options": {}
+      },
+      "id": "api-wa-inbound",
+      "name": "API WhatsApp Autopilot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [260, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.action}}",
+              "value2": "proposal_suite"
+            }
+          ]
+        }
+      },
+      "id": "wants-proposal",
+      "name": "Proposal Stage?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [520, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PRACTO_API_BASE}}/api/v1/proposals/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{$env.LEAD_INGEST_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({ lead_id: $json.lead_id, conversion_lead_id: $json.conversion_lead_id, city_location: $json.memory.city_location, speciality: $json.memory.speciality, product_id: $json.memory.product_id })}}",
+        "options": {}
+      },
+      "id": "api-proposal",
+      "name": "Commercial Proposal Suite ONLY",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [780, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      },
+      "id": "respond-ingest",
+      "name": "Respond Ingest",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1300, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      },
+      "id": "respond-inbound",
+      "name": "Respond Inbound",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 280]
+    }
+  ],
+  "connections": {
+    "Webhook Ingest": {
+      "main": [[{ "node": "Preserve City & Speciality", "type": "main", "index": 0 }]]
+    },
+    "Preserve City & Speciality": {
+      "main": [[{ "node": "API Lead Ingest + Pitch", "type": "main", "index": 0 }]]
+    },
+    "API Lead Ingest + Pitch": {
+      "main": [[{ "node": "Has WhatsApp Pitch?", "type": "main", "index": 0 }]]
+    },
+    "Has WhatsApp Pitch?": {
+      "main": [
+        [{ "node": "WhatsApp Send Pitch", "type": "main", "index": 0 }],
+        [{ "node": "Respond Ingest", "type": "main", "index": 0 }]
+      ]
+    },
+    "WhatsApp Send Pitch": {
+      "main": [[{ "node": "Respond Ingest", "type": "main", "index": 0 }]]
+    },
+    "WhatsApp Inbound Webhook": {
+      "main": [[{ "node": "API WhatsApp Autopilot", "type": "main", "index": 0 }]]
+    },
+    "API WhatsApp Autopilot": {
+      "main": [[{ "node": "Proposal Stage?", "type": "main", "index": 0 }]]
+    },
+    "Proposal Stage?": {
+      "main": [
+        [{ "node": "Commercial Proposal Suite ONLY", "type": "main", "index": 0 }],
+        [{ "node": "Respond Inbound", "type": "main", "index": 0 }]
+      ]
+    },
+    "Commercial Proposal Suite ONLY": {
+      "main": [[{ "node": "Respond Inbound", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Preserves city_location + speciality end-to-end. Proposal node returns Commercial Proposal Suite only (no Basic/Standard/Gold/Enterprise tiers)."
+  },
+  "pinData": {},
+  "versionId": "1"
+}

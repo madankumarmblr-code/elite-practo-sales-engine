@@ -94,4 +94,19 @@ export const api = {
 
   rehydrateWorkspace: (body) =>
     request('/api/workspace/rehydrate', { method: 'POST', body: JSON.stringify(body) }),
+
+  pulseMeta: () => request('/api/pulse/meta'),
+  pulseLeads: () => request('/api/pulse/leads'),
+  pulseSource: (body) =>
+    request('/api/pulse/source', { method: 'POST', body: JSON.stringify(body) }),
+  pulsePitch: (body) =>
+    request('/api/pulse/pitch', { method: 'POST', body: JSON.stringify(body) }),
+  pulseSmartlead: (body) =>
+    request('/api/pulse/smartlead', { method: 'POST', body: JSON.stringify(body) }),
+  pulseHeyReach: (body) =>
+    request('/api/pulse/heyreach', { method: 'POST', body: JSON.stringify(body) }),
+  pulseDemo: (body) =>
+    request('/api/pulse/demo', { method: 'POST', body: JSON.stringify(body) }),
+  pulseFireflies: (body) =>
+    request('/api/pulse/fireflies', { method: 'POST', body: JSON.stringify(body) }),
 };

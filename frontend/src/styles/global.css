@@ -1419,3 +1419,437 @@ label.field textarea:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* —— PractoPulse (embedded in classic app) —— */
+.pulse-shell {
+  display: flex;
+  min-height: calc(100vh - 2rem);
+  margin: -0.25rem;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.pulse-side {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0b1224;
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.pulse-brand {
+  padding: 1.1rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.pulse-brand strong {
+  display: block;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.pulse-brand small {
+  color: #94a3b8;
+}
+
+.pulse-nav {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  flex: 1;
+}
+
+.pulse-nav a {
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.pulse-nav a:hover,
+.pulse-nav a.active {
+  background: rgba(0, 196, 159, 0.14);
+  color: #99f6e4;
+}
+
+.pulse-side-foot {
+  padding: 0.85rem 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.pulse-main {
+  flex: 1;
+  min-width: 0;
+  padding: 1.25rem 1.35rem 1.75rem;
+  overflow: auto;
+}
+
+.pulse-page h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.55rem;
+  letter-spacing: -0.03em;
+}
+
+.pulse-page h2 {
+  margin: 0 0 0.75rem;
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.pulse-head {
+  margin-bottom: 1.15rem;
+}
+
+.pulse-head.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.pulse-head p,
+.pulse-card .muted,
+.pulse-table .muted {
+  margin: 0.35rem 0 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.pulse-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pulse-kpi,
+.pulse-card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.pulse-kpi span {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.pulse-kpi strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.8rem;
+  color: #5eead4;
+}
+
+.pulse-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.pulse-product {
+  margin-top: 0.65rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.pulse-product strong {
+  color: #7dd3fc;
+}
+
+.pulse-product p {
+  margin: 0.35rem 0 0;
+  color: #cbd5e1;
+  font-size: 0.88rem;
+}
+
+.pulse-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.pulse-btn,
+.pulse-row-actions button {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: #00c49f;
+  color: #042f2e;
+}
+
+.pulse-btn.ghost,
+.pulse-row-actions button {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.pulse-btn.navy,
+.pulse-row-actions button.navy {
+  background: #1a365d;
+  color: #fff;
+  border: 0;
+}
+
+.pulse-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.pulse-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  padding: 0.9rem;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.pulse-filters label,
+.pulse-card label,
+.pulse-settings-grid label {
+  display: grid;
+  gap: 0.35rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pulse-filters select,
+.pulse-filters input,
+.pulse-card select,
+.pulse-card textarea,
+.pulse-card input,
+.pulse-settings-grid input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(2, 6, 23, 0.55);
+  color: #f8fafc;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.pulse-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.pulse-specs button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pulse-specs button.on {
+  background: rgba(0, 196, 159, 0.18);
+  color: #99f6e4;
+  box-shadow: inset 0 0 0 1px rgba(0, 196, 159, 0.35);
+}
+
+.pulse-banner {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(0, 196, 159, 0.12);
+  border: 1px solid rgba(0, 196, 159, 0.25);
+  color: #ccfbf1;
+  font-size: 0.9rem;
+}
+
+.pulse-table-wrap {
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.pulse-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.pulse-table th {
+  text-align: left;
+  padding: 0.7rem 0.8rem;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(2, 6, 23, 0.55);
+}
+
+.pulse-table td {
+  padding: 0.75rem 0.8rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  vertical-align: top;
+}
+
+.pulse-table .score {
+  color: #5eead4;
+  font-weight: 800;
+}
+
+.pulse-fit {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #1e293b;
+}
+
+.pulse-fit.reach {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+}
+
+.pulse-fit.prime {
+  background: rgba(0, 196, 159, 0.15);
+  color: #5eead4;
+}
+
+.pulse-fit.hybrid {
+  background: rgba(129, 140, 248, 0.18);
+  color: #c7d2fe;
+}
+
+.pulse-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pulse-row-actions button {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.pulse-chip {
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  background: #1e293b;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.pulse-hook,
+.pulse-summary {
+  margin: 0.75rem 0;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+
+.pulse-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.pulse-table .empty {
+  text-align: center;
+  color: #64748b;
+  padding: 2rem;
+}
+
+@media (max-width: 980px) {
+  .pulse-shell {
+    flex-direction: column;
+  }
+
+  .pulse-side {
+    width: 100%;
+  }
+
+  .pulse-nav {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+  }
+
+  .pulse-kpis,
+  .pulse-grid-2,
+  .pulse-filters,
+  .pulse-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pulse-shell-full {
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+  border: 0;
+}
+
+.pulse-side-links {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.pulse-side-links a {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+}
+
+.pulse-side-links a:hover {
+  color: #e2e8f0;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.pulse-side-foot .muted {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.pulse-side-foot .pulse-btn {
+  margin-top: 0.55rem;
+  width: 100%;
+}

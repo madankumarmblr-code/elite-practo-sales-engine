@@ -9,6 +9,7 @@ import { registerAuthRoutes } from './routes/auth.js';
 import { registerLeadRoutes } from './routes/leads.js';
 import { registerCommercialRoutes } from './routes/commercial.js';
 import { registerWorkspaceRoutes } from './routes/workspace.js';
+import { registerPulseRoutes } from './routes/pulse.js';
 import { logEvent } from './services/logger.js';
 import { syncSheetFromGoogle } from './services/sheetSync.js';
 import { reloadLocationsIndex } from './services/locations.js';
@@ -60,7 +61,7 @@ export function createApp(options = {}) {
     res.json({
       ok: true,
       service: 'practo-sales-api',
-      modules: ['lead-generator', 'commercial-suite'],
+      modules: ['lead-generator', 'commercial-suite', 'practopulse'],
       env: isProd ? 'production' : 'development',
       vercel: Boolean(process.env.VERCEL),
       durableStore: durableStoreConfigured(),
@@ -99,6 +100,7 @@ export function createApp(options = {}) {
   registerLeadRoutes(app);
   registerWorkspaceRoutes(app);
   registerCommercialRoutes(app);
+  registerPulseRoutes(app);
 
   if (serveStatic) {
     const distDir = getFrontendDistDir();

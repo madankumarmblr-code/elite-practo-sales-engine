@@ -1,10 +1,11 @@
-import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Navigate, Link } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../api/client';
 import { readWorkspaceBackup } from '../lib/workspaceBackup';
 
 const links = [
+  { to: '/pulse', label: 'PractoPulse', icon: '◈', perm: 'lead_generator:read' },
   { to: '/lead-generator', label: 'Lead Generator', icon: '✦', perm: 'lead_generator:read' },
   { to: '/commercial-suite', label: 'Commercial Suite', icon: '◎', perm: 'commercial_suite:read' },
 ];
@@ -15,6 +16,7 @@ export default function Layout({ toast }) {
   const location = useLocation();
   const { user, can, logout, loading, isAuthenticated } = useAuth();
   const rehydrated = useRef(false);
+  const isPulse = location.pathname.startsWith('/pulse');
 
   useEffect(() => {
     setOpen(false);
@@ -61,6 +63,16 @@ export default function Layout({ toast }) {
   }
 
   const visible = links.filter((l) => can(l.perm) || can('*'));
+
+  // PractoPulse uses its own full-bleed dark shell
+  if (isPulse) {
+    return (
+      <>
+        <Outlet />
+        {toast ? <div className="toast">{toast}</div> : null}
+      </>
+    );
+  }
 
   return (
     <div className="app-shell">

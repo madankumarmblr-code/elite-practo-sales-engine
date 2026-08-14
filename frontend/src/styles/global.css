@@ -1456,6 +1456,14 @@ label.field textarea:focus {
   color: #94a3b8;
 }
 
+.pulse-build-stamp {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.68rem;
+  color: #5eead4;
+  letter-spacing: 0.02em;
+}
+
 .pulse-nav {
   display: grid;
   gap: 0.25rem;

@@ -3,24 +3,84 @@ import { api } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
 
 const KEY_FIELDS = [
-  'APIFY_API_KEY',
-  'CLAY_API_KEY',
-  'SMARTLEAD_API_KEY',
-  'HEYREACH_API_KEY',
-  'ANTHROPIC_API_KEY',
-  'GAMMA_API_KEY',
-  'ELEVENLABS_API_KEY',
-  'FIREFLIES_API_KEY',
-  'NOTION_API_KEY',
-  'GOOGLE_CALENDAR_CLIENT_ID',
+  {
+    key: 'APIFY_API_KEY',
+    label: 'Apify',
+    purpose: 'Lead Engine live scraping actors (clinic / directory sources when enabled).',
+  },
+  {
+    key: 'CLAY_API_KEY',
+    label: 'Clay',
+    purpose: 'Enrich discovered clinics with emails, phones, and decision-maker data.',
+  },
+  {
+    key: 'SMARTLEAD_API_KEY',
+    label: 'Smartlead',
+    purpose: 'Email outreach sequences pushed from Lead Engine / AI Autopilot (Reach & Prime).',
+  },
+  {
+    key: 'HEYREACH_API_KEY',
+    label: 'HeyReach',
+    purpose: 'LinkedIn DM campaigns for decision-makers from Autopilot sequence/full levels.',
+  },
+  {
+    key: 'ANTHROPIC_API_KEY',
+    label: 'Claude / Anthropic',
+    purpose: 'AI product-fit classify, pitch scripts, and Autopilot message personalization.',
+  },
+  {
+    key: 'GAMMA_API_KEY',
+    label: 'Gamma',
+    purpose: 'Auto-generate pitch decks / proposal slides from Pitch Studio and Autopilot.',
+  },
+  {
+    key: 'ELEVENLABS_API_KEY',
+    label: 'ElevenLabs',
+    purpose: 'AI Autopilot voice calls, voice notes, and call-recording voice synthesis.',
+  },
+  {
+    key: 'FIREFLIES_API_KEY',
+    label: 'Fireflies',
+    purpose: 'Meeting transcripts and action items after demos / AI calls.',
+  },
+  {
+    key: 'NOTION_API_KEY',
+    label: 'Notion',
+    purpose: 'Optional sync of Autopilot jobs, call logs, and playbooks to a Notion workspace.',
+  },
+  {
+    key: 'GOOGLE_CALENDAR_CLIENT_ID',
+    label: 'Google Calendar',
+    purpose: 'Demo holds / calendar booking from Meetings and Full Autopilot; also Gmail channel readiness.',
+  },
 ];
 
 const WEBHOOK_FIELDS = [
-  { key: 'AUTOPILOT_WEBHOOK_URL', label: 'AI Autopilot webhook URL' },
-  { key: 'N8N_WEBHOOK_URL', label: 'n8n / automation webhook URL' },
-  { key: 'SLACK_WEBHOOK_URL', label: 'Slack incoming webhook URL' },
-  { key: 'CUSTOM_WEBHOOK_URL', label: 'Custom webhook URL' },
-  { key: 'WEBHOOK_SECRET', label: 'Webhook shared secret (X-Pulse-Secret)' },
+  {
+    key: 'AUTOPILOT_WEBHOOK_URL',
+    label: 'AI Autopilot webhook URL',
+    purpose: 'Receives pulse.autopilot.push when leads are pushed to Autopilot (primary automation sink).',
+  },
+  {
+    key: 'N8N_WEBHOOK_URL',
+    label: 'n8n / automation webhook URL',
+    purpose: 'Routes Autopilot events into n8n workflows (WhatsApp, CRM, Slack bridges).',
+  },
+  {
+    key: 'SLACK_WEBHOOK_URL',
+    label: 'Slack incoming webhook URL',
+    purpose: 'Posts a short alert when Autopilot push or channel tests run.',
+  },
+  {
+    key: 'CUSTOM_WEBHOOK_URL',
+    label: 'Custom webhook URL',
+    purpose: 'Any extra endpoint that should receive the same Autopilot JSON payload.',
+  },
+  {
+    key: 'WEBHOOK_SECRET',
+    label: 'Webhook shared secret',
+    purpose: 'Sent as X-Pulse-Secret so your automation can verify requests are from PractoPulse.',
+  },
 ];
 
 const LOCAL_KEY = 'practopulse-settings-v1';
@@ -60,7 +120,6 @@ export default function PulseSettings() {
       setSaved(true);
       toast('Settings saved (server + browser)');
     } catch (err) {
-      // still keep local
       localStorage.setItem(LOCAL_KEY, JSON.stringify(settings));
       setSaved(true);
       toast(err.message || 'Saved locally');
@@ -89,10 +148,10 @@ export default function PulseSettings() {
   return (
     <div className="pulse-page">
       <header className="pulse-head">
-        <h1>Pulse Settings</h1>
+        <h1>Settings</h1>
         <p>
-          API keys, webhook endpoints, and Autopilot automation flags. Server-persisted when
-          available; also mirrored in this browser.
+          Integration API keys (with purpose), webhooks, and Autopilot flags — one PractoPulse
+          surface for the whole sales engine.
         </p>
       </header>
 
@@ -207,13 +266,14 @@ export default function PulseSettings() {
       <section className="pulse-card" style={{ marginBottom: 16 }}>
         <h2>API webhooks</h2>
         <p className="muted" style={{ marginBottom: 12 }}>
-          When leads are pushed to Autopilot, these URLs receive a JSON payload (
+          When leads are pushed to Autopilot, these URLs receive JSON (
           <code>pulse.autopilot.push</code>).
         </p>
         <div className="pulse-settings-grid">
-          {WEBHOOK_FIELDS.map(({ key, label }) => (
-            <label key={key}>
-              {label}
+          {WEBHOOK_FIELDS.map(({ key, label, purpose }) => (
+            <label key={key} className="pulse-key-field">
+              <span className="pulse-key-label">{label}</span>
+              <span className="pulse-key-purpose">{purpose}</span>
               <input
                 type={key === 'WEBHOOK_SECRET' ? 'password' : 'url'}
                 autoComplete="off"
@@ -233,10 +293,16 @@ export default function PulseSettings() {
 
       <section className="pulse-card">
         <h2>Integration API keys</h2>
+        <p className="muted" style={{ marginBottom: 12 }}>
+          Each key powers a specific function in Lead Engine, Autopilot, Pitch, or Meetings.
+        </p>
         <div className="pulse-settings-grid">
-          {KEY_FIELDS.map((key) => (
-            <label key={key}>
-              {key}
+          {KEY_FIELDS.map(({ key, label, purpose }) => (
+            <label key={key} className="pulse-key-field">
+              <span className="pulse-key-label">
+                {label} <code>{key}</code>
+              </span>
+              <span className="pulse-key-purpose">{purpose}</span>
               <input
                 type="password"
                 autoComplete="off"

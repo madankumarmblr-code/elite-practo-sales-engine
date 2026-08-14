@@ -41,11 +41,13 @@ export default function App() {
               <Route path="autopilot" element={<PulseAutopilot />} />
               <Route path="status" element={<PulseStatus />} />
               <Route path="settings" element={<PulseSettings />} />
+              <Route path="commercial" element={<CommercialSuite />} />
+              <Route path="superadmin" element={<SuperAdmin />} />
             </Route>
             <Route path="/lead-generator" element={<Navigate to="/pulse/leads" replace />} />
-            <Route path="/commercial-suite" element={<CommercialSuite />} />
-            <Route path="/superadmin" element={<SuperAdmin />} />
-            <Route path="/users" element={<Navigate to="/superadmin" replace />} />
+            <Route path="/commercial-suite" element={<Navigate to="/pulse/commercial" replace />} />
+            <Route path="/superadmin" element={<Navigate to="/pulse/superadmin" replace />} />
+            <Route path="/users" element={<Navigate to="/pulse/superadmin" replace />} />
             <Route path="*" element={<Navigate to="/pulse" replace />} />
           </Route>
         </Routes>

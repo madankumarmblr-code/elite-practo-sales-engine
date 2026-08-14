@@ -7,15 +7,8 @@ import './db/seed.js';
 import { authRequired } from './auth/middleware.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerLeadRoutes } from './routes/leads.js';
-import { registerContactRoutes } from './routes/contacts.js';
-import { registerAutopilotRoutes } from './routes/autopilot.js';
-import { registerSettingsRoutes } from './routes/settings.js';
-import { registerIntegrationRoutes } from './routes/integrations.js';
-import { registerExportRoutes } from './routes/export.js';
-import { registerImportRoutes } from './routes/import.js';
 import { registerCommercialRoutes } from './routes/commercial.js';
 import { registerWorkspaceRoutes } from './routes/workspace.js';
-import { registerConversionRoutes } from './routes/conversion.js';
 import { logEvent } from './services/logger.js';
 import { syncSheetFromGoogle } from './services/sheetSync.js';
 import { reloadLocationsIndex } from './services/locations.js';
@@ -24,22 +17,9 @@ import {
   durablePersistMiddleware,
   durableStoreConfigured,
 } from './services/dbSnapshot.js';
-import { getConversionEngineHealth } from './services/conversion/healthStatus.js';
-import './services/outreach.js';
-
-/** Public conversion / webhook paths (no session required; may still check webhook secret). */
-const PUBLIC_API_PATHS = new Set([
-  '/health',
-  '/auth/login',
-  '/v1/status',
-  '/v1/health',
-  '/v1/leads/ingest',
-  '/v1/whatsapp/inbound',
-  '/v1/proposals/generate',
-]);
 
 /**
- * Build the Express app.
+ * Build the Express app — Lead Generator + Commercial Suite only.
  * @param {{ serveStatic?: boolean, warmSheet?: boolean }} [options]
  */
 export function createApp(options = {}) {
@@ -80,29 +60,20 @@ export function createApp(options = {}) {
     res.json({
       ok: true,
       service: 'practo-sales-api',
+      modules: ['lead-generator', 'commercial-suite'],
       env: isProd ? 'production' : 'development',
       vercel: Boolean(process.env.VERCEL),
       durableStore: durableStoreConfigured(),
       time: new Date().toISOString(),
-      conversion: getConversionEngineHealth(),
     });
   });
 
-  // Root aliases requested by conversion-engine contract
-  app.get(['/health', '/status'], (_req, res) => {
-    res.json(getConversionEngineHealth());
-  });
-
   registerAuthRoutes(app);
-  // Conversion routes include public webhook endpoints — register before auth gate
-  registerConversionRoutes(app);
 
   app.use('/api', (req, res, next) => {
-    if (PUBLIC_API_PATHS.has(req.path)) {
+    if (req.path === '/health' || req.path === '/auth/login') {
       return next();
     }
-    // Meta WhatsApp verify uses GET on inbound
-    if (req.path === '/v1/whatsapp/inbound') return next();
     return authRequired(req, res, next);
   });
 
@@ -123,17 +94,10 @@ export function createApp(options = {}) {
     next();
   });
 
-  // Snapshot SQLite after successful writes (Vercel /tmp is ephemeral)
   app.use('/api', durablePersistMiddleware);
 
   registerLeadRoutes(app);
-  registerContactRoutes(app);
-  registerAutopilotRoutes(app);
-  registerSettingsRoutes(app);
-  registerIntegrationRoutes(app);
   registerWorkspaceRoutes(app);
-  registerExportRoutes(app);
-  registerImportRoutes(app);
   registerCommercialRoutes(app);
 
   if (serveStatic) {
@@ -166,4 +130,3 @@ export function createApp(options = {}) {
 
   return app;
 }
-

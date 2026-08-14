@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
 import LeadGenerator from './pages/LeadGenerator';
 import CommercialSuite from './pages/CommercialSuite';
-import LeadManagement from './pages/LeadManagement';
-import Autopilot from './pages/Autopilot';
-import LeadSettings from './pages/LeadSettings';
-import ApiIntegrations from './pages/ApiIntegrations';
-import Settings from './pages/Settings';
-import SuperAdmin from './pages/SuperAdmin';
 import Login from './pages/Login';
 import { ToastContext } from './hooks/useToast';
 import { AuthProvider } from './hooks/useAuth';
@@ -29,15 +22,10 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route element={<Layout toast={toast} />}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to="/lead-generator" replace />} />
             <Route path="/lead-generator" element={<LeadGenerator />} />
             <Route path="/commercial-suite" element={<CommercialSuite />} />
-            <Route path="/leads" element={<LeadManagement />} />
-            <Route path="/autopilot" element={<Autopilot />} />
-            <Route path="/lead-settings" element={<LeadSettings />} />
-            <Route path="/api-integrations" element={<ApiIntegrations />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/super-admin" element={<SuperAdmin />} />
+            <Route path="*" element={<Navigate to="/lead-generator" replace />} />
           </Route>
         </Routes>
       </ToastContext.Provider>

@@ -5,15 +5,8 @@ import { api } from '../api/client';
 import { readWorkspaceBackup } from '../lib/workspaceBackup';
 
 const links = [
-  { to: '/', label: 'Dashboard', icon: '◈', perm: 'dashboard:read' },
   { to: '/lead-generator', label: 'Lead Generator', icon: '✦', perm: 'lead_generator:read' },
   { to: '/commercial-suite', label: 'Commercial Suite', icon: '◎', perm: 'commercial_suite:read' },
-  { to: '/leads', label: 'Lead Management', icon: '▤', perm: 'leads:read' },
-  { to: '/autopilot', label: 'Autopilot AI', icon: '⚡', perm: 'autopilot:read' },
-  { to: '/lead-settings', label: 'Lead Settings', icon: '⚙', perm: 'lead_settings:read' },
-  { to: '/api-integrations', label: 'API Integrations', icon: '⧉', perm: 'api_integrations:read' },
-  { to: '/settings', label: 'Settings', icon: '◇', perm: 'settings:read' },
-  { to: '/super-admin', label: 'Super Admin', icon: '★', perm: 'users:write' },
 ];
 
 export default function Layout({ toast }) {
@@ -27,8 +20,6 @@ export default function Layout({ toast }) {
     setOpen(false);
   }, [location.pathname]);
 
-  // Re-apply browser-backed Settings / API keys after Vercel /tmp resets
-  // before child pages fetch, so saves appear to stick.
   useEffect(() => {
     if (!isAuthenticated) {
       rehydrated.current = false;
@@ -58,19 +49,18 @@ export default function Layout({ toast }) {
   }, [isAuthenticated]);
 
   if (loading || (isAuthenticated && !bootstrapped)) {
-    return <div className="login-page"><div className="muted">Loading workspace…</div></div>;
+    return (
+      <div className="login-page">
+        <div className="muted">Loading workspace…</div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  const visible = links.filter(
-    (l) =>
-      can(l.perm) ||
-      (l.perm === 'api_integrations:read' && can('settings:read')) ||
-      (l.to === '/super-admin' && (user?.role === 'superadmin' || can('users:write')))
-  );
+  const visible = links.filter((l) => can(l.perm) || can('*'));
 
   return (
     <div className="app-shell">
@@ -84,7 +74,7 @@ export default function Layout({ toast }) {
         </div>
         <nav className="nav">
           {visible.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.to === '/'}>
+            <NavLink key={l.to} to={l.to}>
               <span className="nav-icon">{l.icon}</span>
               {l.label}
             </NavLink>
@@ -95,7 +85,12 @@ export default function Layout({ toast }) {
             Signed in as <strong style={{ color: '#fff' }}>{user?.name}</strong>
             <div>{user?.email}</div>
           </div>
-          <button type="button" className="btn btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.28)' }} onClick={logout}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.28)' }}
+            onClick={logout}
+          >
             Sign out
           </button>
         </div>

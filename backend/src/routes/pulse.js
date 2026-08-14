@@ -1,18 +1,91 @@
+import { discoverClinics, getDiscoveryMeta } from '../services/clinicDiscovery.js';
 import {
   listPulseLeads,
   sourceAndEnrich,
   generatePitch,
+  enrichDiscoveryResults,
+  getServerStatus,
+  getPulseSettings,
+  savePulseSettings,
+  getWebhookConfig,
+  updateWebhookConfig,
+  getAutopilotQueue,
+  pushToAutopilot,
+  testWebhooks,
   INDIAN_CITIES,
   MEDICAL_SPECIALTIES,
+  DEFAULT_PULSE_SETTINGS,
 } from '../services/pulse/engine.js';
 
 export function registerPulseRoutes(app) {
   app.get('/api/pulse/meta', (_req, res) => {
+    const discovery = getDiscoveryMeta();
     res.json({
-      cities: INDIAN_CITIES,
-      specialties: MEDICAL_SPECIALTIES,
+      cities: discovery.cities?.length ? discovery.cities : INDIAN_CITIES,
+      specialties: discovery.keywords?.length
+        ? discovery.keywords
+        : discovery.specialties?.length
+          ? discovery.specialties
+          : MEDICAL_SPECIALTIES,
       products: ['REACH', 'PRIME', 'BOTH'],
+      zonesByCity: discovery.zonesByCity || {},
+      zoneMetaByCity: discovery.zoneMetaByCity || {},
+      keywordsByCity: discovery.keywordsByCity || {},
+      keywordsByCityZone: discovery.keywordsByCityZone || {},
+      localitiesByCityZone: discovery.localitiesByCityZone || {},
+      keywords: discovery.keywords || [],
+      platforms: discovery.platforms || [],
+      localityCount: discovery.localityCount || 0,
+      sheetSync: discovery.sheetSync || null,
+      autopilotLevels: [
+        { id: 'assist', label: 'Assist — enrich + pitch, human sends' },
+        { id: 'sequence', label: 'Sequence — Smartlead / HeyReach queues' },
+        { id: 'full', label: 'Full — webhooks + sequences + demo holds' },
+      ],
     });
+  });
+
+  app.get('/api/pulse/status', (_req, res) => {
+    res.json(getServerStatus());
+  });
+
+  app.get('/api/pulse/settings', (_req, res) => {
+    const settings = getPulseSettings();
+    // Never echo raw secrets in list views beyond values (UI needs them to edit)
+    res.json({ settings, defaults: DEFAULT_PULSE_SETTINGS });
+  });
+
+  app.put('/api/pulse/settings', (req, res) => {
+    const body = req.body || {};
+    const patch = body.settings || body;
+    const allowed = Object.keys(DEFAULT_PULSE_SETTINGS);
+    const next = {};
+    for (const key of allowed) {
+      if (Object.prototype.hasOwnProperty.call(patch, key)) {
+        const val = patch[key];
+        next[key] = typeof val === 'boolean' ? val : val;
+      }
+    }
+    const settings = savePulseSettings(next);
+    res.json({ settings, message: 'Pulse settings saved' });
+  });
+
+  app.get('/api/pulse/webhooks', (_req, res) => {
+    res.json({ webhooks: getWebhookConfig() });
+  });
+
+  app.put('/api/pulse/webhooks', (req, res) => {
+    const webhooks = updateWebhookConfig(req.body?.webhooks || req.body || {});
+    res.json({ webhooks, message: 'Webhook endpoints saved' });
+  });
+
+  app.post('/api/pulse/webhooks/test', async (_req, res) => {
+    try {
+      const results = await testWebhooks();
+      res.json({ results, message: 'Webhook test complete' });
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Webhook test failed' });
+    }
   });
 
   app.get('/api/pulse/leads', (_req, res) => {
@@ -29,6 +102,62 @@ export function registerPulseRoutes(app) {
       specialties: body.specialties || [],
     });
     res.json(result);
+  });
+
+  /** Unified Lead Engine: live Practo/maps discovery + product-fit classify. */
+  app.post('/api/pulse/discover', async (req, res) => {
+    const body = req.body || {};
+    const city = body.city || body.location;
+    const {
+      zone = 'All',
+      zones,
+      localities,
+      specialty,
+      keyword,
+      keywords,
+      limit = null,
+      live = true,
+      maxLocalities = 40,
+      fullScan = false,
+      product = 'BOTH',
+    } = body;
+    const kw = keyword || specialty || (Array.isArray(keywords) ? keywords[0] : null);
+
+    if (!city || !kw) {
+      return res.status(400).json({
+        error: 'Select city and specialty/keyword (zone can be All)',
+      });
+    }
+
+    try {
+      const discovery = await discoverClinics({
+        city,
+        zone,
+        zones,
+        localities,
+        specialty: kw,
+        keyword: kw,
+        keywords,
+        limit,
+        live,
+        maxLocalities,
+        fullScan: fullScan === true || fullScan === '1',
+      });
+      if (discovery.error && !discovery.results?.length) {
+        return res.status(400).json({ error: discovery.error });
+      }
+      const leads = enrichDiscoveryResults(discovery.results || [], product);
+      res.json({
+        ...discovery,
+        results: discovery.results,
+        leads,
+        count: leads.length,
+        product,
+        message: `Discovered ${leads.length} authentic clinic(s) · classified for Reach / Prime`,
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Discovery failed' });
+    }
   });
 
   app.post('/api/pulse/pitch', (req, res) => {
@@ -78,5 +207,40 @@ export function registerPulseRoutes(app) {
       ],
       message: 'Fireflies summary attached',
     });
+  });
+
+  app.get('/api/pulse/autopilot', (_req, res) => {
+    const queue = getAutopilotQueue();
+    const settings = getPulseSettings();
+    res.json({
+      level: settings.AUTOPILOT_LEVEL || 'assist',
+      auto: {
+        pitch: Boolean(settings.AUTOPILOT_AUTO_PITCH),
+        smartlead: Boolean(settings.AUTOPILOT_AUTO_SMARTLEAD),
+        heyreach: Boolean(settings.AUTOPILOT_AUTO_HEYREACH),
+        demo: Boolean(settings.AUTOPILOT_AUTO_DEMO),
+      },
+      queue,
+      jobs: queue.jobs || [],
+      count: (queue.jobs || []).length,
+    });
+  });
+
+  app.post('/api/pulse/autopilot/push', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const leads = body.leads || [];
+      if (!Array.isArray(leads) || !leads.length) {
+        return res.status(400).json({ error: 'leads array required' });
+      }
+      const result = await pushToAutopilot({
+        leads,
+        level: body.level,
+        channels: body.channels || {},
+      });
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Autopilot push failed' });
+    }
   });
 }

@@ -99,6 +99,19 @@ export const api = {
   pulseLeads: () => request('/api/pulse/leads'),
   pulseSource: (body) =>
     request('/api/pulse/source', { method: 'POST', body: JSON.stringify(body) }),
+  pulseDiscover: (body) =>
+    request('/api/pulse/discover', { method: 'POST', body: JSON.stringify(body) }),
+  pulseStatus: () => request('/api/pulse/status'),
+  pulseSettings: () => request('/api/pulse/settings'),
+  pulseSaveSettings: (settings) =>
+    request('/api/pulse/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
+  pulseWebhooks: () => request('/api/pulse/webhooks'),
+  pulseSaveWebhooks: (webhooks) =>
+    request('/api/pulse/webhooks', { method: 'PUT', body: JSON.stringify({ webhooks }) }),
+  pulseTestWebhooks: () => request('/api/pulse/webhooks/test', { method: 'POST' }),
+  pulseAutopilot: () => request('/api/pulse/autopilot'),
+  pulseAutopilotPush: (body) =>
+    request('/api/pulse/autopilot/push', { method: 'POST', body: JSON.stringify(body) }),
   pulsePitch: (body) =>
     request('/api/pulse/pitch', { method: 'POST', body: JSON.stringify(body) }),
   pulseSmartlead: (body) =>

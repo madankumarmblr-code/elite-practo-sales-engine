@@ -3,11 +3,13 @@ import { useAuth } from '../../hooks/useAuth';
 
 const links = [
   { to: '/pulse', label: 'Dashboard', end: true },
-  { to: '/pulse/leads', label: 'Lead Finder' },
+  { to: '/pulse/leads', label: 'Lead Engine' },
   { to: '/pulse/outreach', label: 'Outreach' },
   { to: '/pulse/pitch', label: 'Pitch Studio' },
   { to: '/pulse/meetings', label: 'Meetings' },
-  { to: '/pulse/settings', label: 'Pulse Settings' },
+  { to: '/pulse/autopilot', label: 'AI Autopilot' },
+  { to: '/pulse/status', label: 'Server Status' },
+  { to: '/pulse/settings', label: 'Settings' },
 ];
 
 export default function PulseLayout() {
@@ -28,7 +30,6 @@ export default function PulseLayout() {
           ))}
         </nav>
         <div className="pulse-side-links">
-          <Link to="/lead-generator">Lead Generator</Link>
           <Link to="/commercial-suite">Commercial Suite</Link>
         </div>
         <div className="pulse-side-foot">

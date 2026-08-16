@@ -231,6 +231,18 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_outreach_created ON outreach_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_call_logs_created ON call_logs(created_at);
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT DEFAULT 'info',
+    link TEXT DEFAULT '',
+    is_read INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);
 `);
 
 export default db;

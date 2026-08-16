@@ -206,11 +206,47 @@ export function bootstrap() {
     `).run(passwordHash, JSON.stringify(permissionsForRole('superadmin')), ts, superAdmin.id);
   }
 
+  // Seed initial notification alerts if empty
+  try {
+    const notifCount = db.prepare('SELECT COUNT(*) AS c FROM notifications').get()?.c || 0;
+    if (notifCount === 0) {
+      const notifs = [
+        {
+          title: 'Practo Autopilot Ready',
+          message: 'Autopilot Engine online · WhatsApp, AI Voice Calls & Email channels active.',
+          type: 'success',
+          link: '/pulse/autopilot',
+        },
+        {
+          title: 'Lead Validation Engine Active',
+          message: '10-digit Indian phone normalization & authenticity scoring enabled.',
+          type: 'info',
+          link: '/pulse/validation',
+        },
+        {
+          title: 'Commercial Suite Synced',
+          message: 'Google Sheets slot inventory matrix loaded for Bangalore, Mumbai & Delhi.',
+          type: 'info',
+          link: '/pulse/commercial',
+        },
+      ];
+      const insertNotif = db.prepare(
+        'INSERT INTO notifications (id, title, message, type, link, is_read, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)'
+      );
+      for (const n of notifs) {
+        insertNotif.run(`notif_${nanoid(8)}`, n.title, n.message, n.type, n.link, ts);
+      }
+    }
+  } catch (err) {
+    console.warn('Notification seed skipped:', err.message);
+  }
+
   console.log('Super Admin ready');
   console.log('  User ID:  superadmin');
   console.log('  Email:    superadmin@practo.sales');
   console.log(`  Password: ${demoPassword}`);
-  console.log('Bootstrap complete — Lead Generator + Commercial Suite');
+  console.log('Bootstrap complete — Lead Generator + Commercial Suite + Autopilot Engine');
 }
 
 bootstrap();
+

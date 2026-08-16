@@ -12,15 +12,30 @@ import {
   getAutopilotQueue,
   pushToAutopilot,
   testWebhooks,
+  validateLeads,
+  listNotifications,
+  markNotificationsRead,
+  listCrmLeads,
+  updateLeadStage,
+  addLeadNote,
+  exportMasterLeads,
   INDIAN_CITIES,
   MEDICAL_SPECIALTIES,
   DEFAULT_PULSE_SETTINGS,
 } from '../services/pulse/engine.js';
 import {
   testChannel,
+  dialAiCall,
+  sendWhatsAppMessage,
+  sendEmailMessage,
+  testSuperAdminSelf,
   listOutreachMessages,
   listCallLogs,
   probeDatabase,
+  VOICE_PRESETS,
+  SCRIPT_PRESETS,
+  WHATSAPP_TEMPLATES,
+  EMAIL_DRIP_STEPS,
 } from '../services/pulse/channelTests.js';
 
 export function registerPulseRoutes(app) {
@@ -45,9 +60,18 @@ export function registerPulseRoutes(app) {
       sheetSync: discovery.sheetSync || null,
       autopilotLevels: [
         { id: 'assist', label: 'Assist — enrich + pitch, human sends' },
-        { id: 'sequence', label: 'Sequence — Smartlead / HeyReach queues' },
-        { id: 'full', label: 'Full — webhooks + sequences + demo holds' },
+        { id: 'sequence', label: 'Sequence — WhatsApp + Smartlead / HeyReach queues' },
+        { id: 'full', label: 'Full — AI calls + recordings + WhatsApp followups + demo holds' },
       ],
+    });
+  });
+
+  app.get('/api/pulse/presets', (_req, res) => {
+    res.json({
+      voices: VOICE_PRESETS,
+      scripts: SCRIPT_PRESETS,
+      whatsappTemplates: WHATSAPP_TEMPLATES,
+      emailDripSteps: EMAIL_DRIP_STEPS,
     });
   });
 
@@ -57,7 +81,6 @@ export function registerPulseRoutes(app) {
 
   app.get('/api/pulse/settings', (_req, res) => {
     const settings = getPulseSettings();
-    // Never echo raw secrets in list views beyond values (UI needs them to edit)
     res.json({ settings, defaults: DEFAULT_PULSE_SETTINGS });
   });
 
@@ -99,6 +122,134 @@ export function registerPulseRoutes(app) {
     res.json({ leads, count: leads.length });
   });
 
+  /** Lead Validation Studio endpoint */
+  app.post('/api/pulse/validate', (req, res) => {
+    try {
+      const leads = req.body?.leads || [];
+      const result = validateLeads(leads);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Validation failed' });
+    }
+  });
+
+  /** CRM Hub endpoints */
+  app.get('/api/pulse/crm/leads', (req, res) => {
+    try {
+      const leads = listCrmLeads({
+        stage: req.query.stage,
+        search: req.query.search,
+        limit: req.query.limit,
+      });
+      res.json({ leads, count: leads.length });
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Failed to list CRM leads' });
+    }
+  });
+
+  app.patch('/api/pulse/crm/leads/:id/stage', (req, res) => {
+    try {
+      const { stage, note } = req.body || {};
+      if (!stage) return res.status(400).json({ error: 'stage is required' });
+      const lead = updateLeadStage(req.params.id, stage, note);
+      res.json({ ok: true, lead, message: `Stage updated to ${stage}` });
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Failed to update stage' });
+    }
+  });
+
+  app.post('/api/pulse/crm/leads/:id/notes', (req, res) => {
+    try {
+      const { note, nextAction } = req.body || {};
+      if (!note) return res.status(400).json({ error: 'note is required' });
+      const lead = addLeadNote(req.params.id, note, nextAction);
+      res.json({ ok: true, lead, message: 'Note added to lead timeline' });
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Failed to add note' });
+    }
+  });
+
+  /** Autopilot Calls Studio endpoint */
+  app.post('/api/pulse/calls/dial', async (req, res) => {
+    try {
+      const result = await dialAiCall(req.body || {});
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Dial failed' });
+    }
+  });
+
+  /** Autopilot WhatsApp Studio endpoint */
+  app.post('/api/pulse/whatsapp/send', async (req, res) => {
+    try {
+      const result = await sendWhatsAppMessage(req.body || {});
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'WhatsApp send failed' });
+    }
+  });
+
+  /** Autopilot Email Studio endpoint */
+  app.post('/api/pulse/email/send', async (req, res) => {
+    try {
+      const result = await sendEmailMessage(req.body || {});
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Email send failed' });
+    }
+  });
+
+  /** Superadmin Exclusive Self-Number Test Suite */
+  app.post('/api/pulse/superadmin/self-test', async (req, res) => {
+    try {
+      const result = await testSuperAdminSelf(req.body || {});
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Superadmin self-test failed' });
+    }
+  });
+
+  /** Notification Hub */
+  app.get('/api/pulse/notifications', (req, res) => {
+    const limit = Number(req.query.limit) || 30;
+    res.json(listNotifications({ limit }));
+  });
+
+  app.post('/api/pulse/notifications/mark-read', (req, res) => {
+    const ids = req.body?.ids || [];
+    res.json(markNotificationsRead(ids));
+  });
+
+  /** Master Comprehensive Lead Export */
+  app.get('/api/pulse/export/master', (req, res) => {
+    try {
+      const rows = exportMasterLeads();
+      const format = req.query.format === 'json' ? 'json' : 'csv';
+      if (format === 'json') {
+        return res.json({ leads: rows, count: rows.length });
+      }
+
+      if (!rows.length) {
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        return res.send('');
+      }
+
+      const keys = Object.keys(rows[0]);
+      const escape = (v) => {
+        const s = v == null ? '' : String(v);
+        if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+      };
+
+      const csv = [keys.join(','), ...rows.map((r) => keys.map((k) => escape(r[k])).join(','))].join('\n');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="practopulse_master_leads_${Date.now()}.csv"`);
+      res.send(csv);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Export failed' });
+    }
+  });
+
   app.post('/api/pulse/source', (req, res) => {
     const body = req.body || {};
     if (!body.city) return res.status(400).json({ error: 'city is required' });
@@ -133,23 +284,29 @@ export function registerPulseRoutes(app) {
       keyword ||
       specialty ||
       kwList[0] ||
-      (Array.isArray(keywords) ? keywords[0] : null);
+      (Array.isArray(keywords) ? keywords[0] : null) ||
+      'All';
 
-    if (!city || (!kw && !kwList.length)) {
+    if (!city) {
       return res.status(400).json({
-        error: 'Select city and specialty/keyword (zone can be All; multi-select supported)',
+        error: 'Select city (zone and specialty can be All; multi-select supported)',
       });
     }
+
+    const effectiveKw = !kw || kw === 'All' ? 'clinic' : kw;
+    const effectiveKwList = kwList.length && !kwList.includes('All') ? kwList : undefined;
+    const effectiveZone = !zone || zone === 'All' ? undefined : zone;
+    const effectiveZoneList = zoneList.length && !zoneList.includes('All') ? zoneList : undefined;
 
     try {
       const discovery = await discoverClinics({
         city,
-        zone: zoneList.length ? zoneList[0] : zone,
-        zones: zoneList.length ? zoneList : undefined,
+        zone: effectiveZoneList ? effectiveZoneList[0] : effectiveZone,
+        zones: effectiveZoneList,
         localities,
-        specialty: kw,
-        keyword: kw,
-        keywords: kwList.length ? kwList : undefined,
+        specialty: effectiveKw,
+        keyword: effectiveKw,
+        keywords: effectiveKwList,
         limit,
         live,
         maxLocalities,
@@ -158,6 +315,7 @@ export function registerPulseRoutes(app) {
       if (discovery.error && !discovery.results?.length) {
         return res.status(400).json({ error: discovery.error });
       }
+
       const leads = enrichDiscoveryResults(discovery.results || [], product);
       res.json({
         ...discovery,
@@ -300,3 +458,4 @@ export function registerPulseRoutes(app) {
     res.json({ database: probeDatabase(), time: new Date().toISOString() });
   });
 }
+

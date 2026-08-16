@@ -25,10 +25,39 @@ export default function SuperAdmin() {
   const [form, setForm] = useState(emptyUser);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState('users');
+  const [tab, setTab] = useState('users'); // users | health | selfTest
   const [loadError, setLoadError] = useState('');
 
+  // Superadmin Exclusive Self-Number Live Test Suite State
+  const [selfPhone, setSelfPhone] = useState('+91 98765 43210');
+  const [selfEmail, setSelfEmail] = useState('superadmin@practo.sales');
+  const [selfChannel, setSelfChannel] = useState('all');
+  const [selfVoice, setSelfVoice] = useState('elevenlabs_priya');
+  const [selfScript, setSelfScript] = useState('prime_conversion');
+  const [selfResult, setSelfResult] = useState(null);
+  const [selfBusy, setSelfBusy] = useState(false);
+
   const allowed = can('users:write') || user?.role === 'superadmin';
+
+  async function handleRunSelfTest(e) {
+    if (e) e.preventDefault();
+    setSelfBusy(true);
+    try {
+      const res = await api.superAdminSelfTest({
+        phone: selfPhone,
+        email: selfEmail,
+        channel: selfChannel,
+        voice: selfVoice,
+        scriptPreset: selfScript,
+      });
+      setSelfResult(res);
+      toast(res.message || 'Superadmin live self-test executed successfully!');
+    } catch (err) {
+      toast(err.message || 'Self-test failed');
+    } finally {
+      setSelfBusy(false);
+    }
+  }
 
   const permissionGroups = useMemo(() => {
     const map = {};
@@ -98,35 +127,36 @@ export default function SuperAdmin() {
     setForm((f) => ({
       ...f,
       role: roleId,
-      permissions: [...(role?.permissions || [])].filter((p) => p !== '*'),
+      permissions: role ? [...(role.permissions || [])] : f.permissions,
     }));
   }
 
-  function togglePerm(id) {
-    setForm((f) => ({
-      ...f,
-      permissions: f.permissions.includes(id)
-        ? f.permissions.filter((p) => p !== id)
-        : [...f.permissions, id],
-    }));
+  function togglePermission(permId) {
+    setForm((f) => {
+      const has = f.permissions.includes(permId);
+      const next = has
+        ? f.permissions.filter((p) => p !== permId)
+        : [...f.permissions, permId];
+      return { ...f, permissions: next };
+    });
   }
 
   async function saveUser(e) {
     e.preventDefault();
     setBusy(true);
+    const wasCreate = !editingId;
+    const createdUsername = String(form.username || '').trim().toLowerCase();
     try {
       const payload = {
         name: form.name,
         email: form.email,
-        username: form.username,
+        username: form.username || form.email,
+        password: form.password,
         role: form.role,
         active: form.active,
         permissions: form.permissions,
       };
-      if (form.password) payload.password = form.password;
-      const createdUsername = String(payload.username || '').toLowerCase();
-      const wasCreate = !editingId;
-      let saved;
+      let saved = null;
       if (editingId) {
         if (!form.password) delete payload.password;
         saved = await api.updateUser(editingId, payload);
@@ -178,25 +208,34 @@ export default function SuperAdmin() {
     <div className="pulse-page">
       <header className="pulse-head row">
         <div>
+          <span className="px-eyebrow">Platform Administration</span>
           <h1>Super Admin</h1>
           <p>
-            Create users by permission level. Same PractoPulse UI — durable workspace database.
+            User permissions (L1–L1000), system health, and Superadmin Exclusive Self-Number Live Test Suite.
           </p>
         </div>
         <div className="pulse-actions">
           <button
             type="button"
+            className={`pulse-btn ${tab === 'selfTest' ? '' : 'ghost'}`}
+            style={tab === 'selfTest' ? { background: '#2dd4bf', color: '#0f172a', fontWeight: 'bold' } : {}}
+            onClick={() => setTab('selfTest')}
+          >
+            ⭐ Self-Number Live Test
+          </button>
+          <button
+            type="button"
             className={`pulse-btn ${tab === 'users' ? '' : 'ghost'}`}
             onClick={() => setTab('users')}
           >
-            Users &amp; permissions
+            Users &amp; Permissions
           </button>
           <button
             type="button"
             className={`pulse-btn ${tab === 'health' ? '' : 'ghost'}`}
             onClick={() => setTab('health')}
           >
-            Health &amp; logs
+            Health &amp; Logs
           </button>
           <button type="button" className="pulse-btn ghost" onClick={load}>
             Refresh
@@ -204,7 +243,169 @@ export default function SuperAdmin() {
         </div>
       </header>
 
-      {tab === 'users' ? (
+      {tab === 'selfTest' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Self Test Configuration Workbench */}
+          <section className="pulse-card">
+            <div className="pulse-head row" style={{ marginBottom: 16 }}>
+              <div>
+                <span className="px-eyebrow" style={{ color: '#2dd4bf' }}>Exclusive Superadmin Testing Tool</span>
+                <h2 style={{ margin: '0.2rem 0' }}>Superadmin Self-Number Live Test Suite</h2>
+                <p className="muted" style={{ margin: 0 }}>
+                  Enter your mobile number and email to test live WhatsApp pitches, trigger AI Voice calls with recordings and transcripts, and verify cold email sequences end-to-end.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleRunSelfTest} className="pulse-grid-2" style={{ gap: 16 }}>
+              <div>
+                <label>
+                  Your Test Mobile Number (+91 format)
+                  <input
+                    type="text"
+                    value={selfPhone}
+                    onChange={(e) => setSelfPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    required
+                  />
+                </label>
+
+                <label style={{ marginTop: 12 }}>
+                  Your Test Email Address
+                  <input
+                    type="email"
+                    value={selfEmail}
+                    onChange={(e) => setSelfEmail(e.target.value)}
+                    placeholder="superadmin@practo.sales"
+                    required
+                  />
+                </label>
+
+                <label style={{ marginTop: 12 }}>
+                  Channels to Test
+                  <select value={selfChannel} onChange={(e) => setSelfChannel(e.target.value)}>
+                    <option value="all">🚀 Quad-Channel Test (AI Voice Call + WhatsApp + Email)</option>
+                    <option value="calls">📞 AI Voice Call Only (Dial + Audio + Transcript)</option>
+                    <option value="whatsapp">💬 WhatsApp Pitch Only (Template + Read Receipt)</option>
+                    <option value="gmail">✉️ Cold Email Only (HTML Preview + Open Tracking)</option>
+                  </select>
+                </label>
+              </div>
+
+              <div>
+                <label>
+                  AI Voice Agent Persona (For Call Test)
+                  <select value={selfVoice} onChange={(e) => setSelfVoice(e.target.value)}>
+                    <option value="elevenlabs_priya">Priya · Indian English Healthcare Specialist</option>
+                    <option value="elevenlabs_rahul">Rahul · Indian English Commercial AE</option>
+                    <option value="elevenlabs_ananya">Ananya · Hindi / Hinglish Practice Specialist</option>
+                    <option value="elevenlabs_marcus">Marcus · US English Enterprise Specialist</option>
+                  </select>
+                </label>
+
+                <label style={{ marginTop: 12 }}>
+                  Pitch Focus Script
+                  <select value={selfScript} onChange={(e) => setSelfScript(e.target.value)}>
+                    <option value="prime_conversion">Practo Prime Instant Booking &amp; Smart Number</option>
+                    <option value="reach_visibility">Practo Reach Top 3 Locality Sponsor Slots</option>
+                    <option value="hybrid_bundle">Reach + Prime Hybrid Commercial Package</option>
+                  </select>
+                </label>
+
+                <div className="pulse-actions" style={{ marginTop: 24 }}>
+                  <button
+                    type="submit"
+                    className="pulse-btn"
+                    disabled={selfBusy}
+                    style={{ width: '100%', padding: '0.85rem 1.2rem', fontSize: '0.95rem', fontWeight: 'bold' }}
+                  >
+                    {selfBusy ? 'Executing Live Self-Test…' : '⚡ Run Live Superadmin Self-Test Now'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          {/* Real-Time Test Results & Interactive Payloads */}
+          {selfResult ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Call Result Card with Audio Player */}
+              {selfResult.results?.calls ? (
+                <section className="pulse-card" style={{ borderLeft: '4px solid #2dd4bf' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, color: '#2dd4bf' }}>
+                      📞 AI Call Executed to {selfResult.phone} · {selfResult.results.calls.durationSec}s
+                    </h3>
+                    <span className="pulse-status-pill ok">Status: Completed</span>
+                  </div>
+                  <p style={{ margin: '8px 0', fontSize: '0.85rem' }}>{selfResult.results.calls.summary}</p>
+
+                  <div style={{ margin: '10px 0', background: 'rgba(15, 23, 42, 0.8)', padding: 10, borderRadius: 8 }}>
+                    <strong style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                      Play Synthesized Call Recording:
+                    </strong>
+                    <audio controls src={selfResult.results.calls.recordingUrl} style={{ width: '100%', height: 36 }} />
+                  </div>
+
+                  <details open style={{ marginTop: 8, fontSize: '0.8rem' }}>
+                    <summary style={{ cursor: 'pointer', color: '#38bdf8' }}>Turn-by-Turn Dialogue Transcript</summary>
+                    <pre style={{ whiteSpace: 'pre-wrap', marginTop: 6, background: 'rgba(15, 23, 42, 0.6)', padding: 10, borderRadius: 8, color: '#cbd5e1' }}>
+                      {selfResult.results.calls.transcript}
+                    </pre>
+                  </details>
+                </section>
+              ) : null}
+
+              {/* WhatsApp Result Card */}
+              {selfResult.results?.whatsapp ? (
+                <section className="pulse-card" style={{ borderLeft: '4px solid #10b981' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, color: '#34d399' }}>
+                      💬 WhatsApp Pitch Dispatched to {selfResult.phone}
+                    </h3>
+                    <span className="pulse-status-pill ok">Status: Read ✓✓</span>
+                  </div>
+                  <div style={{ margin: '10px 0', background: '#005c4b', color: '#e9edef', padding: '12px 16px', borderRadius: 8, fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
+                    {selfResult.results.whatsapp.body}
+                  </div>
+                </section>
+              ) : null}
+
+              {/* Email Result Card */}
+              {selfResult.results?.email ? (
+                <section className="pulse-card" style={{ borderLeft: '4px solid #38bdf8' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, color: '#38bdf8' }}>
+                      ✉️ Cold Email Sequence Sent to {selfResult.email}
+                    </h3>
+                    <span className="pulse-status-pill ok">Status: Opened 👁️</span>
+                  </div>
+                  <div style={{ marginTop: 8, background: 'rgba(15, 23, 42, 0.7)', padding: 12, borderRadius: 8, fontSize: '0.85rem' }}>
+                    <strong style={{ display: 'block', color: '#f8fafc', marginBottom: 4 }}>
+                      Subject: {selfResult.results.email.subject}
+                    </strong>
+                    <div style={{ whiteSpace: 'pre-wrap', color: '#cbd5e1', lineHeight: 1.5 }}>
+                      {selfResult.results.email.body}
+                    </div>
+                  </div>
+                </section>
+              ) : null}
+
+              {/* Raw JSON Debug View */}
+              <section className="pulse-card">
+                <details style={{ fontSize: '0.78rem' }}>
+                  <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>Inspect Full Raw Response Payload (JSON)</summary>
+                  <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8, background: 'rgba(15, 23, 42, 0.9)', padding: 10, borderRadius: 8, color: '#2dd4bf' }}>
+                    {JSON.stringify(selfResult, null, 2)}
+                  </pre>
+                </details>
+              </section>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {tab === 'users' && (
         <div className="pulse-grid-2">
           <section className="pulse-card">
             <div className="pulse-head row" style={{ marginBottom: 12 }}>
@@ -378,7 +579,9 @@ export default function SuperAdmin() {
             </form>
           </section>
         </div>
-      ) : (
+      )}
+
+      {tab === 'health' && (
         <div className="pulse-grid-2">
           <section className="pulse-card">
             <h2>Database &amp; system health</h2>

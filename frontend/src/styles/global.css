@@ -2086,3 +2086,186 @@ label.field textarea:focus {
   line-height: 1.4;
   color: #94a3b8;
 }
+
+/* Light Mode Overrides for PractoPulse */
+[data-theme='light'] {
+  --ink: #0f172a;
+  --ink-soft: #334155;
+  --muted: #64748b;
+  --surface: #f8fafc;
+  --surface-2: #f1f5f9;
+  --panel: rgba(255, 255, 255, 0.9);
+  --panel-solid: #ffffff;
+  --line: rgba(15, 23, 42, 0.08);
+  --line-strong: rgba(15, 23, 42, 0.16);
+  --border: rgba(15, 23, 42, 0.12);
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --border-subtle: rgba(15, 23, 42, 0.1);
+  color-scheme: light;
+}
+
+[data-theme='light'] body {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+[data-theme='light'] .pulse-side {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+[data-theme='light'] .pulse-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  color: #0f172a;
+}
+
+[data-theme='light'] .pulse-card h1,
+[data-theme='light'] .pulse-card h2,
+[data-theme='light'] .pulse-card h3,
+[data-theme='light'] .pulse-card strong {
+  color: #0f172a;
+}
+
+[data-theme='light'] .pulse-table th {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+[data-theme='light'] .pulse-table td {
+  border-color: #f1f5f9;
+  color: #1e293b;
+}
+
+[data-theme='light'] .pulse-topbar {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-bottom-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+[data-theme='light'] .pulse-kanban-col {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme='light'] .pulse-kanban-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme='light'] .pulse-kanban-card strong {
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .pulse-drawer {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-left-color: #e2e8f0 !important;
+}
+
+/* Audio Player and Media Styles */
+audio::-webkit-media-controls-panel {
+  background-color: #1e293b;
+}
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+  color: #e2e8f0;
+}
+
+/* Modal and Drawer Animations */
+.pulse-modal-backdrop {
+  animation: fadeIn 0.18s ease-out;
+}
+
+.pulse-drawer {
+  animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modern Select Dropdown Overhaul */
+.pulse-card select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.2rem !important;
+  transition: all 0.15s ease-in-out;
+}
+
+.pulse-card select:focus {
+  outline: none;
+  border-color: #2dd4bf !important;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15);
+}
+
+[data-theme='light'] .pulse-card select {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme='light'] .pulse-card select:focus {
+  border-color: #0d9488 !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+/* Practo Presence Badges */
+.pulse-practo-yes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(45, 212, 191, 0.12);
+  color: #2dd4bf;
+  border: 1px solid rgba(45, 212, 191, 0.28);
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pulse-practo-no {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Table Hover & Polish */
+.pulse-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.pulse-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.025);
+}
+
+[data-theme='light'] .pulse-table tbody tr:hover {
+  background-color: rgba(15, 23, 42, 0.02);
+}
+

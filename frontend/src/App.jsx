@@ -13,6 +13,11 @@ import PulseMeetings from './pages/pulse/PulseMeetings';
 import PulseSettings from './pages/pulse/PulseSettings';
 import PulseStatus from './pages/pulse/PulseStatus';
 import PulseAutopilot from './pages/pulse/PulseAutopilot';
+import PulseValidation from './pages/pulse/PulseValidation';
+import PulseCrm from './pages/pulse/PulseCrm';
+import PulseCalls from './pages/pulse/PulseCalls';
+import PulseWhatsApp from './pages/pulse/PulseWhatsApp';
+import PulseEmail from './pages/pulse/PulseEmail';
 import { ToastContext } from './hooks/useToast';
 import { AuthProvider } from './hooks/useAuth';
 
@@ -35,13 +40,18 @@ export default function App() {
             <Route path="/pulse" element={<PulseLayout />}>
               <Route index element={<PulseDashboard />} />
               <Route path="leads" element={<PulseLeads />} />
+              <Route path="validation" element={<PulseValidation />} />
+              <Route path="crm" element={<PulseCrm />} />
+              <Route path="autopilot" element={<PulseAutopilot />} />
+              <Route path="calls" element={<PulseCalls />} />
+              <Route path="whatsapp" element={<PulseWhatsApp />} />
+              <Route path="email" element={<PulseEmail />} />
               <Route path="outreach" element={<PulseOutreach />} />
               <Route path="pitch" element={<PulsePitch />} />
               <Route path="meetings" element={<PulseMeetings />} />
-              <Route path="autopilot" element={<PulseAutopilot />} />
-              <Route path="status" element={<PulseStatus />} />
-              <Route path="settings" element={<PulseSettings />} />
               <Route path="commercial" element={<CommercialSuite />} />
+              <Route path="settings" element={<PulseSettings />} />
+              <Route path="status" element={<PulseStatus />} />
               <Route path="superadmin" element={<SuperAdmin />} />
             </Route>
             <Route path="/lead-generator" element={<Navigate to="/pulse/leads" replace />} />
@@ -55,3 +65,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+

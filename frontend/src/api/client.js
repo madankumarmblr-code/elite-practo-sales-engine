@@ -139,6 +139,37 @@ export const api = {
   pulseFireflies: (body) =>
     request('/api/pulse/fireflies', { method: 'POST', body: JSON.stringify(body) }),
 
+  pulsePresets: () => request('/api/pulse/presets'),
+  validateLeads: (leads) =>
+    request('/api/pulse/validate', { method: 'POST', body: JSON.stringify({ leads }) }),
+  getCrmLeads: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+    ).toString();
+    return request(`/api/pulse/crm/leads${qs ? `?${qs}` : ''}`);
+  },
+  updateCrmStage: (id, body) =>
+    request(`/api/pulse/crm/leads/${id}/stage`, { method: 'PATCH', body: JSON.stringify(body) }),
+  addCrmNote: (id, body) =>
+    request(`/api/pulse/crm/leads/${id}/notes`, { method: 'POST', body: JSON.stringify(body) }),
+  dialAiCall: (body) =>
+    request('/api/pulse/calls/dial', { method: 'POST', body: JSON.stringify(body) }),
+  sendWhatsApp: (body) =>
+    request('/api/pulse/whatsapp/send', { method: 'POST', body: JSON.stringify(body) }),
+  sendEmail: (body) =>
+    request('/api/pulse/email/send', { method: 'POST', body: JSON.stringify(body) }),
+  superAdminSelfTest: (body) =>
+    request('/api/pulse/superadmin/self-test', { method: 'POST', body: JSON.stringify(body) }),
+  getNotifications: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+    ).toString();
+    return request(`/api/pulse/notifications${qs ? `?${qs}` : ''}`);
+  },
+  markNotificationsRead: (ids = []) =>
+    request('/api/pulse/notifications/mark-read', { method: 'POST', body: JSON.stringify({ ids }) }),
+  getMasterExportUrl: (format = 'csv') => `${BASE}/api/pulse/export/master?format=${format}`,
+
   getUsers: () => request('/api/users'),
   createUser: (body) => request('/api/users', { method: 'POST', body: JSON.stringify(body) }),
   updateUser: (id, body) =>
@@ -154,3 +185,4 @@ export const api = {
   getSystemHealth: () => request('/api/system/health'),
   getApiHealth: () => request('/api/health'),
 };
+

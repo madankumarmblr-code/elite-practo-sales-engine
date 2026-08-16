@@ -121,11 +121,11 @@ export default function PulseAutopilot() {
           </button>
         </div>
         <p className="muted" style={{ marginTop: 10 }}>
-          Auto flags: pitch {data?.auto?.pitch ? 'on' : 'off'} · Smartlead{' '}
-          {data?.auto?.smartlead ? 'on' : 'off'} · HeyReach {data?.auto?.heyreach ? 'on' : 'off'} ·
-          demo {data?.auto?.demo ? 'on' : 'off'}
+          Auto flags: pitch {data?.auto?.pitch ? 'on' : 'off'} · Cold Email{' '}
+          {data?.auto?.smartlead ? 'on' : 'off'} · WhatsApp on · AI Calls on
         </p>
       </section>
+
 
       <div className="pulse-actions" style={{ marginBottom: 12 }}>
         {[

@@ -53,12 +53,13 @@ export default function PulsePitch() {
           <label>
             Channel
             <select value={channel} onChange={(e) => setChannel(e.target.value)}>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="email">Cold email</option>
-              <option value="linkedin">LinkedIn</option>
+              <option value="whatsapp">💬 WhatsApp Pitch</option>
+              <option value="email">✉️ Cold Email Sequence</option>
+              <option value="call">📞 AI Voice Call Script</option>
             </select>
           </label>
         </div>
+
         {lead?.pitchHook ? <p className="pulse-hook">Hook: {lead.pitchHook}</p> : null}
         <button type="button" className="pulse-btn" onClick={generate}>
           Generate deck + script + voice note

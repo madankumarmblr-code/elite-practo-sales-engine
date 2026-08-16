@@ -62,9 +62,10 @@ export function registerPulseRoutes(app) {
       sheetSync: discovery.sheetSync || null,
       autopilotLevels: [
         { id: 'assist', label: 'Assist — enrich + pitch, human sends' },
-        { id: 'sequence', label: 'Sequence — WhatsApp + Smartlead / HeyReach queues' },
+        { id: 'sequence', label: 'Sequence — WhatsApp + Cold Email Sequences' },
         { id: 'full', label: 'Full — AI calls + recordings + WhatsApp followups + demo holds' },
       ],
+
     });
   });
 
@@ -358,15 +359,6 @@ export function registerPulseRoutes(app) {
     });
   });
 
-  app.post('/api/pulse/heyreach', (req, res) => {
-    const leads = req.body?.leads || [];
-    res.json({
-      campaignId: `hr_${Date.now()}`,
-      queued: leads.length,
-      message: `Simulated HeyReach LinkedIn campaign for ${leads.length} decision-maker(s)`,
-    });
-  });
-
   app.post('/api/pulse/demo', (req, res) => {
     const title = req.body?.title || 'Practo demo';
     const startIso = req.body?.startIso || new Date(Date.now() + 86400000).toISOString();
@@ -399,7 +391,6 @@ export function registerPulseRoutes(app) {
       auto: {
         pitch: Boolean(settings.AUTOPILOT_AUTO_PITCH),
         smartlead: Boolean(settings.AUTOPILOT_AUTO_SMARTLEAD),
-        heyreach: Boolean(settings.AUTOPILOT_AUTO_HEYREACH),
         demo: Boolean(settings.AUTOPILOT_AUTO_DEMO),
       },
       queue,
@@ -407,6 +398,7 @@ export function registerPulseRoutes(app) {
       count: (queue.jobs || []).length,
     });
   });
+
 
   app.post('/api/pulse/autopilot/push', async (req, res) => {
     try {

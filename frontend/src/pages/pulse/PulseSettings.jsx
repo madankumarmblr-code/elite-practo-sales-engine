@@ -33,7 +33,7 @@ const ESSENTIAL_API_GROUPS = [
   },
   {
     group: '💬 Outreach & Sequencer Channels',
-    description: 'Manages outbound WhatsApp, cold email drips, and LinkedIn campaigns.',
+    description: 'Manages outbound WhatsApp templates and cold email drip sequences.',
     keys: [
       {
         key: 'WHATSAPP_ACCESS_TOKEN',
@@ -45,13 +45,9 @@ const ESSENTIAL_API_GROUPS = [
         label: 'Smartlead.ai API Key',
         purpose: 'Syncs discovered clinic emails directly into multi-inbox cold drip sequences.',
       },
-      {
-        key: 'HEYREACH_API_KEY',
-        label: 'HeyReach API Key',
-        purpose: 'Automates LinkedIn DM campaigns for verified managing doctors and clinic owners.',
-      },
     ],
   },
+
   {
     group: '🔍 Discovery & Local Intelligence',
     description: 'Enriches clinics with phone numbers, Google ratings, and address coordinates.',

@@ -30,7 +30,6 @@ export const DEFAULT_PULSE_SETTINGS = {
   APIFY_API_KEY: '',
   CLAY_API_KEY: '',
   SMARTLEAD_API_KEY: '',
-  HEYREACH_API_KEY: '',
   ANTHROPIC_API_KEY: '',
   OPENAI_API_KEY: '',
   GAMMA_API_KEY: '',
@@ -42,11 +41,11 @@ export const DEFAULT_PULSE_SETTINGS = {
   WEBHOOK_SECRET: '',
   AUTOPILOT_LEVEL: 'sequence',
   AUTOPILOT_AUTO_SMARTLEAD: true,
-  AUTOPILOT_AUTO_HEYREACH: false,
   AUTOPILOT_AUTO_PITCH: true,
   AUTOPILOT_AUTO_DEMO: false,
   DEFAULT_PRODUCT: 'BOTH',
 };
+
 
 function readJsonSetting(key, fallback) {
   try {
@@ -292,8 +291,8 @@ export function generatePitch(lead, channel = 'whatsapp') {
   const script =
     channel === 'email'
       ? `Subject: ${lead.specialty} growth in ${lead.locality}\n\nHi ${lead.doctorName},\n\nClinics like ${lead.clinicName} in ${lead.city} are using Practo ${product === 'PRIME' ? 'Prime' : product === 'REACH' ? 'Reach' : 'Reach + Prime'} to drive patient discovery and bookings.\n\n${lead.pitchHook || ''}\n\nOpen to a 12-min walkthrough this week?\n\n— Practo Inside Sales`
-      : channel === 'linkedin'
-        ? `Hi ${lead.doctorName} — helping ${lead.specialty} practices in ${lead.city} with Practo ${product}. ${lead.pitchHook || ''} Worth a short chat?`
+      : channel === 'call'
+        ? `Hello, Dr. ${lead.doctorName}? This is Priya calling from Practo Healthcare. I noticed ${lead.clinicName} in ${lead.locality} is getting strong local patient interest. ${lead.pitchHook || ''} I wanted to share how Practo ${product} can help you manage and scale patient consultations seamlessly.`
         : `Hi ${lead.doctorName}, quick note from Practo for ${lead.clinicName} (${lead.locality}). ${lead.pitchHook || ''} Can I share a 1-pager on ${product}?`;
 
   const pitchDeckUrl = `https://gamma.app/docs/practopulse-${lead.city}-${lead.specialty}-${lead.id}`
@@ -324,9 +323,9 @@ export function getServerStatus() {
     { id: 'anthropic', label: 'Claude / Anthropic AI', ...maskSecret(settings.ANTHROPIC_API_KEY) },
     { id: 'openai', label: 'OpenAI / Gemini AI', ...maskSecret(settings.OPENAI_API_KEY) },
     { id: 'smartlead', label: 'Smartlead Cold Email', ...maskSecret(settings.SMARTLEAD_API_KEY) },
-    { id: 'heyreach', label: 'HeyReach LinkedIn Outreach', ...maskSecret(settings.HEYREACH_API_KEY) },
     { id: 'google_maps', label: 'Google Maps Places API', ...maskSecret(settings.GOOGLE_MAPS_API_KEY) },
   ];
+
   const webhooks = [
     {
       id: 'autopilot',
@@ -733,16 +732,11 @@ export async function pushToAutopilot({ leads = [], level, channels = {} } = {})
         detail: `Sequence ${lead.recommendedProduct === 'REACH' ? 'REACH' : 'PRIME'}`,
       });
     }
-    if (
-      (settings.AUTOPILOT_AUTO_HEYREACH || channels.heyreach) &&
-      (autopilotLevel === 'sequence' || autopilotLevel === 'full')
-    ) {
-      steps.push({ id: 'heyreach', status: 'queued', detail: 'LinkedIn DM sequence' });
-    }
     if (autopilotLevel === 'sequence' || autopilotLevel === 'full') {
-      steps.push({ id: 'gmail', status: 'queued', detail: 'Gmail follow-up' });
+      steps.push({ id: 'gmail', status: 'queued', detail: 'Email follow-up sequence' });
     }
     if ((settings.AUTOPILOT_AUTO_DEMO || channels.demo || channels.calls) && autopilotLevel === 'full') {
+
       steps.push({ id: 'ai_call', status: 'queued', detail: 'AI voice call + recording' });
       steps.push({ id: 'demo', status: 'queued', detail: 'Hold calendar slot' });
     }

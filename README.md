@@ -3,7 +3,8 @@
 Full-stack suite with:
 
 1. **Classic app** (`frontend` + `backend`) — Lead Generator + Commercial Proposal Suite on https://www.salesmaster.live
-2. **PractoPulse** (`practopulse`) — Next.js B2B sales engine for Reach & Prime inside sales (Apify / Clay / Smartlead / HeyReach / Claude / Gamma / …)
+2. **PractoPulse** — Healthcare sales automation for Reach & Prime inside sales (Lead Discovery / ElevenLabs Voice Calls / WhatsApp Gateway / Cold Email Sequencer / Claude AI / Gamma Decks)
+
 
 ## PractoPulse (new)
 

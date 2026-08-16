@@ -16,17 +16,7 @@ export default function PulseOutreach() {
     try {
       const data = await api.pulseSmartlead({ leads, product });
       setMessage(data.message);
-      toast('Smartlead campaign queued');
-    } catch (err) {
-      toast(err.message);
-    }
-  }
-
-  async function launchHeyReach() {
-    try {
-      const data = await api.pulseHeyReach({ leads });
-      setMessage(data.message);
-      toast('HeyReach campaign queued');
+      toast('Smartlead email sequence queued');
     } catch (err) {
       toast(err.message);
     }
@@ -36,11 +26,11 @@ export default function PulseOutreach() {
     <div className="pulse-page">
       <header className="pulse-head">
         <h1>Outreach Campaigns</h1>
-        <p>Smartlead email sequences · HeyReach LinkedIn DMs · Native Autopilot</p>
+        <p>Smartlead cold email sequences &amp; multi-inbox drips · Native Autopilot</p>
       </header>
       <section className="pulse-card">
         <h2>Launch Outreach Campaign</h2>
-        <p className="muted">{leads.length} verified clinic leads ready for automated outreach</p>
+        <p className="muted">{leads.length} verified clinic leads ready for automated cold email sequences</p>
 
         <label>
           Smartlead product track
@@ -51,10 +41,7 @@ export default function PulseOutreach() {
         </label>
         <div className="pulse-actions">
           <button type="button" className="pulse-btn" onClick={launchSmartlead}>
-            Push to Smartlead
-          </button>
-          <button type="button" className="pulse-btn navy" onClick={launchHeyReach}>
-            Launch HeyReach LinkedIn
+            Push to Smartlead Sequencer
           </button>
         </div>
         {message ? <p className="pulse-banner">{message}</p> : null}
@@ -62,3 +49,4 @@ export default function PulseOutreach() {
     </div>
   );
 }
+

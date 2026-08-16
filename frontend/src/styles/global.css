@@ -2269,3 +2269,93 @@ audio::-webkit-media-controls-time-remaining-display {
   background-color: rgba(15, 23, 42, 0.02);
 }
 
+/* ==========================================================================
+   💎 Glass Panel & AI Input Design System (Spatial Depth + Cyan AI Glow)
+   ========================================================================== */
+
+.glass-panel {
+  /* The Glass Background */
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px); /* Safari support */
+  
+  /* The Frosted Edge */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  
+  /* The Spatial Depth */
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 24px;
+  
+  /* Layout constraints */
+  padding: 48px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.glass-panel.wide {
+  max-width: 100%;
+}
+
+.glass-panel.compact {
+  padding: 24px;
+  border-radius: 16px;
+}
+
+.ai-input {
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 12px;
+  
+  /* Idle State */
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Inter', var(--font-body), sans-serif;
+  font-size: 16px;
+  outline: none;
+  
+  /* Smooth animation for the glow */
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.ai-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Focused State */
+.ai-input:focus {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #00E5FF;
+  color: #FFFFFF;
+  
+  /* The Cyan AI Glow */
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.3), 
+              inset 0 0 8px rgba(0, 229, 255, 0.1); /* Subtle inner glow */
+}
+
+/* Light Mode Harmonization */
+[data-theme='light'] .glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme='light'] .ai-input {
+  background: rgba(15, 23, 42, 0.02);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+}
+
+[data-theme='light'] .ai-input::placeholder {
+  color: rgba(15, 23, 42, 0.4);
+}
+
+[data-theme='light'] .ai-input:focus {
+  background: #ffffff;
+  border-color: #00bcd4;
+  color: #0f172a;
+  box-shadow: 0 0 16px rgba(0, 188, 212, 0.25),
+              inset 0 0 6px rgba(0, 188, 212, 0.08);
+}
+
+

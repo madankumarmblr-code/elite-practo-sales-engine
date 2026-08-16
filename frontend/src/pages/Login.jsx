@@ -57,13 +57,13 @@ function HealthcareAiStage({ mousePos }) {
     }));
 
     // Ambient floating holographic dust particles
-    const particles = Array.from({ length: 60 }, (_, i) => ({
+    const particles = Array.from({ length: 50 }, (_, i) => ({
       x: Math.random(),
       y: Math.random(),
       r: 1 + (i % 3) * 0.6,
       speed: 0.05 + (i % 4) * 0.02,
       phase: i * 0.8,
-      color: i % 2 === 0 ? 'rgba(0, 229, 255, ' : 'rgba(45, 212, 191, ',
+      color: i % 2 === 0 ? 'rgba(13, 148, 136, ' : 'rgba(2, 132, 199, ',
     }));
 
     function resize() {
@@ -118,16 +118,16 @@ function HealthcareAiStage({ mousePos }) {
       const flashX = mousePos.current.x * w;
       const flashY = mousePos.current.y * h;
       const flashGrad = ctx.createRadialGradient(flashX, flashY, 20, flashX, flashY, 380);
-      flashGrad.addColorStop(0, 'rgba(0, 229, 255, 0.08)');
-      flashGrad.addColorStop(0.5, 'rgba(14, 116, 144, 0.03)');
+      flashGrad.addColorStop(0, 'rgba(8, 145, 178, 0.08)');
+      flashGrad.addColorStop(0.5, 'rgba(13, 148, 136, 0.03)');
       flashGrad.addColorStop(1, 'transparent');
       ctx.fillStyle = flashGrad;
       ctx.fillRect(0, 0, w, h);
 
       // 2. Central 3D Aura Gradient around the Core
       const coreGrad = ctx.createRadialGradient(centerX, centerY, 30, centerX, centerY, 340);
-      coreGrad.addColorStop(0, 'rgba(0, 229, 255, 0.18)');
-      coreGrad.addColorStop(0.4, 'rgba(11, 24, 48, 0.12)');
+      coreGrad.addColorStop(0, 'rgba(13, 148, 136, 0.14)');
+      coreGrad.addColorStop(0.4, 'rgba(8, 145, 178, 0.06)');
       coreGrad.addColorStop(1, 'transparent');
       ctx.fillStyle = coreGrad;
       ctx.fillRect(0, 0, w, h);
@@ -159,8 +159,8 @@ function HealthcareAiStage({ mousePos }) {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < 95) {
-            const alpha = (1 - dist / 95) * 0.28 * Math.min(p1.scale, p2.scale);
-            ctx.strokeStyle = `rgba(0, 229, 255, ${alpha})`;
+            const alpha = (1 - dist / 95) * 0.35 * Math.min(p1.scale, p2.scale);
+            ctx.strokeStyle = `rgba(13, 148, 136, ${alpha})`;
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
@@ -173,20 +173,20 @@ function HealthcareAiStage({ mousePos }) {
       for (const n of projectedLeads) {
         const p = n.proj;
         const pulse = Math.sin(time * 2 + n.pulse) * 0.3 + 0.7;
-        const radius = Math.max(1, n.r * p.scale * pulse);
+        const radius = Math.max(1.2, n.r * p.scale * pulse);
 
         // Outer Glow
         ctx.beginPath();
-        ctx.arc(p.x, p.y, radius * 2.8, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0, 229, 255, ${0.12 * p.scale})`;
+        ctx.arc(p.x, p.y, radius * 2.6, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(13, 148, 136, ${0.16 * p.scale})`;
         ctx.fill();
 
         // Core Point
         ctx.beginPath();
         ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = n.leadType === 'Prime Clinic' ? '#00E5FF' : n.leadType === 'Reach Doctor' ? '#2dd4bf' : '#38bdf8';
-        ctx.shadowColor = '#00E5FF';
-        ctx.shadowBlur = 8 * p.scale;
+        ctx.fillStyle = n.leadType === 'Prime Clinic' ? '#0d9488' : n.leadType === 'Reach Doctor' ? '#0284c7' : '#6366f1';
+        ctx.shadowColor = '#0d9488';
+        ctx.shadowBlur = 6 * p.scale;
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -200,12 +200,12 @@ function HealthcareAiStage({ mousePos }) {
       // Connect Medical Cross Beams
       const centerCross = projectedCross[0].proj;
       ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#00E5FF';
-      ctx.shadowBlur = 14;
+      ctx.shadowColor = '#0d9488';
+      ctx.shadowBlur = 10;
 
       for (let i = 1; i < projectedCross.length; i++) {
         const p = projectedCross[i].proj;
-        ctx.strokeStyle = 'rgba(0, 229, 255, 0.65)';
+        ctx.strokeStyle = 'rgba(13, 148, 136, 0.75)';
         ctx.beginPath();
         ctx.moveTo(centerCross.x, centerCross.y);
         ctx.lineTo(p.x, p.y);
@@ -220,15 +220,15 @@ function HealthcareAiStage({ mousePos }) {
         const r = c.size * p.scale * pulse;
 
         ctx.beginPath();
-        ctx.arc(p.x, p.y, r * 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 229, 255, 0.25)';
+        ctx.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(13, 148, 136, 0.2)';
         ctx.fill();
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = '#FFFFFF';
-        ctx.shadowColor = '#00E5FF';
-        ctx.shadowBlur = 16;
+        ctx.fillStyle = c.type === 'core' ? '#0f172a' : '#0d9488';
+        ctx.shadowColor = '#0d9488';
+        ctx.shadowBlur = 10;
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -237,14 +237,14 @@ function HealthcareAiStage({ mousePos }) {
       const scanPeriod = (time * 0.28) % 1;
       const scanY = h * scanPeriod;
       const scanGrad = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30);
-      scanGrad.addColorStop(0, 'rgba(0, 229, 255, 0)');
-      scanGrad.addColorStop(0.5, 'rgba(0, 229, 255, 0.22)');
-      scanGrad.addColorStop(1, 'rgba(0, 229, 255, 0)');
+      scanGrad.addColorStop(0, 'rgba(8, 145, 178, 0)');
+      scanGrad.addColorStop(0.5, 'rgba(8, 145, 178, 0.18)');
+      scanGrad.addColorStop(1, 'rgba(8, 145, 178, 0)');
       ctx.fillStyle = scanGrad;
       ctx.fillRect(0, scanY - 30, w, 60);
 
       ctx.beginPath();
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+      ctx.strokeStyle = 'rgba(8, 145, 178, 0.4)';
       ctx.lineWidth = 1.2;
       ctx.moveTo(0, scanY);
       ctx.lineTo(w, scanY);

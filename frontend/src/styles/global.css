@@ -1427,9 +1427,9 @@ label.field textarea:focus {
   margin: -0.25rem;
   border-radius: 16px;
   overflow: hidden;
-  background: #0f172a;
-  color: #e2e8f0;
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .pulse-side {
@@ -1437,13 +1437,14 @@ label.field textarea:focus {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: #0b1224;
-  border-right: 1px solid rgba(148, 163, 184, 0.12);
+  background: linear-gradient(180deg, #0b1320 0%, #0f172a 100%);
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+  color: #f8fafc;
 }
 
 .pulse-brand {
   padding: 1.1rem 1rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .pulse-brand strong {
@@ -1477,18 +1478,19 @@ label.field textarea:focus {
   color: #94a3b8;
   font-size: 0.9rem;
   font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .pulse-nav a:hover,
 .pulse-nav a.active {
-  background: rgba(0, 196, 159, 0.14);
-  color: #99f6e4;
+  background: rgba(13, 148, 136, 0.2);
+  color: #5eead4;
 }
 
 .pulse-side-foot {
   padding: 0.85rem 1rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.12);
-  color: #64748b;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
   font-size: 0.75rem;
 }
 
@@ -1497,18 +1499,21 @@ label.field textarea:focus {
   min-width: 0;
   padding: 1.25rem 1.35rem 1.75rem;
   overflow: auto;
+  background: #f8fafc;
+  color: #0f172a;
 }
 
 .pulse-page h1 {
   margin: 0;
-  color: #fff;
+  color: #0f172a;
   font-size: 1.55rem;
   letter-spacing: -0.03em;
+  font-family: var(--font-display);
 }
 
 .pulse-page h2 {
   margin: 0 0 0.75rem;
-  color: #fff;
+  color: #0f172a;
   font-size: 1.05rem;
 }
 
@@ -1527,7 +1532,7 @@ label.field textarea:focus {
 .pulse-card .muted,
 .pulse-table .muted {
   margin: 0.35rem 0 0;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.9rem;
 }
 
@@ -1540,23 +1545,27 @@ label.field textarea:focus {
 
 .pulse-kpi,
 .pulse-card {
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 14px;
   padding: 1rem;
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.04);
 }
 
 .pulse-kpi span {
   display: block;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .pulse-kpi strong {
   display: block;
   margin-top: 0.35rem;
   font-size: 1.8rem;
-  color: #5eead4;
+  color: #0d9488;
 }
 
 .pulse-grid-2 {
@@ -1569,17 +1578,17 @@ label.field textarea:focus {
   margin-top: 0.65rem;
   padding: 0.75rem;
   border-radius: 10px;
-  background: rgba(2, 6, 23, 0.45);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .pulse-product strong {
-  color: #7dd3fc;
+  color: #0284c7;
 }
 
 .pulse-product p {
   margin: 0.35rem 0 0;
-  color: #cbd5e1;
+  color: #475569;
   font-size: 0.88rem;
 }
 
@@ -1596,23 +1605,40 @@ label.field textarea:focus {
   border: 0;
   cursor: pointer;
   border-radius: 10px;
-  padding: 0.55rem 0.9rem;
+  padding: 0.55rem 0.95rem;
   font-weight: 700;
   font-size: 0.85rem;
-  background: #00c49f;
-  color: #042f2e;
+  background: #0d9488;
+  color: #ffffff;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(13, 148, 136, 0.2);
+}
+
+.pulse-btn:hover,
+.pulse-row-actions button:hover {
+  background: #0f766e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
 }
 
 .pulse-btn.ghost,
 .pulse-row-actions button {
-  background: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.pulse-btn.ghost:hover,
+.pulse-row-actions button:hover {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.25);
+  color: #0f172a;
 }
 
 .pulse-btn.navy,
 .pulse-row-actions button.navy {
-  background: #1a365d;
+  background: #0f172a;
   color: #fff;
   border: 0;
 }
@@ -1629,8 +1655,9 @@ label.field textarea:focus {
   margin-bottom: 0.85rem;
   padding: 0.9rem;
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.03);
 }
 
 .pulse-filters label,
@@ -1638,7 +1665,7 @@ label.field textarea:focus {
 .pulse-settings-grid label {
   display: grid;
   gap: 0.35rem;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1653,15 +1680,28 @@ label.field textarea:focus {
 .pulse-settings-grid input {
   width: 100%;
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(2, 6, 23, 0.55);
-  color: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: #f8fafc;
+  color: #0f172a;
   padding: 0.55rem 0.7rem;
   font: inherit;
   text-transform: none;
   letter-spacing: normal;
   font-weight: 500;
   font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+
+.pulse-filters select:focus,
+.pulse-filters input:focus,
+.pulse-card select:focus,
+.pulse-card textarea:focus,
+.pulse-card input:focus,
+.pulse-settings-grid input:focus {
+  outline: none;
+  border-color: #0d9488;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
 .pulse-specs {
@@ -1672,37 +1712,45 @@ label.field textarea:focus {
 }
 
 .pulse-specs button {
-  border: 0;
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
-  background: #1e293b;
-  color: #94a3b8;
+  background: #ffffff;
+  color: #64748b;
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pulse-specs button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .pulse-specs button.on {
-  background: rgba(0, 196, 159, 0.18);
-  color: #99f6e4;
-  box-shadow: inset 0 0 0 1px rgba(0, 196, 159, 0.35);
+  background: rgba(13, 148, 136, 0.12);
+  color: #0f766e;
+  border-color: rgba(13, 148, 136, 0.3);
 }
 
 .pulse-banner {
   margin: 0.75rem 0;
   padding: 0.75rem 0.9rem;
   border-radius: 12px;
-  background: rgba(0, 196, 159, 0.12);
-  border: 1px solid rgba(0, 196, 159, 0.25);
-  color: #ccfbf1;
+  background: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.2);
+  color: #0f766e;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .pulse-table-wrap {
   overflow: auto;
   border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.03);
 }
 
 .pulse-table {
@@ -1713,22 +1761,25 @@ label.field textarea:focus {
 
 .pulse-table th {
   text-align: left;
-  padding: 0.7rem 0.8rem;
-  color: #94a3b8;
+  padding: 0.75rem 0.85rem;
+  color: #475569;
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: rgba(2, 6, 23, 0.55);
+  letter-spacing: 0.05em;
+  background: #f8fafc;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .pulse-table td {
-  padding: 0.75rem 0.8rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  padding: 0.8rem 0.85rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
   vertical-align: top;
+  color: #1e293b;
 }
 
 .pulse-table .score {
-  color: #5eead4;
+  color: #0d9488;
   font-weight: 800;
 }
 
@@ -1738,22 +1789,25 @@ label.field textarea:focus {
   padding: 0.2rem 0.55rem;
   font-size: 0.72rem;
   font-weight: 800;
-  background: #1e293b;
+  background: #f1f5f9;
 }
 
 .pulse-fit.reach {
-  background: rgba(56, 189, 248, 0.15);
-  color: #7dd3fc;
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.2);
 }
 
 .pulse-fit.prime {
-  background: rgba(0, 196, 159, 0.15);
-  color: #5eead4;
+  background: rgba(13, 148, 136, 0.1);
+  color: #0d9488;
+  border: 1px solid rgba(13, 148, 136, 0.2);
 }
 
 .pulse-fit.hybrid {
-  background: rgba(129, 140, 248, 0.18);
-  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .pulse-row-actions {
@@ -1770,8 +1824,8 @@ label.field textarea:focus {
 .pulse-chip {
   border-radius: 999px;
   padding: 0.3rem 0.7rem;
-  background: #1e293b;
-  color: #cbd5e1;
+  background: #f1f5f9;
+  color: #334155;
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -1781,9 +1835,9 @@ label.field textarea:focus {
   margin: 0.75rem 0;
   padding: 0.85rem;
   border-radius: 12px;
-  background: rgba(2, 6, 23, 0.5);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  color: #cbd5e1;
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  color: #334155;
   white-space: pre-wrap;
   font-size: 0.9rem;
 }
@@ -1886,23 +1940,27 @@ label.field textarea:focus {
   letter-spacing: 0.04em;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: #1e293b;
-  color: #94a3b8;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .pulse-status-pill.ok {
-  background: rgba(45, 212, 191, 0.15);
-  color: #5eead4;
+  background: rgba(13, 148, 136, 0.1);
+  color: #0d9488;
+  border-color: rgba(13, 148, 136, 0.25);
 }
 
 .pulse-status-pill.idle {
-  background: rgba(148, 163, 184, 0.12);
-  color: #94a3b8;
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .pulse-status-pill.warn {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.25);
 }
 
 .pulse-motion-page {
@@ -1915,9 +1973,9 @@ label.field textarea:focus {
   inset: -1rem -1rem auto;
   height: 220px;
   background:
-    radial-gradient(ellipse 60% 80% at 20% 40%, rgba(45, 212, 191, 0.18), transparent 70%),
-    radial-gradient(ellipse 50% 70% at 80% 30%, rgba(56, 189, 248, 0.14), transparent 70%),
-    radial-gradient(ellipse 40% 60% at 50% 90%, rgba(251, 191, 36, 0.08), transparent 70%);
+    radial-gradient(ellipse 60% 80% at 20% 40%, rgba(13, 148, 136, 0.08), transparent 70%),
+    radial-gradient(ellipse 50% 70% at 80% 30%, rgba(2, 132, 199, 0.06), transparent 70%),
+    radial-gradient(ellipse 40% 60% at 50% 90%, rgba(245, 158, 11, 0.04), transparent 70%);
   animation: pulse-orb-drift 12s ease-in-out infinite alternate;
   z-index: 0;
 }
@@ -1928,7 +1986,7 @@ label.field textarea:focus {
 }
 
 .pulse-motion-rise {
-  animation: pulse-rise-in 0.7s ease-out both;
+  animation: pulse-rise-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .pulse-motion-rise.delay-1 {
@@ -1936,37 +1994,41 @@ label.field textarea:focus {
 }
 
 .pulse-motion-kpi {
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-  border: 1px solid transparent;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
 }
 
 .pulse-motion-kpi:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.08);
 }
 
 .pulse-motion-kpi.tone-teal {
-  border-color: rgba(45, 212, 191, 0.25);
-  background: linear-gradient(145deg, rgba(45, 212, 191, 0.12), rgba(15, 23, 42, 0.4));
+  border-color: rgba(13, 148, 136, 0.25);
+  background: #ffffff;
 }
 
 .pulse-motion-kpi.tone-blue {
-  border-color: rgba(56, 189, 248, 0.25);
-  background: linear-gradient(145deg, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.4));
+  border-color: rgba(2, 132, 199, 0.25);
+  background: #ffffff;
 }
 
 .pulse-motion-kpi.tone-amber {
-  border-color: rgba(251, 191, 36, 0.25);
-  background: linear-gradient(145deg, rgba(251, 191, 36, 0.1), rgba(15, 23, 42, 0.4));
+  border-color: rgba(245, 158, 11, 0.25);
+  background: #ffffff;
 }
 
 .pulse-feature-card {
   transition: transform 0.28s ease, border-color 0.28s ease;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .pulse-feature-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(45, 212, 191, 0.35);
+  border-color: rgba(13, 148, 136, 0.35);
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.06);
 }
 
 @keyframes pulse-rise-in {
@@ -2016,9 +2078,9 @@ label.field textarea:focus {
   flex: 1;
   width: 100%;
   min-height: calc(100vh - 11rem);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 12px;
-  background: #0b1220;
+  background: #ffffff;
 }
 
 .pulse-admin-form {
@@ -2032,17 +2094,37 @@ label.field textarea:focus {
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.82rem;
-  color: #94a3b8;
+  color: #64748b;
+  font-weight: 600;
 }
 
 .pulse-admin-form input,
 .pulse-admin-form select {
-  background: #0b1220;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.14);
   border-radius: 10px;
-  color: #e2e8f0;
+  color: #0f172a;
   padding: 0.55rem 0.7rem;
   font: inherit;
+}
+
+.pulse-key-label {
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.pulse-key-label code {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #0d9488;
+  margin-left: 0.35rem;
+}
+
+.pulse-key-purpose {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #64748b;
 }
 
 .pulse-check {

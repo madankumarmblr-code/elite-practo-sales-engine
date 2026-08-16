@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { animate, stagger, inView } from 'motion';
 
 /**
  * 8K Cinematic 3D Healthcare Sales AI Data Stage
@@ -296,7 +297,29 @@ export default function Login() {
   const mousePos = useRef({ x: 0.5, y: 0.5 });
   const cardRef = useRef(null);
   const buttonRef = useRef(null);
+  const heroRef = useRef(null);
   const [btnMagnet, setBtnMagnet] = useState({ x: 0, y: 0 });
+
+  // Motion entrance animations on mount
+  useEffect(() => {
+    // Hero left column — staggered slide-up
+    if (heroRef.current) {
+      const els = heroRef.current.querySelectorAll('.px-motion-item');
+      animate(
+        els,
+        { opacity: [0, 1], y: [32, 0] },
+        { duration: 0.7, delay: stagger(0.12), easing: [0.22, 1, 0.36, 1] }
+      );
+    }
+    // Glass card — fade + scale in
+    if (cardRef.current) {
+      animate(
+        cardRef.current,
+        { opacity: [0, 1], scale: [0.96, 1], y: [24, 0] },
+        { duration: 0.75, delay: 0.25, easing: [0.22, 1, 0.36, 1] }
+      );
+    }
+  }, []);
 
   const handleMouseMove = useCallback((e) => {
     const x = e.clientX / window.innerWidth;
@@ -334,22 +357,25 @@ export default function Login() {
     setAuthenticating(true);
     setError('');
 
+    // Motion: button pulse on submit
+    if (buttonRef.current) {
+      animate(buttonRef.current, { scale: [1, 0.97, 1] }, { duration: 0.25, easing: 'ease-in-out' });
+    }
+
     try {
       await login({ login: form.login, password: form.password });
-      // Brief cinematic verification delay for scan animation
       setTimeout(() => {
         navigate('/pulse');
       }, 550);
     } catch (err) {
       setError(err.message || 'Authentication failed. Please verify credentials.');
+      // Motion: shake on error
+      if (cardRef.current) {
+        animate(cardRef.current, { x: [0, -10, 10, -6, 6, 0] }, { duration: 0.45, easing: 'ease-in-out' });
+      }
       setAuthenticating(false);
       setBusy(false);
     }
-  }
-
-  function handleFillDemo() {
-    setForm({ login: 'superadmin', password: 'SuperAdmin@123' });
-    setError('');
   }
 
   return (
@@ -358,24 +384,24 @@ export default function Login() {
 
       <div className="px-login-split-60-40">
         {/* Left Side (Visual Story - 60%) */}
-        <section className="px-login-hero">
-          <div className="px-brand-badge">
+        <section className="px-login-hero" ref={heroRef}>
+          <div className="px-brand-badge px-motion-item">
             <span className="px-badge-dot" />
             <span>Practo Healthcare AI · Autonomous Sales Intelligence</span>
           </div>
 
-          <h1 className="px-hero-title">
+          <h1 className="px-hero-title px-motion-item">
             Predictive Healthcare <br />
             <span className="px-title-gradient">Sales Intelligence</span>
           </h1>
 
-          <p className="px-hero-lede">
-            Bridging clinical trust with hyper-advanced predictive AI. Discover authentic doctors, 
+          <p className="px-hero-lede px-motion-item">
+            Bridging clinical trust with hyper-advanced predictive AI. Discover authentic doctors,
             automate Reach &amp; Prime conversion, and dispatch turn-by-turn AI Voice calls with WhatsApp &amp; Cold Email outreach.
           </p>
 
           {/* Live Healthcare Graph Telemetry Cards */}
-          <div className="px-telemetry-grid">
+          <div className="px-telemetry-grid px-motion-item">
             <div className="px-telemetry-card">
               <span className="px-telemetry-label">Doctor Graph</span>
               <strong className="px-telemetry-val">99.4% Match</strong>
@@ -413,15 +439,7 @@ export default function Login() {
               <p>Enter your sales workspace credentials to initialize AI session</p>
             </div>
 
-            {/* Quick Demo Fill Shortcut Pill */}
-            <button
-              type="button"
-              className="px-demo-shortcut-btn"
-              onClick={handleFillDemo}
-              title="Click to auto-fill Superadmin credentials"
-            >
-              <span>⚡ Quick Demo:</span> <code>superadmin</code> / <code>SuperAdmin@123</code>
-            </button>
+            {/* Quick Demo Fill Shortcut Pill — REMOVED */}
 
             {/* User ID / Email Field with Floating Label & Cyan Border */}
             <div className={`px-float-group ${focusedField === 'login' || form.login ? 'is-active' : ''}`}>

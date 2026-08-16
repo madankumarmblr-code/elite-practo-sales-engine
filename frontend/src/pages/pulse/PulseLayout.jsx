@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
+import { animate } from 'motion';
 
 const navSections = [
   {
@@ -37,17 +38,29 @@ export default function PulseLayout() {
   const { user, logout, can } = useAuth();
   const toast = useToast();
   const isSuper = can('users:write') || user?.role === 'superadmin';
+  const location = useLocation();
+  const mainRef = useRef(null);
 
-  // Theme management: 'dark' | 'light'
-  const [theme, setTheme] = useState(() => localStorage.getItem('practo_theme') || 'dark');
   const [notifications, setNotifications] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
+  // Lock theme permanently to light
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('practo_theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.removeItem('practo_theme');
+  }, []);
+
+  // Motion: page transition on route change
+  useEffect(() => {
+    if (mainRef.current) {
+      animate(
+        mainRef.current,
+        { opacity: [0, 1], y: [14, 0] },
+        { duration: 0.38, easing: [0.22, 1, 0.36, 1] }
+      );
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     loadNotifications();
@@ -86,9 +99,6 @@ export default function PulseLayout() {
     }
   }
 
-  function toggleTheme() {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  }
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -176,9 +186,9 @@ export default function PulseLayout() {
         </div>
       </aside>
 
-      {/* Main Content Area with Header Control Bar */}
+      {/* Main Content Area */}
       <div className="pulse-main px-main" style={{ display: 'flex', flexDirection: 'column' }}>
-        {/* Top Control Bar with Theme Switcher and Notifications Bell */}
+        {/* Top Control Bar — Notifications Bell */}
         <header
           className="pulse-topbar"
           style={{
@@ -186,9 +196,9 @@ export default function PulseLayout() {
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '10px 24px',
-            background: 'var(--card-bg, rgba(15, 23, 42, 0.7))',
-            backdropFilter: 'blur(10px)',
-            borderBottom: '1px solid var(--border-subtle, rgba(148, 163, 184, 0.12))',
+            background: 'rgba(255, 255, 255, 0.88)',
+            backdropFilter: 'blur(16px)',
+            borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
             position: 'sticky',
             top: 0,
             zIndex: 90,
@@ -204,23 +214,6 @@ export default function PulseLayout() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Theme Toggle Button */}
-            <button
-              type="button"
-              className="pulse-btn ghost"
-              onClick={toggleTheme}
-              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-              style={{
-                padding: '0.4rem 0.75rem',
-                fontSize: '0.85rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                borderRadius: 8,
-              }}
-            >
-              {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
-            </button>
 
             {/* Notifications Bell Dropdown */}
             <div style={{ position: 'relative' }} ref={notifRef}>
@@ -342,8 +335,8 @@ export default function PulseLayout() {
           </div>
         </header>
 
-        {/* Page Content */}
-        <div style={{ flex: 1 }}>
+        {/* Page Content — Motion animates opacity+y on route change */}
+        <div ref={mainRef} style={{ flex: 1 }}>
           <Outlet />
         </div>
       </div>

@@ -40,18 +40,15 @@ function MotionKpi({ label, value, tone, hint }) {
 export default function PulseDashboard() {
   const [leads, setLeads] = useState([]);
   const [status, setStatus] = useState(null);
-  const [settings, setSettings] = useState(null);
 
   useEffect(() => {
     api.pulseLeads().then((d) => setLeads(d.leads || [])).catch(() => setLeads([]));
     api.pulseStatus().then(setStatus).catch(() => setStatus(null));
-    api.pulseSettings().then((d) => setSettings(d.settings || {})).catch(() => setSettings(null));
   }, []);
 
   const reach = leads.filter((l) => l.recommendedProduct !== 'PRIME').length;
   const prime = leads.filter((l) => l.recommendedProduct !== 'REACH').length;
   const demos = leads.filter((l) => l.status === 'DEMO_SCHEDULED').length;
-  const n8nUrl = settings?.N8N_WEBHOOK_URL || '';
 
   return (
     <div className="pulse-page pulse-motion-page px-dash">

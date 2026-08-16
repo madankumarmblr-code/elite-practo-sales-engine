@@ -24,11 +24,6 @@ const ESSENTIAL_API_GROUPS = [
         label: 'OpenAI / Gemini API Key',
         purpose: 'Alternate LLM for fallback pitch generation and rapid qualification classification.',
       },
-      {
-        key: 'GAMMA_API_KEY',
-        label: 'Gamma Presentation API Key',
-        purpose: 'Auto-generates proposal decks and clinic pitch slides.',
-      },
     ],
   },
   {

@@ -7,9 +7,6 @@ import SuperAdmin from './pages/SuperAdmin';
 import PulseLayout from './pages/pulse/PulseLayout';
 import PulseDashboard from './pages/pulse/PulseDashboard';
 import PulseLeads from './pages/pulse/PulseLeads';
-import PulseOutreach from './pages/pulse/PulseOutreach';
-import PulsePitch from './pages/pulse/PulsePitch';
-import PulseMeetings from './pages/pulse/PulseMeetings';
 import PulseSettings from './pages/pulse/PulseSettings';
 import PulseStatus from './pages/pulse/PulseStatus';
 import PulseAutopilot from './pages/pulse/PulseAutopilot';
@@ -46,9 +43,6 @@ export default function App() {
               <Route path="calls" element={<PulseCalls />} />
               <Route path="whatsapp" element={<PulseWhatsApp />} />
               <Route path="email" element={<PulseEmail />} />
-              <Route path="outreach" element={<PulseOutreach />} />
-              <Route path="pitch" element={<PulsePitch />} />
-              <Route path="meetings" element={<PulseMeetings />} />
               <Route path="commercial" element={<CommercialSuite />} />
               <Route path="settings" element={<PulseSettings />} />
               <Route path="status" element={<PulseStatus />} />
@@ -65,4 +59,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

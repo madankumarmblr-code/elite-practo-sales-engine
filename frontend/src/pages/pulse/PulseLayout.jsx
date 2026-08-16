@@ -21,8 +21,6 @@ const navSections = [
       { to: '/pulse/calls', label: '📞 Autopilot Calls' },
       { to: '/pulse/whatsapp', label: '💬 Autopilot WhatsApp' },
       { to: '/pulse/email', label: '✉️ Autopilot Email' },
-      { to: '/pulse/pitch', label: '🎯 Pitch Studio' },
-      { to: '/pulse/meetings', label: '📅 Meetings & Demo' },
     ],
   },
   {

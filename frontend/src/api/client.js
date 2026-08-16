@@ -130,16 +130,6 @@ export const api = {
   pulseTestChannel: (body) =>
     request('/api/pulse/channels/test', { method: 'POST', body: JSON.stringify(body) }),
   pulseTestAllChannels: () => request('/api/pulse/channels/test-all', { method: 'POST' }),
-  pulsePitch: (body) =>
-    request('/api/pulse/pitch', { method: 'POST', body: JSON.stringify(body) }),
-  pulseSmartlead: (body) =>
-    request('/api/pulse/smartlead', { method: 'POST', body: JSON.stringify(body) }),
-  pulseDemo: (body) =>
-    request('/api/pulse/demo', { method: 'POST', body: JSON.stringify(body) }),
-
-  pulseFireflies: (body) =>
-    request('/api/pulse/fireflies', { method: 'POST', body: JSON.stringify(body) }),
-
   pulsePresets: () => request('/api/pulse/presets'),
   validateLeads: (leads) =>
     request('/api/pulse/validate', { method: 'POST', body: JSON.stringify({ leads }) }),

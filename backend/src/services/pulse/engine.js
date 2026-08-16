@@ -32,7 +32,6 @@ export const DEFAULT_PULSE_SETTINGS = {
   SMARTLEAD_API_KEY: '',
   ANTHROPIC_API_KEY: '',
   OPENAI_API_KEY: '',
-  GAMMA_API_KEY: '',
   ELEVENLABS_API_KEY: '',
   GOOGLE_MAPS_API_KEY: '',
   AUTOPILOT_WEBHOOK_URL: '',
@@ -295,14 +294,9 @@ export function generatePitch(lead, channel = 'whatsapp') {
         ? `Hello, Dr. ${lead.doctorName}? This is Priya calling from Practo Healthcare. I noticed ${lead.clinicName} in ${lead.locality} is getting strong local patient interest. ${lead.pitchHook || ''} I wanted to share how Practo ${product} can help you manage and scale patient consultations seamlessly.`
         : `Hi ${lead.doctorName}, quick note from Practo for ${lead.clinicName} (${lead.locality}). ${lead.pitchHook || ''} Can I share a 1-pager on ${product}?`;
 
-  const pitchDeckUrl = `https://gamma.app/docs/practopulse-${lead.city}-${lead.specialty}-${lead.id}`
-    .toLowerCase()
-    .replace(/\s+/g, '-');
-
   return {
-    pitchDeckUrl,
     script,
-    message: `Simulated Gamma deck + ElevenLabs voice note + Claude ${channel} script for ${lead.clinicName}`,
+    message: `Pitch ${channel} script generated for ${lead.clinicName}`,
   };
 }
 
@@ -640,7 +634,6 @@ export function getWebhookConfig() {
 export function updateWebhookConfig(patch = {}) {
 
   const allowed = [
-    'N8N_WEBHOOK_URL',
     'AUTOPILOT_WEBHOOK_URL',
     'SLACK_WEBHOOK_URL',
     'CUSTOM_WEBHOOK_URL',
@@ -777,7 +770,7 @@ export async function pushToAutopilot({ leads = [], level, channels = {} } = {})
       payload,
       settings.WEBHOOK_SECRET
     ),
-    n8n: await postWebhook(settings.N8N_WEBHOOK_URL, payload, settings.WEBHOOK_SECRET),
+
     slack: await postWebhook(
       settings.SLACK_WEBHOOK_URL,
       {
@@ -825,7 +818,7 @@ export async function testWebhooks() {
       payload,
       settings.WEBHOOK_SECRET
     ),
-    n8n: await postWebhook(settings.N8N_WEBHOOK_URL, payload, settings.WEBHOOK_SECRET),
+
     slack: await postWebhook(
       settings.SLACK_WEBHOOK_URL,
       { text: 'PractoPulse webhook test OK' },
@@ -1148,7 +1141,6 @@ export function exportMasterLeads() {
       leadScore: l.score || classified.leadScore,
       recommendedProduct: classified.recommendedProduct,
       pitchHook: classified.pitchHook,
-      pitchDeckUrl: `https://gamma.app/docs/practopulse-${l.id}`,
       validationStatus: l.phone ? 'VALID' : 'NEEDS_REVIEW',
       authenticityScore: l.phone && l.email ? 95 : l.phone ? 80 : 45,
       callStatus: call?.status || 'NOT_CALLED',

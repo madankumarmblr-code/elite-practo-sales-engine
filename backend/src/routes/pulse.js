@@ -343,44 +343,11 @@ export function registerPulseRoutes(app) {
     }
   });
 
+
   app.post('/api/pulse/pitch', (req, res) => {
     const lead = req.body?.lead;
     if (!lead?.id) return res.status(400).json({ error: 'lead is required' });
     res.json(generatePitch(lead, req.body?.channel || 'whatsapp'));
-  });
-
-  app.post('/api/pulse/smartlead', (req, res) => {
-    const leads = req.body?.leads || [];
-    const product = req.body?.product === 'REACH' ? 'REACH' : 'PRIME';
-    res.json({
-      campaignId: `sl_${product.toLowerCase()}_${Date.now()}`,
-      queued: leads.length,
-      message: `Simulated Smartlead ${product} sequence for ${leads.length} lead(s)`,
-    });
-  });
-
-  app.post('/api/pulse/demo', (req, res) => {
-    const title = req.body?.title || 'Practo demo';
-    const startIso = req.body?.startIso || new Date(Date.now() + 86400000).toISOString();
-    res.json({
-      eventId: `gcal_${Date.now()}`,
-      htmlLink: 'https://calendar.google.com/',
-      message: `Simulated GCal hold: ${title} @ ${startIso}`,
-      status: 'DEMO_SCHEDULED',
-    });
-  });
-
-  app.post('/api/pulse/fireflies', (req, res) => {
-    const leadId = req.body?.leadId || 'unknown';
-    res.json({
-      summary: `Simulated Fireflies summary for ${leadId}: prospect interested in ROI on missed calls; asked for locality inventory.`,
-      actionItems: [
-        'Send Commercial Proposal Suite 1-pager',
-        'Confirm decision-maker availability',
-        'Schedule follow-up demo',
-      ],
-      message: 'Fireflies summary attached',
-    });
   });
 
   app.get('/api/pulse/autopilot', (_req, res) => {

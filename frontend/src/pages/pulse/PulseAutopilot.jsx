@@ -70,8 +70,8 @@ export default function PulseAutopilot() {
         <div>
           <h1>AI Autopilot</h1>
           <p>
-            WhatsApp Autopilot messages, AI call recordings / transcripts, and push queue. Configure
-            webhooks in Settings so n8n / Slack receive every push.
+            Manage the full outreach pipeline — WhatsApp pitches, AI voice call recordings &amp;
+            transcripts, and cold email drips. Configure webhook endpoints in Platform Settings.
           </p>
         </div>
         <Link className="pulse-btn" to="/pulse/leads">

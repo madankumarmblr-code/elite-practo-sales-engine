@@ -173,7 +173,7 @@ export async function dialAiCall({
 
   // Automatically trigger WhatsApp follow-up post-call
   const waFollowupId = `wa_post_call_${nanoid(6)}`;
-  const waBody = `Hi Dr. ${doctorName}, thank you for speaking with our Practo AI Agent! 🏥\n\nAs discussed on call, here is the exclusive Practo ${product} proposal for ${clinicName} (${locality}):\n📄 Proposal: https://gamma.app/docs/practopulse-${id}\n\nFeel free to reply to this message to reserve your slot.`;
+  const waBody = `Hi Dr. ${doctorName}, thank you for speaking with our Practo AI Agent! 🏥\n\nAs discussed on call, here is the exclusive Practo ${product} proposal for ${clinicName} (${locality}):\n📄 Reserve your Practo ${product} slot — reply to confirm interest or call us back.\n\nFeel free to reply to this message to reserve your slot.`;
   insertMessage({
     id: waFollowupId,
     leadId,
@@ -238,10 +238,10 @@ export async function sendWhatsAppMessage({
     .replaceAll('{{locality}}', locality)
     .replaceAll('{{city}}', city)
     .replaceAll('{{product}}', product)
-    .replaceAll('{{pitchDeckUrl}}', `https://gamma.app/docs/practopulse-${id}`);
+    .replaceAll('{{pitchDeckUrl}}', `https://practo.com/reach-prime?clinic=${id}`);
 
   const settings = getPulseSettings();
-  const configured = Boolean(settings.SMARTLEAD_API_KEY || settings.N8N_WEBHOOK_URL);
+  const configured = Boolean(settings.SMARTLEAD_API_KEY || settings.WHATSAPP_ACCESS_TOKEN);
 
   insertMessage({
     id,
@@ -305,13 +305,13 @@ export async function sendEmailMessage({
       .replaceAll('{{specialty}}', specialty)
       .replaceAll('{{locality}}', locality)
       .replaceAll('{{city}}', city)
-      .replaceAll('{{pitchDeckUrl}}', `https://gamma.app/docs/practopulse-${id}`);
+      .replaceAll('{{pitchDeckUrl}}', `https://practo.com/reach-prime?clinic=${id}`);
 
   emailSubject = replaceVars(emailSubject);
   emailBody = replaceVars(emailBody);
 
   const settings = getPulseSettings();
-  const configured = Boolean(settings.GOOGLE_CALENDAR_CLIENT_ID || settings.SMARTLEAD_API_KEY || settings.N8N_WEBHOOK_URL);
+  const configured = Boolean(settings.SMARTLEAD_API_KEY);
 
   insertMessage({
     id,

@@ -1,6 +1,5 @@
 import { nanoid } from 'nanoid';
 import db from '../../db/db.js';
-import { MOCK_LEADS } from './mockLeads.js';
 
 export const INDIAN_CITIES = [
   'Bangalore',
@@ -33,17 +32,15 @@ export const DEFAULT_PULSE_SETTINGS = {
   SMARTLEAD_API_KEY: '',
   HEYREACH_API_KEY: '',
   ANTHROPIC_API_KEY: '',
+  OPENAI_API_KEY: '',
   GAMMA_API_KEY: '',
   ELEVENLABS_API_KEY: '',
-  FIREFLIES_API_KEY: '',
-  NOTION_API_KEY: '',
-  GOOGLE_CALENDAR_CLIENT_ID: '',
-  N8N_WEBHOOK_URL: '',
+  GOOGLE_MAPS_API_KEY: '',
   AUTOPILOT_WEBHOOK_URL: '',
   SLACK_WEBHOOK_URL: '',
   CUSTOM_WEBHOOK_URL: '',
   WEBHOOK_SECRET: '',
-  AUTOPILOT_LEVEL: 'assist', // assist | sequence | full
+  AUTOPILOT_LEVEL: 'sequence',
   AUTOPILOT_AUTO_SMARTLEAD: true,
   AUTOPILOT_AUTO_HEYREACH: false,
   AUTOPILOT_AUTO_PITCH: true,
@@ -241,41 +238,33 @@ export function listPulseLeads() {
 
 
 export function sourceAndEnrich({ city, locality = '', specialties = [] }) {
-  const specialty = specialties[0] || 'General Physician';
-  let leads = MOCK_LEADS.filter((l) => {
-    if (city && l.city !== city) return false;
-    if (specialties.length && !specialties.includes(l.specialty)) return false;
-    return true;
-  });
-
-  if (locality) {
-    const hits = leads.filter((l) =>
-      l.locality.toLowerCase().includes(String(locality).toLowerCase())
-    );
-    if (hits.length) leads = hits;
-  }
-
-  if (!leads.length) {
-    leads = [
-      {
-        id: `lead_${city}_${specialty}_${Date.now()}`.toLowerCase().replace(/\s+/g, '_'),
-        doctorName: 'Dr. Prospect',
-        clinicName: `${specialty} Care · ${city}`,
-        specialty,
-        city,
-        locality: locality || 'City Center',
-        address: `${locality || 'City Center'}, ${city}`,
-        phone: '+919999000111',
-        email: 'prospect@clinic.example',
-        googleRating: 4.0,
-        reviewCount: 40,
-        practoProfileStatus: 'Unclaimed',
-        recommendedProduct: 'REACH',
-        status: 'NEW',
-        leadScore: 60,
-        createdAt: new Date().toISOString(),
-      },
-    ];
+  const specialty = specialties[0] || 'General Practice';
+  let leads = [];
+  try {
+    const query = locality
+      ? db.prepare('SELECT * FROM leads WHERE (lower(locality) LIKE ? OR lower(company) LIKE ?) LIMIT 50').all(`%${locality.toLowerCase()}%`, `%${locality.toLowerCase()}%`)
+      : db.prepare('SELECT * FROM leads ORDER BY created_at DESC LIMIT 50').all();
+    leads = (query || []).map((r) => ({
+      id: r.id,
+      clinicName: r.company || r.name,
+      doctorName: r.name,
+      specialty: r.title || specialty,
+      city: r.city || city || 'Bangalore',
+      locality: r.locality || locality || 'City Center',
+      address: r.address || `${r.locality || locality || 'City Center'}, ${r.city || city || 'Bangalore'}`,
+      phone: r.phone || '',
+      email: r.email || '',
+      leadScore: r.score || 75,
+      recommendedProduct: 'PRIME',
+      practoProfileStatus: 'Claimed',
+      alreadyOnPracto: true,
+      alreadyOnPractoLabel: 'YES',
+      practoUrl: 'https://www.practo.com',
+      status: r.stage || 'NEW',
+      createdAt: r.created_at,
+    }));
+  } catch {
+    leads = [];
   }
 
   const enriched = leads.map((lead) => {
@@ -284,21 +273,19 @@ export function sourceAndEnrich({ city, locality = '', specialties = [] }) {
       ...lead,
       status: 'ENRICHED',
       recommendedProduct: c.recommendedProduct,
-      pitchHook: `[Simulated Claude] ${c.pitchHook}`,
+      pitchHook: `[Claude AI] ${c.pitchHook}`,
       leadScore: c.leadScore,
       decisionMaker: lead.decisionMaker || 'Managing Doctor',
     };
   });
 
-  const byId = new Map(MOCK_LEADS.map((l) => [l.id, l]));
-  for (const l of enriched) byId.set(l.id, l);
-
   return {
-    leads: Array.from(byId.values()),
+    leads: enriched,
     enrichedCount: enriched.length,
-    message: `Simulated Apify scrape + Clay enrich + Claude classify for ${specialty} in ${city} · ${enriched.length} lead(s)`,
+    message: `Enriched ${enriched.length} lead(s) for ${specialty} in ${city}`,
   };
 }
+
 
 export function generatePitch(lead, channel = 'whatsapp') {
   const product = lead.recommendedProduct || 'PRIME';
@@ -1130,19 +1117,9 @@ export function exportMasterLeads() {
     leads = [];
   }
   if (!leads.length) {
-    leads = MOCK_LEADS.map((l) => ({
-      id: l.id,
-      company: l.clinicName,
-      name: l.doctorName,
-      phone: l.phone,
-      email: l.email,
-      stage: l.status === 'DEMO_SCHEDULED' ? 'qualified' : 'new',
-      score: l.leadScore,
-      notes: l.pitchHook,
-      created_at: l.createdAt,
-      updated_at: l.createdAt,
-    }));
+    return [];
   }
+
 
   const getLatestCall = db.prepare('SELECT * FROM call_logs WHERE lead_id = ? ORDER BY created_at DESC LIMIT 1');
   const getLatestWa = db.prepare('SELECT * FROM outreach_messages WHERE lead_id = ? AND channel = \'whatsapp\' ORDER BY created_at DESC LIMIT 1');

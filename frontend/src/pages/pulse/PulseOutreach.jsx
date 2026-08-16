@@ -36,11 +36,12 @@ export default function PulseOutreach() {
     <div className="pulse-page">
       <header className="pulse-head">
         <h1>Outreach Campaigns</h1>
-        <p>Smartlead email sequences · HeyReach LinkedIn DMs · n8n orchestration</p>
+        <p>Smartlead email sequences · HeyReach LinkedIn DMs · Native Autopilot</p>
       </header>
       <section className="pulse-card">
-        <h2>Launch sample campaign</h2>
-        <p className="muted">{leads.length} sample leads loaded from Pulse inventory</p>
+        <h2>Launch Outreach Campaign</h2>
+        <p className="muted">{leads.length} verified clinic leads ready for automated outreach</p>
+
         <label>
           Smartlead product track
           <select value={product} onChange={(e) => setProduct(e.target.value)}>

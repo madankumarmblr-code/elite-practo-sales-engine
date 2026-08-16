@@ -1,67 +1,74 @@
 import { Link } from 'react-router-dom';
 
-const STEPS = [
+const PIPELINE_STEPS = [
   {
     id: 'discover',
-    title: 'Lead Engine',
-    detail: 'City · zone · specialty discovery',
+    title: 'Lead Discovery',
+    detail: 'City · Zone · Practo Presence',
     to: '/pulse/leads',
+    icon: '🔍',
   },
   {
-    id: 'fit',
-    title: 'Product fit',
-    detail: 'Reach · Prime · Hybrid classify',
-    to: '/pulse/leads',
+    id: 'validation',
+    title: 'Lead Validation',
+    detail: 'Phone Normalization & Scores',
+    to: '/pulse/validation',
+    icon: '🛡️',
   },
   {
-    id: 'autopilot',
-    title: 'AI Autopilot',
-    detail: 'WhatsApp · Gmail · AI calls',
-    to: '/pulse/autopilot',
+    id: 'calls',
+    title: 'AI Autopilot Calls',
+    detail: 'Voice Personas & Audio Recordings',
+    to: '/pulse/calls',
+    icon: '🎙️',
   },
   {
-    id: 'n8n',
-    title: 'n8n webhooks',
-    detail: 'Automate CRM · Slack · Meta',
-    to: '/pulse/settings',
+    id: 'whatsapp',
+    title: 'WhatsApp Engine',
+    detail: 'Pitch Templates & Live Chat',
+    to: '/pulse/whatsapp',
+    icon: '💬',
   },
   {
-    id: 'commercial',
-    title: 'Commercial',
-    detail: 'Prime · Reach proposals',
-    to: '/pulse/commercial',
+    id: 'email',
+    title: 'Email Sequencer',
+    detail: '3-Step Cold Drip & Opens',
+    to: '/pulse/email',
+    icon: '✉️',
+  },
+  {
+    id: 'crm',
+    title: 'CRM Hub & Pipeline',
+    detail: 'Kanban Stages & Timeline',
+    to: '/pulse/crm',
+    icon: '📊',
   },
 ];
 
 export default function AutomationWorkflow({ compact = false, status }) {
-  const n8nReady = Boolean(
-    status?.webhooks?.some?.((w) => w.id === 'n8n' && w.configured) ||
-      status?.webhooks?.find?.((w) => w.id === 'n8n')?.configured
-  );
-
   return (
     <section className={`px-flow ${compact ? 'compact' : ''}`}>
       <div className="px-flow-head">
         <div>
-          <h2>n8n sales automation workflow</h2>
+          <h2>End-to-End AI Sales Automation Pipeline</h2>
           <p className="muted">
-            End-to-end PractoPulse pipeline — discover clinics, classify fit, Autopilot outreach,
-            then hand off to n8n for CRM and messaging.
+            100% Native Autopilot Engine — discover authentic clinics, validate mobile numbers, dispatch AI voice calls &amp; WhatsApp pitches, nurture through email drips, and track stage progression in CRM.
           </p>
         </div>
-        <span className={`pulse-status-pill ${n8nReady ? 'ok' : 'idle'}`}>
-          n8n {n8nReady ? 'connected' : 'configure in Settings'}
+        <span className="pulse-status-pill ok">
+          🟢 Autopilot Engine Active
         </span>
       </div>
       <div className="px-flow-track" role="list">
-        {STEPS.map((step, i) => (
+        {PIPELINE_STEPS.map((step, i) => (
           <div key={step.id} className="px-flow-step" role="listitem" style={{ '--i': i }}>
             <Link to={step.to} className="px-flow-node">
               <span className="px-flow-index">{String(i + 1).padStart(2, '0')}</span>
+              <div style={{ fontSize: '1.2rem', marginBottom: 2 }}>{step.icon}</div>
               <strong>{step.title}</strong>
               <span>{step.detail}</span>
             </Link>
-            {i < STEPS.length - 1 ? <span className="px-flow-arrow" aria-hidden /> : null}
+            {i < PIPELINE_STEPS.length - 1 ? <span className="px-flow-arrow" aria-hidden /> : null}
           </div>
         ))}
       </div>

@@ -139,13 +139,13 @@ export default function Login() {
           <p className="px-login-eyebrow">Healthcare sales automation</p>
           <h1 className="px-login-title">PractoPulse</h1>
           <p className="px-login-lede">
-            Discover authentic clinics, classify Reach &amp; Prime fit, and push WhatsApp, Gmail,
-            and AI calls through n8n Autopilot — built for Practo inside sales.
+            Discover authentic clinics, classify Reach &amp; Prime fit, and dispatch WhatsApp pitches, Cold Email drips,
+            and AI Voice calls through Native Autopilot — built for Practo inside sales.
           </p>
           <ul className="px-login-points">
-            <li>Lead Engine · Practo.com discovery</li>
-            <li>AI Autopilot · messages &amp; call logs</li>
-            <li>Commercial Suite · live inventory</li>
+            <li>Lead Discovery · Practo.com + Maps</li>
+            <li>AI Autopilot · Calls, WhatsApp &amp; Email</li>
+            <li>CRM Hub &amp; Commercial Suite</li>
           </ul>
         </section>
 
@@ -184,8 +184,9 @@ export default function Login() {
           <button type="submit" className="px-login-submit" disabled={busy}>
             {busy ? 'Signing in…' : 'Enter PractoPulse'}
           </button>
-          <p className="px-login-foot">Reach · Prime · n8n Autopilot</p>
+          <p className="px-login-foot">Reach · Prime · Native AI Autopilot</p>
         </form>
+
       </div>
     </div>
   );

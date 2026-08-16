@@ -5,7 +5,9 @@ import {
   generatePitch,
   enrichDiscoveryResults,
   getServerStatus,
+  pingAllServicesAndApis,
   getPulseSettings,
+
   savePulseSettings,
   getWebhookConfig,
   updateWebhookConfig,
@@ -78,6 +80,16 @@ export function registerPulseRoutes(app) {
   app.get('/api/pulse/status', (_req, res) => {
     res.json(getServerStatus());
   });
+
+  app.all('/api/pulse/status/ping-all', async (_req, res) => {
+    try {
+      const results = await pingAllServicesAndApis();
+      res.json(results);
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Ping failed' });
+    }
+  });
+
 
   app.get('/api/pulse/settings', (_req, res) => {
     const settings = getPulseSettings();

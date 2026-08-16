@@ -59,19 +59,24 @@ export default function PulseDashboard() {
       <header className="pulse-head pulse-motion-rise px-dash-head">
         <div>
           <p className="px-eyebrow">Practo · Reach &amp; Prime</p>
-          <h1>Command center</h1>
-          <p>Premium healthcare sales automation — discovery to Autopilot to n8n.</p>
+          <h1>Command Center</h1>
+          <p>Native healthcare sales automation — Lead Discovery, Validation, AI Voice Calls, WhatsApp, and CRM.</p>
         </div>
-        <Link className="pulse-btn" to="/pulse/leads">
-          Run Lead Engine
-        </Link>
+        <div className="pulse-actions">
+          <Link className="pulse-btn ghost" to="/pulse/status">
+            ⚡ Server &amp; API Status
+          </Link>
+          <Link className="pulse-btn" to="/pulse/leads">
+            Run Lead Engine
+          </Link>
+        </div>
       </header>
 
       <div className="pulse-kpis">
-        <MotionKpi label="Pipeline leads" value={leads.length} tone="teal" hint="mock + live" />
-        <MotionKpi label="Reach-fit" value={reach} tone="blue" hint="visibility" />
-        <MotionKpi label="Prime-fit" value={prime} tone="amber" hint="conversion" />
-        <MotionKpi label="Demos" value={demos} tone="teal" hint="scheduled" />
+        <MotionKpi label="Pipeline Leads" value={leads.length} tone="teal" hint="verified clinics" />
+        <MotionKpi label="Reach-fit" value={reach} tone="blue" hint="visibility slot" />
+        <MotionKpi label="Prime-fit" value={prime} tone="amber" hint="conversion tier" />
+        <MotionKpi label="Demos / Deals" value={demos} tone="teal" hint="qualified" />
       </div>
 
       <div className="pulse-motion-rise delay-1" style={{ marginTop: 18 }}>
@@ -80,7 +85,7 @@ export default function PulseDashboard() {
 
       <div className="pulse-grid-2 pulse-motion-rise delay-1" style={{ marginTop: 18 }}>
         <section className="pulse-card pulse-feature-card px-glass">
-          <h2>Practo products</h2>
+          <h2>Practo Products</h2>
           <div className="pulse-product">
             <strong>Practo Reach</strong>
             <p>Guaranteed impressions, locality &amp; specialty visibility, patient traffic.</p>
@@ -91,48 +96,49 @@ export default function PulseDashboard() {
           </div>
         </section>
         <section className="pulse-card pulse-feature-card px-glass">
-          <h2>Automation health</h2>
+          <h2>Automation Health</h2>
           <ul className="pulse-status-list">
             <li>
-              <span>Database</span>
+              <span>Database (SQLite)</span>
               <span className={`pulse-status-pill ${status?.database?.ok ? 'ok' : 'warn'}`}>
                 {status?.database?.ok ? 'connected' : 'checking'}
               </span>
             </li>
             <li>
-              <span>Autopilot queue</span>
+              <span>Autopilot Queue</span>
               <span className="pulse-status-pill ok">{status?.autopilot?.total ?? 0}</span>
             </li>
             <li>
-              <span>WhatsApp / messages</span>
+              <span>WhatsApp / Messages</span>
               <span className="pulse-status-pill ok">
                 {status?.autopilot?.messagesLogged ?? 0}
               </span>
             </li>
             <li>
-              <span>AI call logs</span>
+              <span>AI Voice Call Logs</span>
               <span className="pulse-status-pill ok">{status?.autopilot?.callsLogged ?? 0}</span>
             </li>
             <li>
-              <span>n8n webhook</span>
-              <span className={`pulse-status-pill ${n8nUrl ? 'ok' : 'idle'}`}>
-                {n8nUrl ? 'configured' : 'not set'}
+              <span>API Gateway</span>
+              <span className="pulse-status-pill ok">
+                online · port 4000
               </span>
             </li>
           </ul>
           <div className="pulse-actions" style={{ marginTop: 14 }}>
-            <Link className="pulse-btn ghost" to="/pulse/autopilot">
-              Autopilot logs
+            <Link className="pulse-btn ghost" to="/pulse/status">
+              Live API Status
             </Link>
             <Link className="pulse-btn navy" to="/pulse/settings">
-              Configure n8n
+              API Settings
             </Link>
-            <Link className="pulse-btn ghost" to="/pulse/commercial">
-              Commercial Suite
+            <Link className="pulse-btn ghost" to="/pulse/crm">
+              CRM Hub
             </Link>
           </div>
         </section>
       </div>
+
     </div>
   );
 }

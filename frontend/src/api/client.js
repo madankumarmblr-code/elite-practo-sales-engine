@@ -102,7 +102,9 @@ export const api = {
   pulseDiscover: (body) =>
     request('/api/pulse/discover', { method: 'POST', body: JSON.stringify(body) }),
   pulseStatus: () => request('/api/pulse/status'),
+  pingAllServicesAndApis: () => request('/api/pulse/status/ping-all', { method: 'POST' }),
   pulseDbProbe: () => request('/api/pulse/db-probe'),
+
   pulseSettings: () => request('/api/pulse/settings'),
   pulseSaveSettings: (settings) =>
     request('/api/pulse/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),

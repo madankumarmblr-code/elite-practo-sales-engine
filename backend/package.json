@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",
+    "build": "echo 'Backend ready'",
     "start": "node src/index.js",
     "seed": "node src/db/seed.js"
   },

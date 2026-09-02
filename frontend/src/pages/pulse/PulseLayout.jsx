@@ -7,12 +7,19 @@ import { animate } from 'motion';
 
 const navSections = [
   {
-    title: 'Core Engine',
+    title: 'Core CRM & Discovery',
     links: [
-      { to: '/pulse', label: '📊 Dashboard', end: true },
+      { to: '/pulse', label: '📊 Command Center', end: true },
       { to: '/pulse/leads', label: '🔍 Clinic Discovery' },
       { to: '/pulse/validation', label: '✅ Lead Validation' },
-      { to: '/pulse/crm', label: '🗂️ CRM Hub' },
+      { to: '/pulse/crm', label: '🗂️ CRM Hub & Kanban' },
+    ],
+  },
+  {
+    title: 'AI Pilot & Intelligence',
+    links: [
+      { to: '/pulse/pitch-studio', label: '⚡ AI Pitch Studio' },
+      { to: '/pulse/reports', label: '📈 Custom Reports' },
     ],
   },
   {
@@ -25,9 +32,10 @@ const navSections = [
     ],
   },
   {
-    title: 'Revenue & Config',
+    title: 'Governance & Revenue',
     links: [
       { to: '/pulse/commercial', label: '📑 Commercial Suite' },
+      { to: '/pulse/audit', label: '🛡️ Audit & Compliance' },
       { to: '/pulse/settings', label: '⚙️ Platform Settings' },
       { to: '/pulse/status', label: '🔌 API & Integrations' },
     ],
@@ -45,21 +53,35 @@ export default function PulseLayout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
-  // Lock theme permanently to light
+  // Theme Management: 'dark' | 'light'
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('practo_theme') || 'dark';
+  });
+
+  // Mobile drawer state
+  const [mobileSideOpen, setMobileSideOpen] = useState(false);
+
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'light');
-    localStorage.removeItem('practo_theme');
-  }, []);
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('practo_theme', theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    toast(next === 'dark' ? '🌙 Dark Mode Activated' : '☀️ Light Mode Activated');
+  }
 
   // Motion: page transition on route change
   useEffect(() => {
     if (mainRef.current) {
       animate(
         mainRef.current,
-        { opacity: [0, 1], y: [14, 0] },
-        { duration: 0.38, easing: [0.22, 1, 0.36, 1] }
+        { opacity: [0, 1], y: [12, 0] },
+        { duration: 0.35, easing: [0.22, 1, 0.36, 1] }
       );
     }
+    setMobileSideOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -99,20 +121,42 @@ export default function PulseLayout() {
     }
   }
 
-
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="pulse-shell pulse-shell-full px-shell">
+      {/* Mobile Drawer Overlay Backdrop */}
+      {mobileSideOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            zIndex: 998,
+          }}
+          onClick={() => setMobileSideOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="pulse-side px-side">
+      <aside className={`pulse-side px-side ${mobileSideOpen ? 'open' : ''}`}>
         <div className="pulse-brand px-brand">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <img src="/practo-logo-light.svg" alt="" className="px-side-logo" style={{ height: 26 }} />
-            <strong style={{ fontSize: '1.05rem', letterSpacing: '-0.02em' }}>PractoPulse</strong>
+            <img
+              src={theme === 'dark' ? '/practo-logo.svg' : '/practo-logo-light.svg'}
+              alt="Practo"
+              className="px-side-logo"
+              style={{ height: 26 }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+            <strong style={{ fontSize: '1.05rem', letterSpacing: '-0.02em', color: 'var(--text-main)' }}>
+              PractoPulse
+            </strong>
           </div>
           <small>Autonomous Healthcare B2B Sales</small>
-          <svg className="px-ecg" viewBox="0 0 120 24" aria-hidden>
+          <svg className="px-ecg" viewBox="0 0 120 24" aria-hidden style={{ color: '#2dd4bf' }}>
             <path
               d="M0 12 H18 L24 12 L28 4 L34 20 L40 8 L46 12 H120"
               fill="none"
@@ -188,7 +232,7 @@ export default function PulseLayout() {
 
       {/* Main Content Area */}
       <div className="pulse-main px-main" style={{ display: 'flex', flexDirection: 'column' }}>
-        {/* Top Control Bar — Notifications Bell */}
+        {/* Top Control Bar */}
         <header
           className="pulse-topbar"
           style={{
@@ -196,24 +240,49 @@ export default function PulseLayout() {
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '10px 24px',
-            background: 'rgba(255, 255, 255, 0.88)',
             backdropFilter: 'blur(16px)',
-            borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
             position: 'sticky',
             top: 0,
             zIndex: 90,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              className="pulse-btn ghost mobile-only"
+              onClick={() => setMobileSideOpen(!mobileSideOpen)}
+              style={{ padding: '4px 8px', fontSize: '1.1rem' }}
+            >
+              ☰
+            </button>
+
             <span className="pulse-status-pill ok" style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}>
               🟢 Autopilot Engine Online
             </span>
-            <span className="muted" style={{ fontSize: '0.8rem', display: 'inline-block' }}>
-              AI Dialing · WhatsApp Drips · Smartlead Synced
+            <span className="muted desktop-only" style={{ fontSize: '0.8rem' }}>
+              AI Pitch Studio · WhatsApp Drips · HIPAA/DPDP Compliant
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Theme Toggle Button */}
+            <button
+              type="button"
+              className="pulse-btn ghost"
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              style={{
+                padding: '0.4rem 0.75rem',
+                fontSize: '0.9rem',
+                borderRadius: 8,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            </button>
 
             {/* Notifications Bell Dropdown */}
             <div style={{ position: 'relative' }} ref={notifRef}>

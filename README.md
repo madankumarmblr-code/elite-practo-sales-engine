@@ -1,54 +1,46 @@
-# Practo Sales Automation
+# NexusHub — Full-Stack Project Studio
 
-Full-stack suite with:
+A modern, high-performance Full-Stack application powered by **React 19 (Vite)** and **Node.js (Express)**.
 
-1. **Classic app** (`frontend` + `backend`) — Lead Generator + Commercial Proposal Suite on https://www.salesmaster.live
-2. **PractoPulse** — Healthcare sales automation for Reach & Prime inside sales (Lead Discovery / ElevenLabs Voice Calls / WhatsApp Gateway / Cold Email Sequencer / Claude AI / Gamma Decks)
+## 🚀 Quick Start
 
-
-## PractoPulse (new)
-
+### 1. Install Dependencies
 ```bash
 npm install
-npm run dev:pulse
 ```
 
-Open http://localhost:3000 — see `practopulse/README.md`.
-
-## Classic Lead Generator + Commercial Suite
-
+### 2. Run in Development Mode
+Starts both Express backend (`http://localhost:5001`) and Vite React frontend (`http://localhost:5173`) concurrently:
 ```bash
-npm install
 npm run dev
 ```
 
-- Web: http://localhost:5173
-- API: http://localhost:4000/api/health
+### 3. Individual Commands
+- **Backend only**: `npm run dev:backend`
+- **Frontend only**: `npm run dev:frontend`
+- **Production Build**: `npm run build`
+- **Production Server**: `npm run start:prod`
 
-## Host (production)
+---
 
-### Fastest — Docker
+## 🏗️ Project Architecture
 
-```bash
-docker compose up -d --build
+```text
+├── backend/
+│   ├── src/
+│   │   ├── config.js         # Environment & directory configuration
+│   │   ├── app.js            # Express middlewares, routing & error handling
+│   │   ├── index.js          # HTTP server bootstrap & graceful shutdown
+│   │   ├── routes/           # REST endpoints (/api/health, /api/projects, etc.)
+│   │   └── services/         # State store & business logic
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── api/client.js     # Centralized API service
+│   │   ├── components/       # Header, StatsGrid, ProjectCard, Modals, Feed
+│   │   ├── styles/index.css  # Custom modern design system (vanilla CSS)
+│   │   ├── App.jsx           # Main dashboard & live orchestration
+│   │   └── main.jsx          # React 19 entry point
+│   └── vite.config.js        # Vite config with backend proxy
+└── package.json              # Monorepo workspace orchestration
 ```
-
-Open **http://localhost:8080**
-
-### Node (VPS)
-
-```bash
-npm install
-npm run build
-NODE_ENV=production PORT=8080 npm start
-```
-
-Full steps: **[HOSTING.md](./HOSTING.md)** and **[VERCEL.md](./VERCEL.md)**.
-
-### Super Admin login (classic app)
-
-| Field | Value |
-|------|-------|
-| User ID | `superadmin` |
-| Email | `superadmin@practo.sales` |
-| Password | `SuperAdmin@123` |

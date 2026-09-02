@@ -8,6 +8,38 @@ const now = () => new Date().toISOString();
 /** Minimal connectors still used by Lead Generator (Maps / Practo.com). */
 const CORE_INTEGRATIONS = [
   {
+    provider: 'meta_whatsapp',
+    label: 'Meta WhatsApp Cloud API',
+    category: 'Messaging',
+    channel: 'whatsapp',
+    notes: 'Official Meta WhatsApp Business Cloud API for verified doctor outreach and ROI pitch dispatch',
+    config: {
+      phoneNumberId: '',
+      wabaId: '',
+      verifyToken: 'practo_wa_verify_token_2026',
+    },
+    secrets: { accessToken: '', appSecret: '' },
+    is_default: 1,
+  },
+  {
+    provider: 'sarvam_voice',
+    label: 'Sarvam Voice Agents',
+    category: 'Voice AI',
+    channel: 'voice_ai',
+    notes: 'Indus Samvaad Voice Agents for instant outbound and batch healthcare campaigns',
+    config: {
+      orgId: '01a050ff-9cdc-7d60-8c27-eaf6731df818',
+      workspaceId: '01a050ff-9ce4-74ef-980d-b167c2e3489c',
+      appId: '',
+      appVersion: 1,
+      connectionId: '',
+      agentPhoneNumber: '',
+      webhookUrl: '',
+    },
+    secrets: { apiKey: '' },
+    is_default: 1,
+  },
+  {
     provider: 'google_maps',
     label: 'Google Maps / Places',
     category: 'Discovery',
@@ -66,6 +98,8 @@ function ensureCoreIntegrations() {
 function hydrateEnvSecrets() {
   const force = process.env.INTEGRATION_SECRETS_FORCE === '1';
   const map = [
+    { provider: 'meta_whatsapp', secret: 'accessToken', env: 'WHATSAPP_ACCESS_TOKEN' },
+    { provider: 'sarvam_voice', secret: 'apiKey', env: 'SARVAM_VOICE_API_KEY' },
     { provider: 'google_maps', secret: 'apiKey', env: 'GOOGLE_MAPS_API_KEY' },
   ];
 
@@ -172,6 +206,9 @@ export function bootstrap() {
   const ts = now();
   const demoPassword = 'SuperAdmin@123';
   const passwordHash = bcrypt.hashSync(demoPassword, 10);
+  const karanPasswordHash = bcrypt.hashSync('admin123', 10);
+
+  // Superadmin user
   const superAdmin =
     db.prepare("SELECT * FROM users WHERE role = 'superadmin' LIMIT 1").get() ||
     db.prepare("SELECT * FROM users WHERE lower(username) = 'superadmin' LIMIT 1").get();
@@ -206,47 +243,32 @@ export function bootstrap() {
     `).run(passwordHash, JSON.stringify(permissionsForRole('superadmin')), ts, superAdmin.id);
   }
 
-  // Seed initial notification alerts if empty
-  try {
-    const notifCount = db.prepare('SELECT COUNT(*) AS c FROM notifications').get()?.c || 0;
-    if (notifCount === 0) {
-      const notifs = [
-        {
-          title: 'Practo Autopilot Ready',
-          message: 'Autopilot Engine online · WhatsApp, AI Voice Calls & Email channels active.',
-          type: 'success',
-          link: '/pulse/autopilot',
-        },
-        {
-          title: 'Lead Validation Engine Active',
-          message: '10-digit Indian phone normalization & authenticity scoring enabled.',
-          type: 'info',
-          link: '/pulse/validation',
-        },
-        {
-          title: 'Commercial Suite Synced',
-          message: 'Google Sheets slot inventory matrix loaded for Bangalore, Mumbai & Delhi.',
-          type: 'info',
-          link: '/pulse/commercial',
-        },
-      ];
-      const insertNotif = db.prepare(
-        'INSERT INTO notifications (id, title, message, type, link, is_read, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)'
-      );
-      for (const n of notifs) {
-        insertNotif.run(`notif_${nanoid(8)}`, n.title, n.message, n.type, n.link, ts);
-      }
-    }
-  } catch (err) {
-    console.warn('Notification seed skipped:', err.message);
+  // Karan user
+  const karanUser = db.prepare("SELECT * FROM users WHERE lower(username) = 'karan' LIMIT 1").get();
+  if (!karanUser) {
+    db.prepare(`
+      INSERT INTO users (id, name, email, username, password_hash, role, permissions, active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'superadmin', ?, 1, ?, ?)
+    `).run(
+      'user_karan',
+      'Karan Patel',
+      'karan@apexsales.io',
+      'karan',
+      karanPasswordHash,
+      JSON.stringify(permissionsForRole('superadmin')),
+      ts,
+      ts
+    );
+    console.log('Created Karan user (karan / admin123)');
+  } else {
+    db.prepare(`
+      UPDATE users
+      SET password_hash = ?, role = 'superadmin', active = 1, updated_at = ?
+      WHERE id = ?
+    `).run(karanPasswordHash, ts, karanUser.id);
   }
 
-  console.log('Super Admin ready');
-  console.log('  User ID:  superadmin');
-  console.log('  Email:    superadmin@practo.sales');
-  console.log(`  Password: ${demoPassword}`);
-  console.log('Bootstrap complete — Lead Generator + Commercial Suite + Autopilot Engine');
+  console.log('Users ready:');
+  console.log('  1. User ID: karan | Password: admin123');
+  console.log('  2. User ID: superadmin | Password: SuperAdmin@123');
 }
-
-bootstrap();
-

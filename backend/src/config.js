@@ -4,7 +4,14 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Persistent data directory (SQLite + sheet cache). Override with DATA_DIR for Docker volumes. */
+export const config = {
+  port: parseInt(process.env.PORT || '5001', 10),
+  nodeEnv: process.env.NODE_ENV || 'development',
+  corsOrigin: process.env.CORS_ORIGIN || '*',
+  dataDir: getDataDir(),
+  frontendDistDir: getFrontendDistDir()
+};
+
 export function getDataDir() {
   const fromEnv = process.env.DATA_DIR;
   if (fromEnv) {
@@ -12,9 +19,8 @@ export function getDataDir() {
     if (!fs.existsSync(resolved)) fs.mkdirSync(resolved, { recursive: true });
     return resolved;
   }
-  // Vercel serverless: only /tmp is writable
   if (process.env.VERCEL) {
-    const tmp = '/tmp/practo-sales-data';
+    const tmp = '/tmp/app-data';
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp, { recursive: true });
     return tmp;
   }
@@ -25,6 +31,5 @@ export function getDataDir() {
 
 export function getFrontendDistDir() {
   if (process.env.FRONTEND_DIST) return path.resolve(process.env.FRONTEND_DIST);
-  // backend/src → repo root → frontend/dist
   return path.join(__dirname, '../../frontend/dist');
 }

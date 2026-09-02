@@ -12,6 +12,7 @@ backend/data/*.db-shm
 backend/data/*.db-wal
 backend/data/locations-sheet.csv
 backend/data/locations-sheet.meta.json
+backend/data/zone-localities.csv
 data/
 *.log
 .vite/
@@ -22,3 +23,4 @@ data/
 .next/
 practopulse/.next/
 practopulse/node_modules/
+*.zip

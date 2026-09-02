@@ -243,6 +243,76 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id TEXT PRIMARY KEY,
+    actor_id TEXT,
+    actor_name TEXT NOT NULL,
+    actor_role TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT,
+    details TEXT DEFAULT '',
+    ip_address TEXT DEFAULT '127.0.0.1',
+    user_agent TEXT DEFAULT '',
+    status TEXT DEFAULT 'success',
+    compliance_tag TEXT DEFAULT 'HIPAA/DPDP',
+    old_state TEXT DEFAULT '{}',
+    new_state TEXT DEFAULT '{}',
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
+  CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_logs(actor_id);
+  CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action);
+  CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id);
+
+  CREATE TABLE IF NOT EXISTS custom_reports (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    user_id TEXT NOT NULL,
+    filters TEXT NOT NULL DEFAULT '{}',
+    metrics TEXT NOT NULL DEFAULT '[]',
+    chart_type TEXT DEFAULT 'bar',
+    is_shared INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_reports_user ON custom_reports(user_id);
+
+  CREATE TABLE IF NOT EXISTS compliance_consents (
+    id TEXT PRIMARY KEY,
+    lead_id TEXT,
+    clinic_name TEXT NOT NULL,
+    contact_person TEXT,
+    channel TEXT NOT NULL,
+    consent_status TEXT DEFAULT 'opted_in',
+    purpose TEXT DEFAULT 'B2B Sales Communication',
+    ip_address TEXT DEFAULT '127.0.0.1',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_compliance_lead ON compliance_consents(lead_id);
+
+  CREATE TABLE IF NOT EXISTS doctor_pitch_history (
+    id TEXT PRIMARY KEY,
+    lead_id TEXT,
+    clinic_name TEXT NOT NULL,
+    doctor_name TEXT,
+    specialty TEXT,
+    city TEXT,
+    product TEXT NOT NULL,
+    pitch_deck TEXT,
+    objection_handled TEXT,
+    created_by TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_pitch_history_lead ON doctor_pitch_history(lead_id);
+  CREATE INDEX IF NOT EXISTS idx_pitch_history_created ON doctor_pitch_history(created_at);
 `);
 
 export default db;

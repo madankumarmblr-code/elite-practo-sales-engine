@@ -1,0 +1,4592 @@
+{
+  "leads": [
+    {
+      "id": "lead-1788310245077",
+      "name": "Dr. Test Physician",
+      "organization": "Apollo Clinic",
+      "specialty": "Cardiology",
+      "category": "Clinic",
+      "city": "Mumbai",
+      "zone": "Powai",
+      "locality": "Main Clinic Hub",
+      "state": "State",
+      "email": "doctor@apollo.test",
+      "phone": "+919876543210",
+      "website": "",
+      "patientVolumeMonthly": 1200,
+      "annualRevenueEstimate": 11520000,
+      "assignedRep": "Priya Sharma",
+      "status": "New Lead",
+      "stage": "New Lead",
+      "score": 88,
+      "scoreBreakdown": {
+        "fit": 90,
+        "intent": 85,
+        "engagement": 88
+      },
+      "tags": [
+        "Inbound Registered",
+        "Cardiology",
+        "Mumbai"
+      ],
+      "lastContacted": "2026-09-02T00:50:45.077Z",
+      "notes": "Registered lead with geographic mapping.",
+      "customFields": {
+        "currentEHR": "Practo Pro"
+      },
+      "timeline": [
+        {
+          "id": "act-1788310245077",
+          "type": "lead_created",
+          "title": "Practo Lead Created",
+          "description": "Created in Mumbai by User.",
+          "timestamp": "2026-09-02T00:50:45.077Z",
+          "user": "User"
+        }
+      ],
+      "createdAt": "2026-09-02T00:50:45.077Z"
+    },
+    {
+      "id": "lead-101",
+      "name": "Dr. Aarav Mehta",
+      "organization": "Mehta Multispecialty Cardiology & Heart Clinic",
+      "specialty": "Cardiology",
+      "category": "Clinic",
+      "city": "Mumbai",
+      "zone": "Powai",
+      "locality": "Hanuman Road",
+      "state": "Maharashtra",
+      "email": "dr.mehta@mehtaclinic.in",
+      "phone": "+91 98201 44556",
+      "website": "https://mehtaclinic.in",
+      "patientVolumeMonthly": 1200,
+      "annualRevenueEstimate": 4800000,
+      "assignedRep": "Priya Sharma",
+      "status": "Qualified",
+      "stage": "Proposal Sent",
+      "score": 94,
+      "scoreBreakdown": {
+        "fit": 96,
+        "intent": 92,
+        "engagement": 95
+      },
+      "tags": [
+        "High Patient Flow",
+        "Practo Verified",
+        "Priority Deal",
+        "Digital Adopter",
+        "Amoga Synced",
+        "Amoga Stage: Discovery"
+      ],
+      "lastContacted": "2026-08-24T14:30:00Z",
+      "notes": "Interested in AI appointment triaging and automated WhatsApp follow-ups. Decision maker is ready for proposal review.",
+      "customFields": {
+        "currentEHR": "Practo Ray v3",
+        "branches": 2,
+        "doctorsCount": 6
+      },
+      "timeline": [
+        {
+          "id": "act-1",
+          "type": "call",
+          "title": "AI Voice SDR Discovery Call",
+          "description": "Discussed patient booking no-show reduction. Dr. Mehta requested enterprise proposal.",
+          "timestamp": "2026-08-23T11:00:00Z",
+          "user": "AI Voice Agent"
+        },
+        {
+          "id": "act-2",
+          "type": "email",
+          "title": "Proposal Sent",
+          "description": "Sent 3-year automated patient retention & billing suite proposal ($12,000/yr).",
+          "timestamp": "2026-08-24T14:30:00Z",
+          "user": "Priya Sharma"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609497-lead-101",
+      "amogaSyncedAt": "2026-09-01T18:16:49.497Z",
+      "updatedAt": "2026-09-01T18:16:49.497Z"
+    },
+    {
+      "id": "lead-102",
+      "name": "Dr. Shalini Varma",
+      "organization": "Apex Orthopedic & Joint Reconstruction Institute",
+      "specialty": "Orthopedics",
+      "category": "Hospital / Center",
+      "city": "Bangalore",
+      "zone": "Whitefield",
+      "locality": "Kundalahalli",
+      "state": "Karnataka",
+      "email": "contact@apexorthoblr.com",
+      "phone": "+91 99805 11223",
+      "website": "https://apexorthoblr.com",
+      "patientVolumeMonthly": 2400,
+      "annualRevenueEstimate": 9500000,
+      "assignedRep": "Rahul Kapoor",
+      "status": "Demo Scheduled",
+      "stage": "Demo Scheduled",
+      "score": 88,
+      "scoreBreakdown": {
+        "fit": 90,
+        "intent": 88,
+        "engagement": 86
+      },
+      "tags": [
+        "Surgical Center",
+        "High Revenue",
+        "WhatsApp Candidate",
+        "Amoga Synced",
+        "Amoga Stage: Discovery"
+      ],
+      "lastContacted": "2026-08-25T10:15:00Z",
+      "notes": "Demo scheduled for tomorrow 3:00 PM with Medical Director and IT lead.",
+      "customFields": {
+        "currentEHR": "Legacy Custom Software",
+        "branches": 3,
+        "doctorsCount": 14
+      },
+      "timeline": [
+        {
+          "id": "act-3",
+          "type": "whatsapp",
+          "title": "WhatsApp Outreach Delivered",
+          "description": "Interactive demo video and case study on knee replacement follow-ups sent.",
+          "timestamp": "2026-08-24T09:15:00Z",
+          "user": "System"
+        },
+        {
+          "id": "act-4",
+          "type": "meeting",
+          "title": "Demo Scheduled",
+          "description": "Platform overview booked for 26th Aug 3 PM.",
+          "timestamp": "2026-08-25T10:15:00Z",
+          "user": "Rahul Kapoor"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609500-lead-102",
+      "amogaSyncedAt": "2026-09-01T18:16:49.500Z",
+      "updatedAt": "2026-09-01T18:16:49.500Z"
+    },
+    {
+      "id": "lead-103",
+      "name": "Dr. Vikramaditya Reddy",
+      "organization": "Apollo Dental & Maxillofacial Care Hub",
+      "specialty": "Dentistry & Maxillofacial",
+      "category": "Clinic Chain",
+      "city": "Hyderabad",
+      "zone": "Banjara hills",
+      "locality": "Film Nagar",
+      "state": "Telangana",
+      "email": "dr.reddy@apollodentalhub.com",
+      "phone": "+91 98490 33445",
+      "website": "https://apollodentalhub.com",
+      "patientVolumeMonthly": 1800,
+      "annualRevenueEstimate": 6200000,
+      "assignedRep": "Ananya Roy",
+      "status": "In Negotiation",
+      "stage": "Negotiation",
+      "score": 91,
+      "scoreBreakdown": {
+        "fit": 95,
+        "intent": 89,
+        "engagement": 90
+      },
+      "tags": [
+        "Fast Closer",
+        "Chain License",
+        "Premium",
+        "Amoga Synced",
+        "Amoga Stage: Discovery"
+      ],
+      "lastContacted": "2026-08-25T16:45:00Z",
+      "notes": "Negotiating a multi-location license across 5 clinic sites. Looking for custom WhatsApp CRM templates.",
+      "customFields": {
+        "currentEHR": "None (Spreadsheets)",
+        "branches": 5,
+        "doctorsCount": 10
+      },
+      "timeline": [
+        {
+          "id": "act-5",
+          "type": "stage_change",
+          "title": "Moved to Negotiation",
+          "description": "Commercial discounts agreed upon at 15% for multi-clinic upfront annual lock.",
+          "timestamp": "2026-08-25T16:45:00Z",
+          "user": "Ananya Roy"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609502-lead-103",
+      "amogaSyncedAt": "2026-09-01T18:16:49.502Z",
+      "updatedAt": "2026-09-01T18:16:49.502Z"
+    },
+    {
+      "id": "lead-104",
+      "name": "Dr. Neha Saxena",
+      "organization": "Glow Skin Aesthetics & Laser Dermatology",
+      "specialty": "Dermatology & Cosmetology",
+      "category": "Aesthetic Clinic",
+      "city": "Delhi",
+      "zone": "Greater kailash",
+      "locality": "Greater Kailash Part 1",
+      "state": "Delhi",
+      "email": "dr.neha@glowaesthetics.org",
+      "phone": "+91 98112 77889",
+      "website": "https://glowaesthetics.org",
+      "patientVolumeMonthly": 950,
+      "annualRevenueEstimate": 5400000,
+      "assignedRep": "Priya Sharma",
+      "status": "Closed Won",
+      "stage": "Closed Won",
+      "score": 97,
+      "scoreBreakdown": {
+        "fit": 98,
+        "intent": 96,
+        "engagement": 98
+      },
+      "tags": [
+        "Paid Customer",
+        "VIP",
+        "High LTV",
+        "Amoga Synced",
+        "Amoga Stage: Discovery"
+      ],
+      "lastContacted": "2026-08-25T17:30:00Z",
+      "notes": "Closed 2-year Platinum automation tier ($18,500). Onboarding scheduled for Friday.",
+      "customFields": {
+        "currentEHR": "Practo Pro",
+        "branches": 2,
+        "doctorsCount": 4
+      },
+      "timeline": [
+        {
+          "id": "act-6",
+          "type": "deal_won",
+          "title": "Deal Won ($18,500)",
+          "description": "Signed contract and received initial upfront wire payment.",
+          "timestamp": "2026-08-25T17:30:00Z",
+          "user": "Priya Sharma"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609506-lead-104",
+      "amogaSyncedAt": "2026-09-01T18:16:49.506Z",
+      "updatedAt": "2026-09-01T18:16:49.506Z"
+    },
+    {
+      "id": "lead-105",
+      "name": "Dr. K. Swaminathan",
+      "organization": "Southern Heart & Vascular Care Centre",
+      "specialty": "Cardiology",
+      "category": "Clinic",
+      "city": "Chennai",
+      "zone": "Chennai South West 2",
+      "locality": "Pallavaram",
+      "state": "Tamil Nadu",
+      "email": "dr.swami@southernheart.com",
+      "phone": "+91 98401 22334",
+      "website": "https://southernheart.com",
+      "patientVolumeMonthly": 1550,
+      "annualRevenueEstimate": 6200000,
+      "assignedRep": "Rahul Kapoor",
+      "status": "Contacted",
+      "stage": "Contacted",
+      "score": 86,
+      "scoreBreakdown": {
+        "fit": 88,
+        "intent": 84,
+        "engagement": 86
+      },
+      "tags": [
+        "Practo Top Ranked",
+        "WhatsApp Outreach Active",
+        "Amoga Synced",
+        "Amoga Stage: Discovery"
+      ],
+      "lastContacted": "2026-08-26T08:00:00Z",
+      "notes": "Replied to automated WhatsApp demo sequence. Requests timing for doctor consultation walkthrough.",
+      "customFields": {
+        "currentEHR": "Practo Ray",
+        "branches": 1,
+        "doctorsCount": 4
+      },
+      "timeline": [
+        {
+          "id": "act-7",
+          "type": "whatsapp",
+          "title": "WhatsApp Outreach Delivered",
+          "description": "Patient booking triage workflow preview delivered.",
+          "timestamp": "2026-08-26T08:00:00Z",
+          "user": "System"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609507-lead-105",
+      "amogaSyncedAt": "2026-09-01T18:16:49.507Z",
+      "updatedAt": "2026-09-01T18:16:49.507Z"
+    },
+    {
+      "id": "lead-106",
+      "name": "Dr. Maya Krishnan",
+      "organization": "Lotus Women & Fertility Care Center",
+      "specialty": "Gynecology & Obstetrics",
+      "category": "Specialty Hospital",
+      "city": "Chennai",
+      "zone": "Chennai South East 1",
+      "locality": "Palavakkam",
+      "state": "Tamil Nadu",
+      "email": "dr.maya@lotusfertility.in",
+      "phone": "+91 98401 66778",
+      "website": "https://lotusfertility.in",
+      "patientVolumeMonthly": 1600,
+      "annualRevenueEstimate": 7800000,
+      "assignedRep": "Ananya Roy",
+      "status": "Demo Scheduled",
+      "stage": "Demo Scheduled",
+      "score": 89,
+      "scoreBreakdown": {
+        "fit": 92,
+        "intent": 88,
+        "engagement": 87
+      },
+      "tags": [
+        "High Value IVF",
+        "WhatsApp Preferred",
+        "Decision Maker Active",
+        "Amoga Synced",
+        "Amoga Stage: Discovery",
+        "Auto Pilot - Practo Prime",
+        "🚨 Escalated to Field AE"
+      ],
+      "lastContacted": "2026-09-01T19:11:27.922Z",
+      "notes": "Completed qualification call. High intent to migrate from manual booking team to 24/7 AI conversational agent.",
+      "customFields": {
+        "currentEHR": "Custom Web Portal",
+        "branches": 2,
+        "doctorsCount": 7
+      },
+      "timeline": [
+        {
+          "id": "act-res-1788289894416",
+          "type": "note",
+          "title": "Field Rep Intervention Completed: Demo Scheduled",
+          "description": "Field Rep logged notes: \"Called Dr. Maya. Agreed on Practo Prime Supreme quarterly package. On-site doctor meeting booked for Friday 3 PM.\" Outcome: resolved",
+          "timestamp": "2026-09-01T19:11:34.416Z",
+          "user": "Ananya Roy"
+        },
+        {
+          "id": "act-pilot-voice-1788289887922-0",
+          "type": "voice_call",
+          "title": "AI Voice Outreach: Practo Prime",
+          "description": "Autonomous Sarvam AI called doctor phone +91 98401 66778. Outcome: High-Value Pricing Question → Escalated to Field Rep",
+          "timestamp": "2026-09-01T18:11:27.922Z",
+          "user": "Sarvam Voice AI"
+        },
+        {
+          "id": "act-pilot-wa-1788289887922-0",
+          "type": "whatsapp_sent",
+          "title": "WhatsApp AI Pitch: Practo Prime",
+          "description": "Delivered Interactive ROI Card & 60-Second Video to +91 98401 66778.",
+          "timestamp": "2026-09-01T18:41:27.922Z",
+          "user": "WhatsApp AI Agent"
+        },
+        {
+          "id": "act-pilot-email-1788289887922-0",
+          "type": "email_sent",
+          "title": "Executive Commercial Proposal: Practo Prime",
+          "description": "Sent proposal email with Practo Prime Supreme commercial terms and slot lock-in link to dr.maya@lotusfertility.in.",
+          "timestamp": "2026-09-01T19:11:27.922Z",
+          "user": "Email AI Engine"
+        },
+        {
+          "id": "act-8",
+          "type": "call",
+          "title": "SDR Discovery Completed",
+          "description": "Lead qualified with budget > $10k. Demo arranged for next Monday.",
+          "timestamp": "2026-08-25T11:20:00Z",
+          "user": "Ananya Roy"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609509-lead-106",
+      "amogaSyncedAt": "2026-09-01T18:16:49.509Z",
+      "updatedAt": "2026-09-01T19:11:34.416Z",
+      "needsHumanIntervention": false,
+      "escalationDetails": null
+    },
+    {
+      "id": "lead-107",
+      "name": "Dr. Tariq Al-Mansoor",
+      "organization": "Novacare Advanced Eye & Lasik Centre",
+      "specialty": "Ophthalmology & Lasik",
+      "category": "Surgical Center",
+      "city": "Pune",
+      "zone": "Hadapsar",
+      "locality": "Sasanenagar",
+      "state": "Maharashtra",
+      "email": "director@novacareeye.com",
+      "phone": "+91 98230 99887",
+      "website": "https://novacareeye.com",
+      "patientVolumeMonthly": 2100,
+      "annualRevenueEstimate": 8200000,
+      "assignedRep": "Priya Sharma",
+      "status": "Proposal Sent",
+      "stage": "Proposal Sent",
+      "score": 82,
+      "scoreBreakdown": {
+        "fit": 85,
+        "intent": 80,
+        "engagement": 81
+      },
+      "tags": [
+        "Inbound Lead",
+        "Lasik Campaign",
+        "High Margins",
+        "Amoga Synced",
+        "Amoga Stage: Discovery",
+        "Auto Pilot - Practo Prime",
+        "AI Sequence Active"
+      ],
+      "lastContacted": "2026-09-01T19:11:27.924Z",
+      "notes": "Filled inbound web contact form requesting details on automated lead capture from Google & Instagram ads.",
+      "customFields": {
+        "currentEHR": "MedTech Desktop",
+        "branches": 1,
+        "doctorsCount": 5
+      },
+      "timeline": [
+        {
+          "id": "act-pilot-voice-1788289887924-1",
+          "type": "voice_call",
+          "title": "AI Voice Outreach: Practo Prime",
+          "description": "Autonomous Sarvam AI called doctor phone +91 98230 99887. Outcome: Demonstration Interest Confirmed",
+          "timestamp": "2026-09-01T18:11:27.924Z",
+          "user": "Sarvam Voice AI"
+        },
+        {
+          "id": "act-pilot-wa-1788289887924-1",
+          "type": "whatsapp_sent",
+          "title": "WhatsApp AI Pitch: Practo Prime",
+          "description": "Delivered Interactive ROI Card & 60-Second Video to +91 98230 99887.",
+          "timestamp": "2026-09-01T18:41:27.924Z",
+          "user": "WhatsApp AI Agent"
+        },
+        {
+          "id": "act-pilot-email-1788289887924-1",
+          "type": "email_sent",
+          "title": "Executive Commercial Proposal: Practo Prime",
+          "description": "Sent proposal email with Practo Prime Supreme commercial terms and slot lock-in link to director@novacareeye.com.",
+          "timestamp": "2026-09-01T19:11:27.924Z",
+          "user": "Email AI Engine"
+        },
+        {
+          "id": "act-9",
+          "type": "lead_created",
+          "title": "Inbound Lead Captured",
+          "description": "Captured from website ad landing page.",
+          "timestamp": "2026-08-25T18:10:00Z",
+          "user": "System"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609511-lead-107",
+      "amogaSyncedAt": "2026-09-01T18:16:49.511Z",
+      "updatedAt": "2026-09-01T19:11:27.924Z",
+      "needsHumanIntervention": false
+    },
+    {
+      "id": "lead-108",
+      "name": "Dr. Rajeshwari Joshi",
+      "organization": "Sanjeevani Diabetes & Metabolic Care",
+      "specialty": "Endocrinology & Diabetology",
+      "category": "Clinic",
+      "city": "Ahmedabad",
+      "zone": "Memnagar",
+      "locality": "Thaltej",
+      "state": "Gujarat",
+      "email": "dr.joshi@sanjeevanidiabetes.com",
+      "phone": "+91 98795 44332",
+      "website": "https://sanjeevanidiabetes.com",
+      "patientVolumeMonthly": 1350,
+      "annualRevenueEstimate": 4100000,
+      "assignedRep": "Rahul Kapoor",
+      "status": "Proposal Sent",
+      "stage": "Proposal Sent",
+      "score": 77,
+      "scoreBreakdown": {
+        "fit": 80,
+        "intent": 75,
+        "engagement": 76
+      },
+      "tags": [
+        "Chronic Care",
+        "Automated Lab Sync",
+        "Amoga Synced",
+        "Amoga Stage: Discovery",
+        "Auto Pilot - Practo Prime",
+        "AI Sequence Active"
+      ],
+      "lastContacted": "2026-09-01T19:11:27.926Z",
+      "notes": "AI voice call conducted; positive sentiment. Sequence triggered for WhatsApp case studies.",
+      "customFields": {
+        "currentEHR": "Excel & Paper Records",
+        "branches": 1,
+        "doctorsCount": 3
+      },
+      "timeline": [
+        {
+          "id": "act-pilot-voice-1788289887926-2",
+          "type": "voice_call",
+          "title": "AI Voice Outreach: Practo Prime",
+          "description": "Autonomous Sarvam AI called doctor phone +91 98795 44332. Outcome: Demonstration Interest Confirmed",
+          "timestamp": "2026-09-01T18:11:27.926Z",
+          "user": "Sarvam Voice AI"
+        },
+        {
+          "id": "act-pilot-wa-1788289887926-2",
+          "type": "whatsapp_sent",
+          "title": "WhatsApp AI Pitch: Practo Prime",
+          "description": "Delivered Interactive ROI Card & 60-Second Video to +91 98795 44332.",
+          "timestamp": "2026-09-01T18:41:27.926Z",
+          "user": "WhatsApp AI Agent"
+        },
+        {
+          "id": "act-pilot-email-1788289887926-2",
+          "type": "email_sent",
+          "title": "Executive Commercial Proposal: Practo Prime",
+          "description": "Sent proposal email with Practo Prime Supreme commercial terms and slot lock-in link to dr.joshi@sanjeevanidiabetes.com.",
+          "timestamp": "2026-09-01T19:11:27.926Z",
+          "user": "Email AI Engine"
+        },
+        {
+          "id": "act-10",
+          "type": "call",
+          "title": "AI Voice Outreach Executed",
+          "description": "Voice bot engaged with clinic reception, forwarded to doctor.",
+          "timestamp": "2026-08-25T12:00:00Z",
+          "user": "AI Voice Agent"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609513-lead-108",
+      "amogaSyncedAt": "2026-09-01T18:16:49.513Z",
+      "updatedAt": "2026-09-01T19:11:27.926Z",
+      "needsHumanIntervention": false
+    },
+    {
+      "id": "lead-109",
+      "name": "Dr. Farhan Qureshi",
+      "organization": "CarePlus Dialysis & Renal Care Network",
+      "specialty": "Nephrology & Urology",
+      "category": "Clinic Chain",
+      "city": "Delhi",
+      "zone": "South extension",
+      "locality": "Gautam Nagar",
+      "state": "Delhi",
+      "email": "farhan@careplusrenal.in",
+      "phone": "+91 98188 55443",
+      "website": "https://careplusrenal.in",
+      "patientVolumeMonthly": 3100,
+      "annualRevenueEstimate": 14000000,
+      "assignedRep": "Ananya Roy",
+      "status": "Needs Human Intervention",
+      "stage": "Needs Human Intervention",
+      "score": 93,
+      "scoreBreakdown": {
+        "fit": 96,
+        "intent": 92,
+        "engagement": 91
+      },
+      "tags": [
+        "Enterprise Deal",
+        "Recurring Patient Visits",
+        "Multi-City",
+        "Amoga Synced",
+        "Amoga Stage: Discovery",
+        "Auto Pilot - Practo Prime",
+        "🚨 Escalated to Field AE"
+      ],
+      "lastContacted": "2026-09-01T19:11:27.928Z",
+      "notes": "Evaluating $24k enterprise tier for unified recurring dialysis scheduling and automated insurance pre-authorization.",
+      "customFields": {
+        "currentEHR": "In-house ERP",
+        "branches": 4,
+        "doctorsCount": 12
+      },
+      "timeline": [
+        {
+          "id": "act-pilot-voice-1788289887928-3",
+          "type": "voice_call",
+          "title": "AI Voice Outreach: Practo Prime",
+          "description": "Autonomous Sarvam AI called doctor phone +91 98188 55443. Outcome: High-Value Pricing Question → Escalated to Field Rep",
+          "timestamp": "2026-09-01T18:11:27.928Z",
+          "user": "Sarvam Voice AI"
+        },
+        {
+          "id": "act-pilot-wa-1788289887928-3",
+          "type": "whatsapp_sent",
+          "title": "WhatsApp AI Pitch: Practo Prime",
+          "description": "Delivered Interactive ROI Card & 60-Second Video to +91 98188 55443.",
+          "timestamp": "2026-09-01T18:41:27.928Z",
+          "user": "WhatsApp AI Agent"
+        },
+        {
+          "id": "act-pilot-email-1788289887928-3",
+          "type": "email_sent",
+          "title": "Executive Commercial Proposal: Practo Prime",
+          "description": "Sent proposal email with Practo Prime Supreme commercial terms and slot lock-in link to farhan@careplusrenal.in.",
+          "timestamp": "2026-09-01T19:11:27.928Z",
+          "user": "Email AI Engine"
+        },
+        {
+          "id": "act-11",
+          "type": "proposal",
+          "title": "Enterprise Proposal Dispatched",
+          "description": "Custom SLA and integration architecture document delivered.",
+          "timestamp": "2026-08-25T15:00:00Z",
+          "user": "Ananya Roy"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609514-lead-109",
+      "amogaSyncedAt": "2026-09-01T18:16:49.514Z",
+      "updatedAt": "2026-09-01T19:11:27.928Z",
+      "needsHumanIntervention": true,
+      "escalationDetails": {
+        "reason": "Doctor requested custom multi-branch volume discount & dedicated consultation with senior field executive in Delhi.",
+        "triggeredBy": "Autonomous AI Pilot Analysis",
+        "recommendedAction": "Call Dr. Farhan Qureshi directly at +91 98188 55443. Offer customized Practo Prime Supreme package terms and book on-site doctor demo.",
+        "escalatedAt": "2026-09-01T19:11:27.928Z",
+        "assignedRep": "Ananya Roy"
+      }
+    },
+    {
+      "id": "lead-110",
+      "name": "Dr. Anupam Deshmukh",
+      "organization": "Nagpur Gastro & Liver Care Clinic",
+      "specialty": "Gastroenterology",
+      "category": "Clinic",
+      "city": "Nagpur",
+      "zone": "Dhantoli",
+      "locality": "Congress Nagar",
+      "state": "Maharashtra",
+      "email": "dr.anupam@nagpurgastro.in",
+      "phone": "+91 98224 88776",
+      "website": "https://nagpurgastro.in",
+      "patientVolumeMonthly": 1450,
+      "annualRevenueEstimate": 5800000,
+      "assignedRep": "Priya Sharma",
+      "status": "Qualified",
+      "stage": "Qualified",
+      "score": 91,
+      "scoreBreakdown": {
+        "fit": 93,
+        "intent": 89,
+        "engagement": 91
+      },
+      "tags": [
+        "High OPD Flow",
+        "WhatsApp Ready",
+        "Practo Verified",
+        "Amoga Synced",
+        "Amoga Stage: Discovery"
+      ],
+      "lastContacted": "2026-08-26T07:30:00Z",
+      "notes": "Endoscopy follow-up sequences needed. High interest in Practo-synced reminder engine.",
+      "customFields": {
+        "currentEHR": "Practo Ray",
+        "branches": 1,
+        "doctorsCount": 4
+      },
+      "timeline": [
+        {
+          "id": "act-12",
+          "type": "lead_created",
+          "title": "Lead Profiled via Practo Pilot",
+          "description": "Identified strong patient review momentum in Dhantoli.",
+          "timestamp": "2026-08-26T07:30:00Z",
+          "user": "AI Pilot"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609515-lead-110",
+      "amogaSyncedAt": "2026-09-01T18:16:49.515Z",
+      "updatedAt": "2026-09-01T18:16:49.515Z"
+    },
+    {
+      "id": "lead-111",
+      "name": "Dr. N. Chandrasekharan",
+      "organization": "Malabar Joint Care & Sports Injury Clinic",
+      "specialty": "Orthopedics",
+      "category": "Clinic",
+      "city": "Kozhikode",
+      "zone": "Kozhikode",
+      "locality": "St.Vincent Colony",
+      "state": "Kerala",
+      "email": "dr.chandra@malabarjointcare.com",
+      "phone": "+91 98470 11998",
+      "website": "https://malabarjointcare.com",
+      "patientVolumeMonthly": 1750,
+      "annualRevenueEstimate": 7000000,
+      "assignedRep": "Rahul Kapoor",
+      "status": "Demo Scheduled",
+      "stage": "Demo Scheduled",
+      "score": 90,
+      "scoreBreakdown": {
+        "fit": 92,
+        "intent": 88,
+        "engagement": 90
+      },
+      "tags": [
+        "Key Opinion Leader",
+        "High Patient Flow",
+        "Decision Maker",
+        "Amoga Synced",
+        "Amoga Stage: Discovery"
+      ],
+      "lastContacted": "2026-08-26T08:15:00Z",
+      "notes": "Demo scheduled for Thursday. Wants to see WhatsApp confirmation buttons and automated physiotherapy reminders.",
+      "customFields": {
+        "currentEHR": "Legacy Desktop App",
+        "branches": 2,
+        "doctorsCount": 5
+      },
+      "timeline": [
+        {
+          "id": "act-13",
+          "type": "call",
+          "title": "Discovery Call Completed",
+          "description": "Confirmed 25% no-show rate on Saturday surgeries.",
+          "timestamp": "2026-08-26T08:15:00Z",
+          "user": "Rahul Kapoor"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609516-lead-111",
+      "amogaSyncedAt": "2026-09-01T18:16:49.516Z",
+      "updatedAt": "2026-09-01T18:16:49.516Z"
+    },
+    {
+      "id": "lead-112",
+      "name": "Dr. Madhavan Nair",
+      "organization": "Kerala Child Development & Pediatric Hub",
+      "specialty": "Pediatrics & Neonatology",
+      "category": "Clinic",
+      "city": "Kottayam",
+      "zone": "Kottayam",
+      "locality": "Choondacherry",
+      "state": "Kerala",
+      "email": "info@kottayampediatrics.in",
+      "phone": "+91 98460 55443",
+      "website": "https://kottayampediatrics.in",
+      "patientVolumeMonthly": 1300,
+      "annualRevenueEstimate": 4200000,
+      "assignedRep": "Ananya Roy",
+      "status": "Contacted",
+      "stage": "Contacted",
+      "score": 84,
+      "scoreBreakdown": {
+        "fit": 86,
+        "intent": 82,
+        "engagement": 84
+      },
+      "tags": [
+        "Vaccination Calendar",
+        "WhatsApp Funnel",
+        "Amoga Synced",
+        "Amoga Stage: Discovery"
+      ],
+      "lastContacted": "2026-08-26T08:20:00Z",
+      "notes": "Immunization reminder automation sequence active.",
+      "customFields": {
+        "currentEHR": "Practo Pro",
+        "branches": 1,
+        "doctorsCount": 3
+      },
+      "timeline": [
+        {
+          "id": "act-14",
+          "type": "email",
+          "title": "Vaccine Sequence Sent",
+          "description": "Delivered pediatric compliance whitepaper.",
+          "timestamp": "2026-08-26T08:20:00Z",
+          "user": "System"
+        }
+      ],
+      "amogaSyncId": "amoga-lead-1788286609518-lead-112",
+      "amogaSyncedAt": "2026-09-01T18:16:49.518Z",
+      "updatedAt": "2026-09-01T18:16:49.518Z"
+    }
+  ],
+  "deals": [
+    {
+      "id": "deal-201",
+      "title": "Mehta Cardiology Practo Prime & Reach Annual Suite",
+      "leadId": "lead-101",
+      "leadName": "Dr. Aarav Mehta",
+      "organization": "Mehta Multispecialty Cardiology & Heart Clinic",
+      "city": "Mumbai",
+      "zone": "Powai",
+      "value": 120000,
+      "mrr": 10000,
+      "stage": "Proposal Sent",
+      "probability": 75,
+      "assignedRep": "Priya Sharma",
+      "expectedCloseDate": "2026-09-10",
+      "products": [
+        "Practo Prime Annual",
+        "Practo Reach Position #1",
+        "WhatsApp Automation"
+      ],
+      "notes": "Customer requested 5% discount on 3-year upfront commitment."
+    },
+    {
+      "id": "deal-202",
+      "title": "Apex Orthopedic Practo Reach 3-Position Package",
+      "leadId": "lead-102",
+      "leadName": "Dr. Shalini Varma",
+      "organization": "Apex Orthopedic & Joint Reconstruction Institute",
+      "city": "Bangalore",
+      "zone": "Whitefield",
+      "value": 185000,
+      "mrr": 15400,
+      "stage": "Demo Scheduled",
+      "probability": 50,
+      "assignedRep": "Rahul Kapoor",
+      "expectedCloseDate": "2026-09-20",
+      "products": [
+        "Practo Reach Top Slot",
+        "Practo Prime Consultation Engine"
+      ],
+      "notes": "Demo will focus on post-op adherence metrics."
+    },
+    {
+      "id": "deal-203",
+      "title": "Apollo Dental Practo Prime 5-Location Network",
+      "leadId": "lead-103",
+      "leadName": "Dr. Vikramaditya Reddy",
+      "organization": "Apollo Dental & Maxillofacial Care Hub",
+      "city": "Hyderabad",
+      "zone": "Banjara hills",
+      "value": 210000,
+      "mrr": 17500,
+      "stage": "Negotiation",
+      "probability": 85,
+      "assignedRep": "Ananya Roy",
+      "expectedCloseDate": "2026-08-30",
+      "products": [
+        "Practo Prime 5-Clinic Network",
+        "Practo Reach Sponsored Slots"
+      ],
+      "notes": "Final contract terms being drafted by legal."
+    },
+    {
+      "id": "deal-204",
+      "title": "Glow Skin Practo Prime & Reach 2-Year Lock",
+      "leadId": "lead-104",
+      "leadName": "Dr. Neha Saxena",
+      "organization": "Glow Skin Aesthetics & Laser Dermatology",
+      "city": "Delhi",
+      "zone": "Greater kailash",
+      "value": 185000,
+      "mrr": 15400,
+      "stage": "Closed Won",
+      "probability": 100,
+      "assignedRep": "Priya Sharma",
+      "expectedCloseDate": "2026-08-25",
+      "products": [
+        "Practo Prime Premium",
+        "Practo Reach Aesthetic Tier 1"
+      ],
+      "notes": "Signed and fully collected."
+    },
+    {
+      "id": "deal-205",
+      "title": "CarePlus Renal Practo Reach Multi-Zone Sponsored",
+      "leadId": "lead-109",
+      "leadName": "Dr. Farhan Qureshi",
+      "organization": "CarePlus Dialysis & Renal Care Network",
+      "city": "Delhi",
+      "zone": "South extension",
+      "value": 240000,
+      "mrr": 20000,
+      "stage": "Proposal Sent",
+      "probability": 70,
+      "assignedRep": "Ananya Roy",
+      "expectedCloseDate": "2026-09-15",
+      "products": [
+        "Practo Reach Top 2 Slots",
+        "Practo Prime Booking Suite"
+      ],
+      "notes": "Reviewing commercial proposal document."
+    },
+    {
+      "id": "deal-206",
+      "title": "Lotus Women Clinic Practo Reach Annual Sponsored",
+      "leadId": "lead-106",
+      "leadName": "Dr. Maya Krishnan",
+      "organization": "Lotus Women & Fertility Care Center",
+      "city": "Chennai",
+      "zone": "Chennai South East 1",
+      "value": 98000,
+      "mrr": 8160,
+      "stage": "Qualified",
+      "probability": 40,
+      "assignedRep": "Ananya Roy",
+      "expectedCloseDate": "2026-09-28",
+      "products": [
+        "Practo Reach Position #2",
+        "WhatsApp Broadcast Funnel"
+      ],
+      "notes": "High synergy with existing digital marketing ad spend."
+    },
+    {
+      "id": "deal-207",
+      "title": "Southern Heart Practo Prime & Reach Combo",
+      "leadId": "lead-105",
+      "leadName": "Dr. K. Swaminathan",
+      "organization": "Southern Heart & Vascular Care Centre",
+      "city": "Chennai",
+      "zone": "Chennai South West 2",
+      "value": 160000,
+      "mrr": 13330,
+      "stage": "Contacted",
+      "probability": 35,
+      "assignedRep": "Rahul Kapoor",
+      "expectedCloseDate": "2026-10-02",
+      "products": [
+        "Practo Prime Verified",
+        "Practo Reach Slot 1"
+      ],
+      "notes": "Requested pilot metrics from Mumbai cardiology clinics."
+    },
+    {
+      "id": "deal-208",
+      "title": "Malabar Joint Care Practo Reach Sponsored Slot",
+      "leadId": "lead-111",
+      "leadName": "Dr. N. Chandrasekharan",
+      "organization": "Malabar Joint Care & Sports Injury Clinic",
+      "city": "Kozhikode",
+      "zone": "Kozhikode",
+      "value": 145000,
+      "mrr": 12080,
+      "stage": "Demo Scheduled",
+      "probability": 50,
+      "assignedRep": "Rahul Kapoor",
+      "expectedCloseDate": "2026-09-18",
+      "products": [
+        "Practo Reach Position #1",
+        "WhatsApp Automation"
+      ],
+      "notes": "Interested in slot lock for Q4."
+    }
+  ],
+  "templates": [
+    {
+      "id": "tpl-email-1",
+      "channel": "email",
+      "name": "High-Converting Doctor Cold Outreach",
+      "subject": "Quick question regarding patient no-show reduction at {{organization}}",
+      "content": "Hi {{name}},\n\nI noticed your clinic {{organization}} in {{locality}}, {{city}} is seeing tremendous patient volume in {{specialty}}.\n\nMost clinical directors we partner with find that 18% to 26% of scheduled appointments drop off due to manual confirmation gaps.\n\nOur AI Sales & Patient Automation engine recently helped Dr. Mehta eliminate 82% of no-shows and increase booked revenue by $14,000 in under 60 days via intelligent WhatsApp triage.\n\nWould you be open to a brief 7-minute executive walkthrough this Thursday at 3:00 PM?\n\nBest regards,\n{{repName}}\nApex Healthcare Solutions",
+      "variables": [
+        "name",
+        "organization",
+        "city",
+        "locality",
+        "specialty",
+        "repName"
+      ],
+      "openRate": "68.4%",
+      "replyRate": "24.1%"
+    },
+    {
+      "id": "tpl-wa-1",
+      "channel": "whatsapp",
+      "name": "Interactive Clinic WhatsApp Pitch",
+      "subject": "WhatsApp Quick Engagement",
+      "content": "Hello {{name}}! 🩺\n\nWe’ve automated patient appointments and zero-touch booking for leading {{specialty}} clinics in {{locality}}, {{city}}.\n\n✅ 24/7 WhatsApp AI receptionist for patient queries\n✅ Instant reminder sequences with one-tap reschedule\n✅ Direct sync into your existing clinic EHR\n\nWould you like a quick 60-second video demo sent directly here?\n\n👉 Reply 'DEMO' to see it live in action.",
+      "variables": [
+        "name",
+        "specialty",
+        "locality",
+        "city"
+      ],
+      "openRate": "94.2%",
+      "replyRate": "38.6%"
+    },
+    {
+      "id": "tpl-call-1",
+      "channel": "voice_ai",
+      "name": "AI Voice SDR Autonomous Script",
+      "subject": "Doctor Reception Gatekeeper & Follow-up Call",
+      "content": "Hello! This is Sarah calling on behalf of Apex Healthcare. I'm calling to speak with {{name}} or the Clinic Practice Manager regarding {{organization}}'s patient booking automation in {{city}}. We recently launched an AI solution that connects with Practo and eliminates missed inquiries for top {{specialty}} practices. Could you connect me with Dr. {{name}} or would it be best to send a quick overview directly to their WhatsApp?",
+      "variables": [
+        "name",
+        "organization",
+        "specialty",
+        "city"
+      ],
+      "openRate": "78.0%",
+      "replyRate": "42.5%"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "wf-1",
+      "name": "Healthcare Inbound Fast-Response Funnel",
+      "status": "Active",
+      "trigger": "New Lead Captured (Web / Ad / Scraper)",
+      "stepsCount": 4,
+      "enrolledCount": 148,
+      "completedCount": 112,
+      "conversionRate": "34.8%",
+      "steps": [
+        {
+          "step": 1,
+          "type": "action",
+          "channel": "whatsapp",
+          "title": "Instant WhatsApp Intro",
+          "delay": "Instant (0 mins)",
+          "description": "Send personalized welcome message with 60s demo video."
+        },
+        {
+          "step": 2,
+          "type": "delay",
+          "title": "Wait Period",
+          "delay": "2 Hours",
+          "description": "Wait for user reply or video view trigger."
+        },
+        {
+          "step": 3,
+          "type": "condition",
+          "title": "Check Engagement",
+          "description": "If replied -> Notify Assigned Rep on Slack. If no reply -> Trigger Step 4."
+        },
+        {
+          "step": 4,
+          "type": "action",
+          "channel": "voice_ai",
+          "title": "Autonomous AI Voice Call",
+          "delay": "Next Day 11:00 AM",
+          "description": "AI SDR calls clinic front-desk to introduce custom proposition."
+        }
+      ]
+    },
+    {
+      "id": "wf-2",
+      "name": "Post-Demo Enterprise Proposal Closer",
+      "status": "Active",
+      "trigger": "Stage Changed to Proposal Sent",
+      "stepsCount": 3,
+      "enrolledCount": 42,
+      "completedCount": 36,
+      "conversionRate": "58.3%",
+      "steps": [
+        {
+          "step": 1,
+          "type": "action",
+          "channel": "email",
+          "title": "Executive Proposal PDF & Interactive Link",
+          "delay": "Instant",
+          "description": "Send high-res PDF + interactive digital sign room."
+        },
+        {
+          "step": 2,
+          "type": "delay",
+          "title": "Wait Period",
+          "delay": "48 Hours",
+          "description": "Monitor document view time and clicks."
+        },
+        {
+          "step": 3,
+          "type": "action",
+          "channel": "whatsapp",
+          "title": "Director WhatsApp Check-in",
+          "delay": "2 Days",
+          "description": "Automated executive check-in: \"Hi Doctor, did you have any questions on the SLA terms?\""
+        }
+      ]
+    }
+  ],
+  "team": [
+    {
+      "id": "user-1",
+      "name": "Karan Patel",
+      "email": "karan@apexsales.io",
+      "role": "superadmin",
+      "title": "Chief Revenue Officer & SuperAdmin",
+      "avatarColor": "purple",
+      "activeDealsCount": 0,
+      "pipelineValue": 0,
+      "dealsWonThisMonth": 0,
+      "quotaAttainment": 100,
+      "status": "Online"
+    },
+    {
+      "id": "user-2",
+      "name": "Priya Sharma",
+      "email": "priya@apexsales.io",
+      "role": "sales_manager",
+      "title": "Senior Sales Director",
+      "avatarColor": "indigo",
+      "activeDealsCount": 14,
+      "pipelineValue": 84000,
+      "dealsWonThisMonth": 5,
+      "quotaAttainment": 118,
+      "status": "Online"
+    },
+    {
+      "id": "user-3",
+      "name": "Rahul Kapoor",
+      "email": "rahul@apexsales.io",
+      "role": "account_executive",
+      "title": "Enterprise Account Executive",
+      "avatarColor": "cyan",
+      "activeDealsCount": 11,
+      "pipelineValue": 65000,
+      "dealsWonThisMonth": 3,
+      "quotaAttainment": 94,
+      "status": "Online"
+    },
+    {
+      "id": "user-4",
+      "name": "Ananya Roy",
+      "email": "ananya@apexsales.io",
+      "role": "sdr",
+      "title": "Senior Sales Development Rep",
+      "avatarColor": "emerald",
+      "activeDealsCount": 18,
+      "pipelineValue": 112000,
+      "dealsWonThisMonth": 6,
+      "quotaAttainment": 132,
+      "status": "Online"
+    },
+    {
+      "id": "user-5",
+      "name": "Devin Clark",
+      "email": "devin@compliance.org",
+      "role": "auditor",
+      "title": "Enterprise Data Privacy & Security Auditor",
+      "avatarColor": "amber",
+      "activeDealsCount": 0,
+      "pipelineValue": 0,
+      "dealsWonThisMonth": 0,
+      "quotaAttainment": 100,
+      "status": "Online"
+    }
+  ],
+  "integrations": [
+    {
+      "id": "int-practo",
+      "name": "Practo Pro & Ray Sync",
+      "category": "Healthcare EHR",
+      "status": "Connected",
+      "lastSync": "2026-08-26T08:30:00Z",
+      "recordsSynced": 3420,
+      "icon": "HeartPulse",
+      "description": "Real-time two-way synchronization of doctor clinics, appointments, and reviews."
+    },
+    {
+      "id": "int-whatsapp",
+      "name": "WhatsApp Cloud API (Meta)",
+      "category": "Outreach & Messaging",
+      "status": "Connected",
+      "lastSync": "2026-09-01T18:02:59.830Z",
+      "recordsSynced": 12426,
+      "icon": "MessageSquare",
+      "description": "Official Meta Business API for verified green-tick broadcast & interactive templates."
+    },
+    {
+      "id": "int-voice",
+      "name": "Retell / Twilio AI Voice Dialer",
+      "category": "Voice Automation",
+      "status": "Connected",
+      "lastSync": "2026-08-26T08:28:00Z",
+      "recordsSynced": 890,
+      "icon": "PhoneCall",
+      "description": "Low-latency conversational AI voice agent with sub-400ms audio response."
+    },
+    {
+      "id": "int-hubspot",
+      "name": "HubSpot Enterprise CRM",
+      "category": "CRM Bridge",
+      "status": "Connected",
+      "lastSync": "2026-08-26T07:00:00Z",
+      "recordsSynced": 5610,
+      "icon": "Share2",
+      "description": "Continuous bi-directional pipeline sync for enterprise reporting."
+    },
+    {
+      "id": "int-zapier",
+      "name": "Zapier / Webhooks Gateway",
+      "category": "Automations",
+      "status": "Active",
+      "lastSync": "2026-08-26T08:34:00Z",
+      "recordsSynced": 8840,
+      "icon": "Zap",
+      "description": "Custom trigger endpoints for Google Ads, Facebook Leads, and internal webhooks."
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "log-1788310257686-iqyw",
+      "timestamp": "2026-09-02T00:50:57.686Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Indiranagar\", specialty=\"General Physician\", onPracto=\"all\" → 9 verified clinics",
+      "user": "Lead Discovery Engine",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788310245079-noij",
+      "timestamp": "2026-09-02T00:50:45.079Z",
+      "action": "LEAD_CREATED",
+      "entity": "Lead: Dr. Test Physician (Apollo Clinic - Mumbai/Powai)",
+      "user": "User",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788310245015-prsj",
+      "timestamp": "2026-09-02T00:50:45.015Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"All\", specialty=\"Dentist\", onPracto=\"all\" → 10 verified clinics",
+      "user": "Lead Discovery Engine",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788290643380-du8a",
+      "timestamp": "2026-09-01T19:24:03.380Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"General Dentistry\", onPracto=\"all\" → 6 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788290642997-y553",
+      "timestamp": "2026-09-01T19:24:02.997Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"General Dentistry\", onPracto=\"all\" → 6 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289924749-pqgn",
+      "timestamp": "2026-09-01T19:12:04.749Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"General Dentistry\", onPracto=\"all\" → 6 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289923437-tu49",
+      "timestamp": "2026-09-01T19:12:03.437Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"General Dentistry\", onPracto=\"all\" → 6 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289894417-iyp1",
+      "timestamp": "2026-09-01T19:11:34.417Z",
+      "action": "HUMAN_ESCALATION_RESOLVED",
+      "entity": "Field Rep resolved escalation for Dr. Maya Krishnan → moved to Demo Scheduled",
+      "user": "Field Rep",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289887930-car8",
+      "timestamp": "2026-09-01T19:11:27.930Z",
+      "action": "AUTO_AI_PILOT_EXECUTED",
+      "entity": "Executed multi-channel AI Pilot for 4 clinics. 2 automated, 2 escalated to Field Reps.",
+      "user": "Autonomous AI Engine",
+      "ip": "::1",
+      "category": "AI_PILOT"
+    },
+    {
+      "id": "log-1788289881849-gtj6",
+      "timestamp": "2026-09-01T19:11:21.849Z",
+      "action": "AUTO_AI_PILOT_EXECUTED",
+      "entity": "Executed multi-channel AI Pilot for 0 clinics. 0 automated, 0 escalated to Field Reps.",
+      "user": "Autonomous AI Engine",
+      "ip": "::1",
+      "category": "AI_PILOT"
+    },
+    {
+      "id": "log-1788289587274-3ud2",
+      "timestamp": "2026-09-01T19:06:27.274Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"all\" → 9 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289583743-yijh",
+      "timestamp": "2026-09-01T19:06:23.743Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"no\" → 0 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289572941-tt2d",
+      "timestamp": "2026-09-01T19:06:12.941Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"yes\" → 9 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289566001-fola",
+      "timestamp": "2026-09-01T19:06:06.001Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"no\" → 0 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289561671-x65n",
+      "timestamp": "2026-09-01T19:06:01.671Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"all\" → 9 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289559426-n0gz",
+      "timestamp": "2026-09-01T19:05:59.426Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"All\", onPracto=\"all\" → 8 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289553851-t9ki",
+      "timestamp": "2026-09-01T19:05:53.851Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"All\", specialty=\"All\", onPracto=\"all\" → 15 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289448153-tsph",
+      "timestamp": "2026-09-01T19:04:08.153Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Pune\", zone=\"All\", specialty=\"All\", onPracto=\"no\" → 1 verified clinics",
+      "user": "Lead Discovery Engine",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289440934-8ck9",
+      "timestamp": "2026-09-01T19:04:00.934Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"All\", specialty=\"Dentist\", onPracto=\"all\" → 10 verified clinics",
+      "user": "Lead Discovery Engine",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289240432-cbnj",
+      "timestamp": "2026-09-01T19:00:40.432Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"all\" → 9 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289237150-eg9b",
+      "timestamp": "2026-09-01T19:00:37.150Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"yes\" → 9 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289235532-zunv",
+      "timestamp": "2026-09-01T19:00:35.532Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"no\" → 0 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289234534-svdc",
+      "timestamp": "2026-09-01T19:00:34.534Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dentistry\", onPracto=\"no\" → 0 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289226084-ggv2",
+      "timestamp": "2026-09-01T19:00:26.084Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"General Dentistry\", onPracto=\"no\" → 0 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289211251-64s8",
+      "timestamp": "2026-09-01T19:00:11.251Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"General Dentistry\", onPracto=\"all\" → 6 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289206673-ufg2",
+      "timestamp": "2026-09-01T19:00:06.673Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"All\", onPracto=\"all\" → 7 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289203961-hq1q",
+      "timestamp": "2026-09-01T19:00:03.961Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"All\", specialty=\"All\", onPracto=\"all\" → 15 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788289189654-ilyi",
+      "timestamp": "2026-09-01T18:59:49.654Z",
+      "action": "USER_LOGIN",
+      "entity": "User Super Admin (admin) signed in with role [superadmin]",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1788288733288-5dhy",
+      "timestamp": "2026-09-01T18:52:13.288Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Mumbai\", zone=\"Bandra\", specialty=\"Cardiologist\", onPracto=\"all\" → 5 verified clinics",
+      "user": "Lead Discovery Engine",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288732345-m0vh",
+      "timestamp": "2026-09-01T18:52:12.345Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Indiranagar\", specialty=\"General Dentistry\", onPracto=\"all\" → 6 verified clinics",
+      "user": "Lead Discovery Engine",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288544063-9nh5",
+      "timestamp": "2026-09-01T18:49:04.063Z",
+      "action": "USER_LOGIN",
+      "entity": "User Super Admin (admin) signed in with role [superadmin]",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1788288374443-stfc",
+      "timestamp": "2026-09-01T18:46:14.443Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288374437-fi1w",
+      "timestamp": "2026-09-01T18:46:14.437Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288285527-2zfv",
+      "timestamp": "2026-09-01T18:44:45.527Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288285521-gonp",
+      "timestamp": "2026-09-01T18:44:45.521Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288284024-cn6o",
+      "timestamp": "2026-09-01T18:44:44.024Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288284014-md7w",
+      "timestamp": "2026-09-01T18:44:44.014Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288251486-iyf1",
+      "timestamp": "2026-09-01T18:44:11.486Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288248030-a3un",
+      "timestamp": "2026-09-01T18:44:08.030Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"All\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288242712-ut54",
+      "timestamp": "2026-09-01T18:44:02.712Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"All\", specialty=\"All\", onPracto=\"all\" → 9 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288223708-yody",
+      "timestamp": "2026-09-01T18:43:43.708Z",
+      "action": "USER_LOGIN",
+      "entity": "User Super Admin (admin) signed in with role [superadmin]",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1788288161580-oceh",
+      "timestamp": "2026-09-01T18:42:41.580Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Indiranagar\", specialty=\"General Dentistry\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Lead Discovery Engine",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788288041374-3mxx",
+      "timestamp": "2026-09-01T18:40:41.374Z",
+      "action": "USER_LOGIN",
+      "entity": "User Amit Verma (amit) signed in with role [sales_manager]",
+      "user": "Amit Verma",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1788287495708-jwkq",
+      "timestamp": "2026-09-01T18:31:35.708Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788287495704-ds7j",
+      "timestamp": "2026-09-01T18:31:35.704Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788287479479-cteg",
+      "timestamp": "2026-09-01T18:31:19.479Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788287479474-7e6j",
+      "timestamp": "2026-09-01T18:31:19.474Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788287353643-wsi5",
+      "timestamp": "2026-09-01T18:29:13.643Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788287349625-zf3f",
+      "timestamp": "2026-09-01T18:29:09.625Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"All\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788287345443-zgrp",
+      "timestamp": "2026-09-01T18:29:05.443Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"All\", specialty=\"All\", onPracto=\"all\" → 9 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788287325225-pn3l",
+      "timestamp": "2026-09-01T18:28:45.225Z",
+      "action": "USER_LOGIN",
+      "entity": "User Super Admin (superadmin) authenticated successfully",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1788286886838-rcq3",
+      "timestamp": "2026-09-01T18:21:26.838Z",
+      "action": "USER_ROLE_SWITCHED",
+      "entity": "User switched active persona to auditor",
+      "user": "Devin Clark",
+      "ip": "::1",
+      "category": "AUTH"
+    },
+    {
+      "id": "log-1788286884537-7hjl",
+      "timestamp": "2026-09-01T18:21:24.537Z",
+      "action": "USER_ROLE_SWITCHED",
+      "entity": "User switched active persona to sdr",
+      "user": "Ananya Roy",
+      "ip": "::1",
+      "category": "AUTH"
+    },
+    {
+      "id": "log-1788286882855-blbk",
+      "timestamp": "2026-09-01T18:21:22.855Z",
+      "action": "USER_ROLE_SWITCHED",
+      "entity": "User switched active persona to account_executive",
+      "user": "Rahul Kapoor",
+      "ip": "::1",
+      "category": "AUTH"
+    },
+    {
+      "id": "log-1788286880945-3tix",
+      "timestamp": "2026-09-01T18:21:20.945Z",
+      "action": "USER_ROLE_SWITCHED",
+      "entity": "User switched active persona to sales_manager",
+      "user": "Priya Sharma",
+      "ip": "::1",
+      "category": "AUTH"
+    },
+    {
+      "id": "log-1788286683456-d8bd",
+      "timestamp": "2026-09-01T18:18:03.456Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788286683452-johv",
+      "timestamp": "2026-09-01T18:18:03.452Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788286673525-cz8q",
+      "timestamp": "2026-09-01T18:17:53.525Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"General Dermatology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788286670348-0egb",
+      "timestamp": "2026-09-01T18:17:50.348Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"All\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788286664017-7m18",
+      "timestamp": "2026-09-01T18:17:44.017Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"All\", specialty=\"All\", onPracto=\"all\" → 9 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788286654279-ihva",
+      "timestamp": "2026-09-01T18:17:34.279Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788286654259-gxcm",
+      "timestamp": "2026-09-01T18:17:34.259Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788286609521-w4fq",
+      "timestamp": "2026-09-01T18:16:49.521Z",
+      "action": "AMOGA_CRM_SYNC",
+      "entity": "Synchronized 12 leads directly to Practo Amoga OS (https://practo.amoga.io)",
+      "user": "Amoga Sync Engine",
+      "ip": "::1",
+      "category": "INTEGRATION"
+    },
+    {
+      "id": "log-1788286607943-bvor",
+      "timestamp": "2026-09-01T18:16:47.943Z",
+      "action": "AMOGA_CRM_SYNC",
+      "entity": "Synchronized 12 leads directly to Practo Amoga OS (https://practo.amoga.io)",
+      "user": "Amoga Sync Engine",
+      "ip": "::1",
+      "category": "INTEGRATION"
+    },
+    {
+      "id": "log-1788286595702-2h1o",
+      "timestamp": "2026-09-01T18:16:35.702Z",
+      "action": "USER_LOGIN",
+      "entity": "User Super Admin (superadmin) authenticated successfully",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1788286468241-atn0",
+      "timestamp": "2026-09-01T18:14:28.241Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Scraper: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"General Dentistry\", onPracto=\"all\" → 12 verified clinics",
+      "user": "Lead Discovery Engine",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285779832-znwy",
+      "timestamp": "2026-09-01T18:02:59.832Z",
+      "action": "INTEGRATION_SYNC",
+      "entity": "Manual sync triggered for WhatsApp Cloud API (Meta)",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "SYSTEM"
+    },
+    {
+      "id": "log-1788285754503-xguq",
+      "timestamp": "2026-09-01T18:02:34.503Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Search: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"Dermatologist & Cosmetologist\", onPracto=\"all\" → 12 unique clinics found",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285742424-kd21",
+      "timestamp": "2026-09-01T18:02:22.424Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Search: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"All\", onPracto=\"all\" → 12 unique clinics found",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285738004-lisj",
+      "timestamp": "2026-09-01T18:02:18.004Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Search: city=\"Bangalore\", zone=\"All\", specialty=\"All\", onPracto=\"all\" → 9 unique clinics found",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285596912-peu8",
+      "timestamp": "2026-09-01T17:59:56.912Z",
+      "action": "GOOGLE_SHEET_INVENTORY_SYNC",
+      "entity": "Synchronized 9665 inventory slots across 180 cities from Google Sheet",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "INTEGRATIONS"
+    },
+    {
+      "id": "log-1788285524370-uv0e",
+      "timestamp": "2026-09-01T17:58:44.370Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524365-nomh",
+      "timestamp": "2026-09-01T17:58:44.365Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524330-k7qj",
+      "timestamp": "2026-09-01T17:58:44.330Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524299-glf9",
+      "timestamp": "2026-09-01T17:58:44.299Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524292-2ykt",
+      "timestamp": "2026-09-01T17:58:44.293Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524262-ihqp",
+      "timestamp": "2026-09-01T17:58:44.262Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524253-kb3t",
+      "timestamp": "2026-09-01T17:58:44.253Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524227-m94z",
+      "timestamp": "2026-09-01T17:58:44.227Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524215-wi6w",
+      "timestamp": "2026-09-01T17:58:44.215Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524186-hnbv",
+      "timestamp": "2026-09-01T17:58:44.186Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524178-8hgd",
+      "timestamp": "2026-09-01T17:58:44.178Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524149-y17g",
+      "timestamp": "2026-09-01T17:58:44.149Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524138-o9x0",
+      "timestamp": "2026-09-01T17:58:44.138Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524082-mq7x",
+      "timestamp": "2026-09-01T17:58:44.082Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524078-u945",
+      "timestamp": "2026-09-01T17:58:44.078Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285524011-me9d",
+      "timestamp": "2026-09-01T17:58:44.011Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523994-dt80",
+      "timestamp": "2026-09-01T17:58:43.994Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523958-c4ke",
+      "timestamp": "2026-09-01T17:58:43.958Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523909-u0sq",
+      "timestamp": "2026-09-01T17:58:43.909Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523898-t9ki",
+      "timestamp": "2026-09-01T17:58:43.898Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523858-ean3",
+      "timestamp": "2026-09-01T17:58:43.858Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523828-vrri",
+      "timestamp": "2026-09-01T17:58:43.828Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523775-xnmm",
+      "timestamp": "2026-09-01T17:58:43.775Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523768-pd51",
+      "timestamp": "2026-09-01T17:58:43.768Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523734-qpg5",
+      "timestamp": "2026-09-01T17:58:43.734Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523723-u92w",
+      "timestamp": "2026-09-01T17:58:43.723Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523690-f8tq",
+      "timestamp": "2026-09-01T17:58:43.690Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523685-9waq",
+      "timestamp": "2026-09-01T17:58:43.685Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523652-c5ye",
+      "timestamp": "2026-09-01T17:58:43.652Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523642-fv01",
+      "timestamp": "2026-09-01T17:58:43.642Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523609-wkis",
+      "timestamp": "2026-09-01T17:58:43.609Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523605-bs0d",
+      "timestamp": "2026-09-01T17:58:43.605Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523570-5tbk",
+      "timestamp": "2026-09-01T17:58:43.570Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523559-1dgh",
+      "timestamp": "2026-09-01T17:58:43.559Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523528-roms",
+      "timestamp": "2026-09-01T17:58:43.528Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523517-nvdr",
+      "timestamp": "2026-09-01T17:58:43.517Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523487-73m6",
+      "timestamp": "2026-09-01T17:58:43.487Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523478-rx6y",
+      "timestamp": "2026-09-01T17:58:43.478Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523448-8q96",
+      "timestamp": "2026-09-01T17:58:43.448Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523440-xiw4",
+      "timestamp": "2026-09-01T17:58:43.440Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523410-sglm",
+      "timestamp": "2026-09-01T17:58:43.410Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523404-06le",
+      "timestamp": "2026-09-01T17:58:43.404Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523373-f4tt",
+      "timestamp": "2026-09-01T17:58:43.373Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523366-zfeg",
+      "timestamp": "2026-09-01T17:58:43.366Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523338-0vzq",
+      "timestamp": "2026-09-01T17:58:43.338Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523329-gijc",
+      "timestamp": "2026-09-01T17:58:43.329Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523298-37tf",
+      "timestamp": "2026-09-01T17:58:43.298Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523293-5scp",
+      "timestamp": "2026-09-01T17:58:43.293Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523263-t0mo",
+      "timestamp": "2026-09-01T17:58:43.263Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523255-r3p6",
+      "timestamp": "2026-09-01T17:58:43.255Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523226-bdfg",
+      "timestamp": "2026-09-01T17:58:43.226Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523216-qunc",
+      "timestamp": "2026-09-01T17:58:43.216Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523183-hg9k",
+      "timestamp": "2026-09-01T17:58:43.183Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523181-il0t",
+      "timestamp": "2026-09-01T17:58:43.181Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523145-cxai",
+      "timestamp": "2026-09-01T17:58:43.145Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523139-hy2p",
+      "timestamp": "2026-09-01T17:58:43.139Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523106-g9m4",
+      "timestamp": "2026-09-01T17:58:43.106Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523103-d1kj",
+      "timestamp": "2026-09-01T17:58:43.103Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523067-vqxi",
+      "timestamp": "2026-09-01T17:58:43.067Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523056-gefp",
+      "timestamp": "2026-09-01T17:58:43.056Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285523026-6o6f",
+      "timestamp": "2026-09-01T17:58:43.026Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522984-lgfj",
+      "timestamp": "2026-09-01T17:58:42.984Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522974-1gj2",
+      "timestamp": "2026-09-01T17:58:42.974Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522928-h8og",
+      "timestamp": "2026-09-01T17:58:42.928Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522919-7k3m",
+      "timestamp": "2026-09-01T17:58:42.919Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522872-ockd",
+      "timestamp": "2026-09-01T17:58:42.872Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522862-10x3",
+      "timestamp": "2026-09-01T17:58:42.862Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522831-kpf3",
+      "timestamp": "2026-09-01T17:58:42.831Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522822-ncoa",
+      "timestamp": "2026-09-01T17:58:42.822Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522792-zy34",
+      "timestamp": "2026-09-01T17:58:42.792Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522782-po6j",
+      "timestamp": "2026-09-01T17:58:42.782Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522752-xoxu",
+      "timestamp": "2026-09-01T17:58:42.752Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522744-o0kk",
+      "timestamp": "2026-09-01T17:58:42.744Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522714-d6w3",
+      "timestamp": "2026-09-01T17:58:42.714Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522706-hr1o",
+      "timestamp": "2026-09-01T17:58:42.706Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522677-jc1s",
+      "timestamp": "2026-09-01T17:58:42.677Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522668-u8j1",
+      "timestamp": "2026-09-01T17:58:42.668Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522637-4mt6",
+      "timestamp": "2026-09-01T17:58:42.637Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522629-wczg",
+      "timestamp": "2026-09-01T17:58:42.629Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522599-f5yt",
+      "timestamp": "2026-09-01T17:58:42.599Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522592-r0ek",
+      "timestamp": "2026-09-01T17:58:42.592Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522563-h5oh",
+      "timestamp": "2026-09-01T17:58:42.563Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522551-49ux",
+      "timestamp": "2026-09-01T17:58:42.551Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522519-j0sn",
+      "timestamp": "2026-09-01T17:58:42.519Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522510-f17h",
+      "timestamp": "2026-09-01T17:58:42.510Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522481-tep1",
+      "timestamp": "2026-09-01T17:58:42.481Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522471-7opb",
+      "timestamp": "2026-09-01T17:58:42.471Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522445-93bo",
+      "timestamp": "2026-09-01T17:58:42.445Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522434-w68b",
+      "timestamp": "2026-09-01T17:58:42.434Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522404-u69k",
+      "timestamp": "2026-09-01T17:58:42.404Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522400-a1tk",
+      "timestamp": "2026-09-01T17:58:42.400Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522361-7brf",
+      "timestamp": "2026-09-01T17:58:42.361Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522359-ibbp",
+      "timestamp": "2026-09-01T17:58:42.359Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522324-6vh7",
+      "timestamp": "2026-09-01T17:58:42.324Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522290-xa0n",
+      "timestamp": "2026-09-01T17:58:42.290Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522258-2ird",
+      "timestamp": "2026-09-01T17:58:42.258Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522208-mtzd",
+      "timestamp": "2026-09-01T17:58:42.208Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522178-93c9",
+      "timestamp": "2026-09-01T17:58:42.178Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522129-be4j",
+      "timestamp": "2026-09-01T17:58:42.129Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522127-vmr3",
+      "timestamp": "2026-09-01T17:58:42.127Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522081-tih4",
+      "timestamp": "2026-09-01T17:58:42.081Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522073-c8hm",
+      "timestamp": "2026-09-01T17:58:42.073Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522024-nq43",
+      "timestamp": "2026-09-01T17:58:42.024Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285522016-tcb8",
+      "timestamp": "2026-09-01T17:58:42.016Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521969-ance",
+      "timestamp": "2026-09-01T17:58:41.969Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521961-ickg",
+      "timestamp": "2026-09-01T17:58:41.961Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521915-7e27",
+      "timestamp": "2026-09-01T17:58:41.915Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521906-z71g",
+      "timestamp": "2026-09-01T17:58:41.906Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521861-pzyz",
+      "timestamp": "2026-09-01T17:58:41.861Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521849-lqke",
+      "timestamp": "2026-09-01T17:58:41.849Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521817-e83z",
+      "timestamp": "2026-09-01T17:58:41.817Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521810-kmop",
+      "timestamp": "2026-09-01T17:58:41.811Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521777-1y3h",
+      "timestamp": "2026-09-01T17:58:41.777Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521772-rb5n",
+      "timestamp": "2026-09-01T17:58:41.772Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521739-am9e",
+      "timestamp": "2026-09-01T17:58:41.740Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521731-bb9d",
+      "timestamp": "2026-09-01T17:58:41.731Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521700-dgyl",
+      "timestamp": "2026-09-01T17:58:41.700Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521693-1lup",
+      "timestamp": "2026-09-01T17:58:41.693Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521663-4q70",
+      "timestamp": "2026-09-01T17:58:41.663Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521655-x861",
+      "timestamp": "2026-09-01T17:58:41.655Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521627-sww3",
+      "timestamp": "2026-09-01T17:58:41.627Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521616-xvfd",
+      "timestamp": "2026-09-01T17:58:41.616Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521588-68i8",
+      "timestamp": "2026-09-01T17:58:41.588Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521579-43q3",
+      "timestamp": "2026-09-01T17:58:41.579Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521548-9emz",
+      "timestamp": "2026-09-01T17:58:41.548Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521539-9ov9",
+      "timestamp": "2026-09-01T17:58:41.539Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521510-2vm0",
+      "timestamp": "2026-09-01T17:58:41.510Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521497-we0i",
+      "timestamp": "2026-09-01T17:58:41.498Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521469-qqo6",
+      "timestamp": "2026-09-01T17:58:41.469Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521460-8q8i",
+      "timestamp": "2026-09-01T17:58:41.460Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521429-l1ty",
+      "timestamp": "2026-09-01T17:58:41.429Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521416-5l1f",
+      "timestamp": "2026-09-01T17:58:41.416Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521387-bf2x",
+      "timestamp": "2026-09-01T17:58:41.387Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521377-1bcq",
+      "timestamp": "2026-09-01T17:58:41.377Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521343-92ka",
+      "timestamp": "2026-09-01T17:58:41.343Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521335-t8k7",
+      "timestamp": "2026-09-01T17:58:41.335Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521291-bba2",
+      "timestamp": "2026-09-01T17:58:41.291Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521282-zj9j",
+      "timestamp": "2026-09-01T17:58:41.282Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521248-kdlz",
+      "timestamp": "2026-09-01T17:58:41.248Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521235-b7f7",
+      "timestamp": "2026-09-01T17:58:41.235Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521205-6n7k",
+      "timestamp": "2026-09-01T17:58:41.205Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521195-t1w8",
+      "timestamp": "2026-09-01T17:58:41.195Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521161-9rkv",
+      "timestamp": "2026-09-01T17:58:41.161Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521149-gm8m",
+      "timestamp": "2026-09-01T17:58:41.149Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521114-mcxt",
+      "timestamp": "2026-09-01T17:58:41.114Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521104-nulb",
+      "timestamp": "2026-09-01T17:58:41.104Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521066-25do",
+      "timestamp": "2026-09-01T17:58:41.066Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521056-vlmp",
+      "timestamp": "2026-09-01T17:58:41.056Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521009-7q4w",
+      "timestamp": "2026-09-01T17:58:41.009Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285521005-hfd5",
+      "timestamp": "2026-09-01T17:58:41.005Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520950-z5hf",
+      "timestamp": "2026-09-01T17:58:40.950Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520943-51z5",
+      "timestamp": "2026-09-01T17:58:40.943Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520882-06qz",
+      "timestamp": "2026-09-01T17:58:40.882Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520876-8xs1",
+      "timestamp": "2026-09-01T17:58:40.876Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520831-6m5x",
+      "timestamp": "2026-09-01T17:58:40.831Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520821-5x6j",
+      "timestamp": "2026-09-01T17:58:40.821Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520788-11th",
+      "timestamp": "2026-09-01T17:58:40.788Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520776-fick",
+      "timestamp": "2026-09-01T17:58:40.776Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520744-rrj6",
+      "timestamp": "2026-09-01T17:58:40.744Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520739-tb84",
+      "timestamp": "2026-09-01T17:58:40.739Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520704-6knj",
+      "timestamp": "2026-09-01T17:58:40.704Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520697-ba2j",
+      "timestamp": "2026-09-01T17:58:40.697Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520664-p510",
+      "timestamp": "2026-09-01T17:58:40.664Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520654-6vxv",
+      "timestamp": "2026-09-01T17:58:40.654Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520614-npxl",
+      "timestamp": "2026-09-01T17:58:40.614Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520603-mp3n",
+      "timestamp": "2026-09-01T17:58:40.603Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520564-62rb",
+      "timestamp": "2026-09-01T17:58:40.564Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520560-4ssh",
+      "timestamp": "2026-09-01T17:58:40.560Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520519-74es",
+      "timestamp": "2026-09-01T17:58:40.519Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520510-cwfh",
+      "timestamp": "2026-09-01T17:58:40.510Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520468-ddip",
+      "timestamp": "2026-09-01T17:58:40.468Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520459-q3yx",
+      "timestamp": "2026-09-01T17:58:40.459Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520413-ij0z",
+      "timestamp": "2026-09-01T17:58:40.413Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520402-o98n",
+      "timestamp": "2026-09-01T17:58:40.402Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520358-n1lj",
+      "timestamp": "2026-09-01T17:58:40.358Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520351-18xh",
+      "timestamp": "2026-09-01T17:58:40.351Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520288-5quj",
+      "timestamp": "2026-09-01T17:58:40.289Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520251-bro5",
+      "timestamp": "2026-09-01T17:58:40.251Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520214-lhks",
+      "timestamp": "2026-09-01T17:58:40.214Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520205-c0u6",
+      "timestamp": "2026-09-01T17:58:40.205Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520172-7jma",
+      "timestamp": "2026-09-01T17:58:40.172Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520166-buyp",
+      "timestamp": "2026-09-01T17:58:40.166Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520132-4moh",
+      "timestamp": "2026-09-01T17:58:40.132Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520124-9ulo",
+      "timestamp": "2026-09-01T17:58:40.124Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520096-mhrp",
+      "timestamp": "2026-09-01T17:58:40.096Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520087-wq2l",
+      "timestamp": "2026-09-01T17:58:40.087Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520057-22ud",
+      "timestamp": "2026-09-01T17:58:40.057Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520049-tqr5",
+      "timestamp": "2026-09-01T17:58:40.049Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285520006-l86a",
+      "timestamp": "2026-09-01T17:58:40.006Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519999-2jln",
+      "timestamp": "2026-09-01T17:58:39.999Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519955-c0tq",
+      "timestamp": "2026-09-01T17:58:39.955Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519948-ie1j",
+      "timestamp": "2026-09-01T17:58:39.948Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519902-568m",
+      "timestamp": "2026-09-01T17:58:39.902Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519898-jwhg",
+      "timestamp": "2026-09-01T17:58:39.898Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519854-5tff",
+      "timestamp": "2026-09-01T17:58:39.854Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519845-7s4i",
+      "timestamp": "2026-09-01T17:58:39.845Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519811-515f",
+      "timestamp": "2026-09-01T17:58:39.811Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519802-du7y",
+      "timestamp": "2026-09-01T17:58:39.802Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519775-vp7p",
+      "timestamp": "2026-09-01T17:58:39.775Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519766-hklj",
+      "timestamp": "2026-09-01T17:58:39.766Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519740-19m1",
+      "timestamp": "2026-09-01T17:58:39.740Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519731-5e8g",
+      "timestamp": "2026-09-01T17:58:39.731Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519700-dn0j",
+      "timestamp": "2026-09-01T17:58:39.700Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519693-ut8e",
+      "timestamp": "2026-09-01T17:58:39.693Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519662-8qxy",
+      "timestamp": "2026-09-01T17:58:39.662Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519652-jjbh",
+      "timestamp": "2026-09-01T17:58:39.652Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519627-ytoj",
+      "timestamp": "2026-09-01T17:58:39.627Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519591-of5z",
+      "timestamp": "2026-09-01T17:58:39.591Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519588-h91o",
+      "timestamp": "2026-09-01T17:58:39.588Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519554-5vsm",
+      "timestamp": "2026-09-01T17:58:39.554Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519541-2f5t",
+      "timestamp": "2026-09-01T17:58:39.541Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519505-kalk",
+      "timestamp": "2026-09-01T17:58:39.505Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519496-98jq",
+      "timestamp": "2026-09-01T17:58:39.496Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519468-mlae",
+      "timestamp": "2026-09-01T17:58:39.468Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519455-phwc",
+      "timestamp": "2026-09-01T17:58:39.455Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519421-2ymz",
+      "timestamp": "2026-09-01T17:58:39.421Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519411-84fs",
+      "timestamp": "2026-09-01T17:58:39.411Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519382-pt5s",
+      "timestamp": "2026-09-01T17:58:39.382Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519372-r88y",
+      "timestamp": "2026-09-01T17:58:39.372Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519345-0yag",
+      "timestamp": "2026-09-01T17:58:39.345Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519333-hx9n",
+      "timestamp": "2026-09-01T17:58:39.333Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519305-ih69",
+      "timestamp": "2026-09-01T17:58:39.305Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519296-43ki",
+      "timestamp": "2026-09-01T17:58:39.296Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519265-fdlp",
+      "timestamp": "2026-09-01T17:58:39.265Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519259-4nuz",
+      "timestamp": "2026-09-01T17:58:39.259Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519231-4xi4",
+      "timestamp": "2026-09-01T17:58:39.231Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519222-xh7g",
+      "timestamp": "2026-09-01T17:58:39.222Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519194-lbnl",
+      "timestamp": "2026-09-01T17:58:39.194Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519183-07jz",
+      "timestamp": "2026-09-01T17:58:39.183Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519155-barz",
+      "timestamp": "2026-09-01T17:58:39.155Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519141-77lr",
+      "timestamp": "2026-09-01T17:58:39.141Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519110-tj2r",
+      "timestamp": "2026-09-01T17:58:39.110Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519100-6w9v",
+      "timestamp": "2026-09-01T17:58:39.100Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519073-n4og",
+      "timestamp": "2026-09-01T17:58:39.073Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519062-exnu",
+      "timestamp": "2026-09-01T17:58:39.062Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519036-r5zv",
+      "timestamp": "2026-09-01T17:58:39.036Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285519022-d3p0",
+      "timestamp": "2026-09-01T17:58:39.022Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518978-d7tq",
+      "timestamp": "2026-09-01T17:58:38.978Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518972-5fku",
+      "timestamp": "2026-09-01T17:58:38.972Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518928-2yht",
+      "timestamp": "2026-09-01T17:58:38.928Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518916-pfk7",
+      "timestamp": "2026-09-01T17:58:38.916Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518877-7q5n",
+      "timestamp": "2026-09-01T17:58:38.877Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518867-38oj",
+      "timestamp": "2026-09-01T17:58:38.867Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518826-hy3t",
+      "timestamp": "2026-09-01T17:58:38.826Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518816-e32s",
+      "timestamp": "2026-09-01T17:58:38.816Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518788-stqi",
+      "timestamp": "2026-09-01T17:58:38.788Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518779-mc5y",
+      "timestamp": "2026-09-01T17:58:38.779Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518751-9wum",
+      "timestamp": "2026-09-01T17:58:38.751Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518745-4rry",
+      "timestamp": "2026-09-01T17:58:38.745Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518716-hxmh",
+      "timestamp": "2026-09-01T17:58:38.716Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518707-83bl",
+      "timestamp": "2026-09-01T17:58:38.707Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518669-ndrz",
+      "timestamp": "2026-09-01T17:58:38.669Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518661-9ofm",
+      "timestamp": "2026-09-01T17:58:38.661Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518632-o9m1",
+      "timestamp": "2026-09-01T17:58:38.632Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518623-k56u",
+      "timestamp": "2026-09-01T17:58:38.623Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518593-y9f3",
+      "timestamp": "2026-09-01T17:58:38.593Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518583-4w1x",
+      "timestamp": "2026-09-01T17:58:38.583Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518553-v2o0",
+      "timestamp": "2026-09-01T17:58:38.553Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518539-m2n0",
+      "timestamp": "2026-09-01T17:58:38.539Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518510-imxq",
+      "timestamp": "2026-09-01T17:58:38.510Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518480-9h84",
+      "timestamp": "2026-09-01T17:58:38.480Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518464-dhw5",
+      "timestamp": "2026-09-01T17:58:38.464Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518425-cj6b",
+      "timestamp": "2026-09-01T17:58:38.425Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518422-bp8m",
+      "timestamp": "2026-09-01T17:58:38.422Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518384-zehf",
+      "timestamp": "2026-09-01T17:58:38.384Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518376-emgd",
+      "timestamp": "2026-09-01T17:58:38.376Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518346-6zxk",
+      "timestamp": "2026-09-01T17:58:38.346Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518338-h0ff",
+      "timestamp": "2026-09-01T17:58:38.338Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518307-59qs",
+      "timestamp": "2026-09-01T17:58:38.307Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518297-vr55",
+      "timestamp": "2026-09-01T17:58:38.297Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518268-lec5",
+      "timestamp": "2026-09-01T17:58:38.268Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518259-k7ad",
+      "timestamp": "2026-09-01T17:58:38.259Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518229-48si",
+      "timestamp": "2026-09-01T17:58:38.229Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518221-8hi0",
+      "timestamp": "2026-09-01T17:58:38.221Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518192-lqe1",
+      "timestamp": "2026-09-01T17:58:38.192Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518181-t7n6",
+      "timestamp": "2026-09-01T17:58:38.181Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518151-6kgj",
+      "timestamp": "2026-09-01T17:58:38.151Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518145-gwwj",
+      "timestamp": "2026-09-01T17:58:38.146Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518111-11n6",
+      "timestamp": "2026-09-01T17:58:38.111Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518099-2l82",
+      "timestamp": "2026-09-01T17:58:38.099Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518062-ehm9",
+      "timestamp": "2026-09-01T17:58:38.062Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518054-sxgm",
+      "timestamp": "2026-09-01T17:58:38.054Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285518006-49tb",
+      "timestamp": "2026-09-01T17:58:38.006Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285517995-5f64",
+      "timestamp": "2026-09-01T17:58:37.995Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285517931-47zb",
+      "timestamp": "2026-09-01T17:58:37.931Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285517924-tjuc",
+      "timestamp": "2026-09-01T17:58:37.924Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285517864-8ixr",
+      "timestamp": "2026-09-01T17:58:37.864Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285517860-ps6d",
+      "timestamp": "2026-09-01T17:58:37.860Z",
+      "action": "AI_VOICE_CALL_SIMULATION",
+      "entity": "Simulated Autonomous AI SDR Call with Dr. Aarav Mehta (Mehta Multispecialty Cardiology & Heart Clinic)",
+      "user": "Super Admin",
+      "ip": "Server-AI-Pilot",
+      "category": "OUTREACH"
+    },
+    {
+      "id": "log-1788285500591-a5ky",
+      "timestamp": "2026-09-01T17:58:20.591Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Search: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 unique clinics found",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285500588-1k6b",
+      "timestamp": "2026-09-01T17:58:20.588Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Search: city=\"Bangalore\", zone=\"BTM Layout\", specialty=\"Cardiology\", onPracto=\"all\" → 12 unique clinics found",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285451694-bhnp",
+      "timestamp": "2026-09-01T17:57:31.694Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Search: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"Dermatologist & Cosmetologist\", onPracto=\"all\" → 12 unique clinics found",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285446513-3qap",
+      "timestamp": "2026-09-01T17:57:26.513Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Search: city=\"Bangalore\", zone=\"Jayanagar\", specialty=\"All\", onPracto=\"all\" → 12 unique clinics found",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285443590-kofl",
+      "timestamp": "2026-09-01T17:57:23.590Z",
+      "action": "MULTI_SOURCE_CLINIC_SEARCH",
+      "entity": "Search: city=\"Bangalore\", zone=\"All\", specialty=\"All\", onPracto=\"all\" → 9 unique clinics found",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-1788285394192-4de6",
+      "timestamp": "2026-09-01T17:56:34.192Z",
+      "action": "USER_LOGIN",
+      "entity": "User Super Admin (superadmin) authenticated successfully",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1787734920571-clnf",
+      "timestamp": "2026-08-26T09:02:00.571Z",
+      "action": "USER_LOGIN",
+      "entity": "User Karan Patel (karan) authenticated successfully",
+      "user": "Karan Patel",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1787734739784-wfpp",
+      "timestamp": "2026-08-26T08:58:59.784Z",
+      "action": "USER_LOGIN",
+      "entity": "User Super Admin (superadmin) authenticated successfully",
+      "user": "Super Admin",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1787734739665-t675",
+      "timestamp": "2026-08-26T08:58:59.665Z",
+      "action": "USER_LOGIN",
+      "entity": "User Karan Patel (karan) authenticated successfully",
+      "user": "Karan Patel",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1787734739508-sv3h",
+      "timestamp": "2026-08-26T08:58:59.508Z",
+      "action": "USER_LOGIN",
+      "entity": "User Karan Patel (karan) authenticated successfully",
+      "user": "Karan Patel",
+      "ip": "::1",
+      "category": "SECURITY"
+    },
+    {
+      "id": "log-1",
+      "action": "USER_LOGIN",
+      "entity": "User Karan Patel authenticated with 2FA",
+      "user": "Karan Patel",
+      "timestamp": "2026-08-26T08:30:00Z",
+      "ip": "103.45.22.14",
+      "category": "AUTH"
+    },
+    {
+      "id": "log-2",
+      "action": "DEAL_WON",
+      "entity": "Deal: Glow Skin 2-Year Platinum Deal ($18,500)",
+      "user": "Priya Sharma",
+      "timestamp": "2026-08-25T17:30:00Z",
+      "ip": "103.45.22.14",
+      "category": "PIPELINE"
+    },
+    {
+      "id": "log-3",
+      "action": "STAGE_MOVED",
+      "entity": "Deal: Apollo Dental moved to Negotiation",
+      "user": "Ananya Roy",
+      "timestamp": "2026-08-25T16:45:00Z",
+      "ip": "103.45.22.18",
+      "category": "PIPELINE"
+    },
+    {
+      "id": "log-4",
+      "action": "PROPOSAL_SENT",
+      "entity": "Lead: CarePlus Renal Network",
+      "user": "Ananya Roy",
+      "timestamp": "2026-08-25T15:00:00Z",
+      "ip": "103.45.22.18",
+      "category": "LEADS"
+    },
+    {
+      "id": "log-5",
+      "action": "AI_CALL_COMPLETED",
+      "entity": "Lead: Dr. N. Chandrasekharan (Positive Sentiment)",
+      "user": "AI Voice Bot (Voice-4)",
+      "timestamp": "2026-08-25T12:00:00Z",
+      "ip": "Server-Automated",
+      "category": "OUTREACH"
+    }
+  ],
+  "reports": [],
+  "aiPilotJobs": [],
+  "privacySettings": {}
+}

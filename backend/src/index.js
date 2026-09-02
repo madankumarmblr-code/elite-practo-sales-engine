@@ -1,26 +1,31 @@
-import fs from 'fs';
 import { createApp } from './app.js';
-import { startSheetAutoSync } from './services/sheetSync.js';
-import { reloadLocationsIndex } from './services/locations.js';
-import { getFrontendDistDir } from './config.js';
+import { config } from './config.js';
 
-const PORT = Number(process.env.PORT || 4000);
-const HOST = process.env.HOST || '0.0.0.0';
+(async () => {
+  const app = await createApp({ serveStatic: true, warmSheet: true });
 
-const app = createApp({ serveStatic: true, warmSheet: false });
-const distDir = getFrontendDistDir();
+  const server = app.listen(config.port, () => {
+    console.log(`🚀 [Server] Backend running at http://localhost:${config.port}`);
+    console.log(`📡 [Health] http://localhost:${config.port}/api/health`);
+    console.log(`🎙️  [Sarvam] http://localhost:${config.port}/api/sarvam/config`);
+    console.log(`🏥 [Pulse]  http://localhost:${config.port}/api/pulse/meta`);
+    console.log(`📊 [Comm]   http://localhost:${config.port}/api/commercial/meta`);
+  });
 
-app.listen(PORT, HOST, () => {
-  console.log(`Practo Sales listening on http://${HOST}:${PORT}`);
-  if (fs.existsSync(distDir)) {
-    console.log(`Open http://${HOST}:${PORT} (API + UI)`);
+  // Graceful Shutdown
+  function handleShutdown(signal) {
+    console.log(`\n🛑 Received ${signal}, closing HTTP server gracefully...`);
+    server.close(() => {
+      console.log('✅ HTTP server closed. Process exiting.');
+      process.exit(0);
+    });
+
+    setTimeout(() => {
+      console.error('⚠️ Forcefully terminating server after timeout.');
+      process.exit(1);
+    }, 5000);
   }
-  startSheetAutoSync();
-  setTimeout(() => {
-    try {
-      reloadLocationsIndex();
-    } catch {
-      /* ignore */
-    }
-  }, 5000);
-});
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
+})();

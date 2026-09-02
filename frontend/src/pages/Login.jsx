@@ -432,7 +432,7 @@ export default function Login() {
 
             <div className="px-card-header">
               <div className="px-logo-wrap">
-                <img src="/practo-logo-light.svg" alt="Practo" className="px-login-logo" />
+                <img src="/practo-logo.svg" alt="Practo" className="px-login-logo" style={{ height: '28px', width: 'auto' }} />
                 <span className="px-ai-chip">AI SALES 2.0</span>
               </div>
               <h2>Sign in to Command Center</h2>

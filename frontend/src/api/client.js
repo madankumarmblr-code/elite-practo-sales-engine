@@ -1,179 +1,355 @@
-// Same-origin by default (Docker/Node single-port). For Cloudflare Pages UI + separate API, set VITE_API_BASE at build time.
-const BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
-const TOKEN_KEY = 'practo_sales_token';
+/**
+ * Frontend API Client
+ * All methods map 1-to-1 to backend route handlers.
+ * Auth token is read from localStorage and sent as Bearer header on every request.
+ */
 
+const API_BASE = '/api';
+const TOKEN_KEY = 'practo-auth-token';
+
+// ── Auth token helpers (used by CommercialSuite iframe postMessage too) ────────
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
 }
 
 export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
 }
 
-async function request(path, options = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
+function authHeaders(extra = {}) {
   const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
 
-  let res;
-  try {
-    res = await fetch(`${BASE}${path}`, {
-      ...options,
-      headers,
-    });
-  } catch {
-    throw new Error('Cannot reach API. Check that the server is running.');
+async function handleResponse(response) {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
   }
+  return response.json();
+}
 
-  if (res.status === 401 && !path.startsWith('/api/auth/login')) {
-    setToken('');
-    if (!window.location.pathname.startsWith('/login')) {
-      window.location.href = '/login';
-    }
-  }
+async function get(path, query = {}) {
+  const qs = Object.keys(query).length
+    ? '?' + new URLSearchParams(Object.fromEntries(Object.entries(query).filter(([, v]) => v != null && v !== ''))).toString()
+    : '';
+  const res = await fetch(`${API_BASE}${path}${qs}`, { headers: authHeaders() });
+  return handleResponse(res);
+}
 
-  const contentType = res.headers.get('Content-Type') || '';
-  if (!res.ok) {
-    if (contentType.includes('application/json')) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || err.message || 'Request failed');
-    }
-    if (res.status === 504) {
-      throw new Error(
-        'Lead search timed out on the server. Try a smaller zone or Refresh again — Practo.com may be slow.'
-      );
-    }
-    throw new Error(
-      res.status === 405 || res.status === 404
-        ? 'API is not available on this deployment. Redeploy with the fullstack Vercel config.'
-        : `Request failed (${res.status})`
-    );
-  }
+async function post(path, body = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res);
+}
 
-  const disposition = res.headers.get('Content-Disposition') || '';
-  if (disposition.includes('attachment') || contentType.includes('text/csv')) {
-    return res;
-  }
-  if (!contentType.includes('application/json')) {
-    throw new Error('API returned a non-JSON response. The serverless API may not be deployed.');
-  }
-  return res.json();
+async function put(path, body = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res);
+}
+
+async function patch(path, body = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res);
+}
+
+async function del(path) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return handleResponse(res);
 }
 
 export const api = {
-  login: (body) => request('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),
-  logout: () => request('/api/auth/logout', { method: 'POST' }),
-  me: () => request('/api/auth/me'),
+  // ── Health ─────────────────────────────────────────────────────────────────
+  async getHealth() {
+    try {
+      const res = await fetch(`${API_BASE}/health`);
+      return await handleResponse(res);
+    } catch (err) {
+      console.error('API getHealth error:', err);
+      return { status: 'offline', error: err.message };
+    }
+  },
 
-  searchLeads: (body) =>
-    request('/api/lead-generator/search', { method: 'POST', body: JSON.stringify(body) }),
-  getLeadGeneratorMeta: () => request('/api/lead-generator/meta'),
-  getLeadGeneratorOptions: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
-    ).toString();
-    return request(`/api/lead-generator/options${qs ? `?${qs}` : ''}`);
+  // ── Projects (basic CRUD) ──────────────────────────────────────────────────
+  async getStats() {
+    const json = await get('/stats');
+    return json.data;
   },
-  importLeads: (leads) =>
-    request('/api/lead-generator/import', { method: 'POST', body: JSON.stringify({ leads }) }),
 
-  getSheetStatus: () => request('/api/sheet/status'),
-  syncSheet: () => request('/api/sheet/sync', { method: 'POST' }),
-  getCommercialMeta: () => request('/api/commercial/meta'),
-  getCommercialInventory: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
-    ).toString();
-    return request(`/api/commercial/inventory${qs ? `?${qs}` : ''}`);
+  async getProjects(params = {}) {
+    const query = {};
+    if (params.status && params.status !== 'all') query.status = params.status;
+    if (params.category && params.category !== 'all') query.category = params.category;
+    if (params.search) query.search = params.search;
+    const json = await get('/projects', query);
+    return json.data;
   },
-  refreshCommercial: () => request('/api/commercial/refresh', { method: 'POST' }),
 
-  rehydrateWorkspace: (body) =>
-    request('/api/workspace/rehydrate', { method: 'POST', body: JSON.stringify(body) }),
+  async createProject(projectData) {
+    const json = await post('/projects', projectData);
+    return json.data;
+  },
 
-  pulseMeta: () => request('/api/pulse/meta'),
-  pulseLeads: () => request('/api/pulse/leads'),
-  pulseSource: (body) =>
-    request('/api/pulse/source', { method: 'POST', body: JSON.stringify(body) }),
-  pulseDiscover: (body) =>
-    request('/api/pulse/discover', { method: 'POST', body: JSON.stringify(body) }),
-  pulseStatus: () => request('/api/pulse/status'),
-  pingAllServicesAndApis: () => request('/api/pulse/status/ping-all', { method: 'POST' }),
-  pulseDbProbe: () => request('/api/pulse/db-probe'),
+  async updateProject(id, updates) {
+    const json = await put(`/projects/${id}`, updates);
+    return json.data;
+  },
 
-  pulseSettings: () => request('/api/pulse/settings'),
-  pulseSaveSettings: (settings) =>
-    request('/api/pulse/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
-  pulseWebhooks: () => request('/api/pulse/webhooks'),
-  pulseSaveWebhooks: (webhooks) =>
-    request('/api/pulse/webhooks', { method: 'PUT', body: JSON.stringify({ webhooks }) }),
-  pulseTestWebhooks: () => request('/api/pulse/webhooks/test', { method: 'POST' }),
-  pulseAutopilot: () => request('/api/pulse/autopilot'),
-  pulseAutopilotPush: (body) =>
-    request('/api/pulse/autopilot/push', { method: 'POST', body: JSON.stringify(body) }),
-  pulseMessages: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
-    ).toString();
-    return request(`/api/pulse/logs/messages${qs ? `?${qs}` : ''}`);
+  async deleteProject(id) {
+    return del(`/projects/${id}`);
   },
-  pulseCallLogs: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
-    ).toString();
-    return request(`/api/pulse/logs/calls${qs ? `?${qs}` : ''}`);
-  },
-  pulseTestChannel: (body) =>
-    request('/api/pulse/channels/test', { method: 'POST', body: JSON.stringify(body) }),
-  pulseTestAllChannels: () => request('/api/pulse/channels/test-all', { method: 'POST' }),
-  pulsePresets: () => request('/api/pulse/presets'),
-  validateLeads: (leads) =>
-    request('/api/pulse/validate', { method: 'POST', body: JSON.stringify({ leads }) }),
-  getCrmLeads: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
-    ).toString();
-    return request(`/api/pulse/crm/leads${qs ? `?${qs}` : ''}`);
-  },
-  updateCrmStage: (id, body) =>
-    request(`/api/pulse/crm/leads/${id}/stage`, { method: 'PATCH', body: JSON.stringify(body) }),
-  addCrmNote: (id, body) =>
-    request(`/api/pulse/crm/leads/${id}/notes`, { method: 'POST', body: JSON.stringify(body) }),
-  dialAiCall: (body) =>
-    request('/api/pulse/calls/dial', { method: 'POST', body: JSON.stringify(body) }),
-  sendWhatsApp: (body) =>
-    request('/api/pulse/whatsapp/send', { method: 'POST', body: JSON.stringify(body) }),
-  sendEmail: (body) =>
-    request('/api/pulse/email/send', { method: 'POST', body: JSON.stringify(body) }),
-  superAdminSelfTest: (body) =>
-    request('/api/pulse/superadmin/self-test', { method: 'POST', body: JSON.stringify(body) }),
-  getNotifications: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
-    ).toString();
-    return request(`/api/pulse/notifications${qs ? `?${qs}` : ''}`);
-  },
-  markNotificationsRead: (ids = []) =>
-    request('/api/pulse/notifications/mark-read', { method: 'POST', body: JSON.stringify({ ids }) }),
-  getMasterExportUrl: (format = 'csv') => `${BASE}/api/pulse/export/master?format=${format}`,
 
-  getUsers: () => request('/api/users'),
-  createUser: (body) => request('/api/users', { method: 'POST', body: JSON.stringify(body) }),
-  updateUser: (id, body) =>
-    request(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  deleteUser: (id) => request(`/api/users/${id}`, { method: 'DELETE' }),
-  getRoles: () => request('/api/auth/roles'),
-  getSystemEvents: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
-    ).toString();
-    return request(`/api/system/events${qs ? `?${qs}` : ''}`);
+  async getActivities() {
+    const json = await get('/activities');
+    return json.data;
   },
-  getSystemHealth: () => request('/api/system/health'),
-  getApiHealth: () => request('/api/health'),
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
+  async login(credentials) {
+    return post('/auth/login', credentials);
+  },
+
+  async logout() {
+    return post('/auth/logout');
+  },
+
+  async getMe() {
+    return get('/auth/me');
+  },
+
+  // ── Pulse Meta (city/zone/keyword discovery config) ────────────────────────
+  async getLeadGeneratorMeta() {
+    return get('/pulse/meta');
+  },
+
+  async pulsePresets() {
+    return get('/pulse/presets');
+  },
+
+  async pulseStatus() {
+    return get('/pulse/status');
+  },
+
+  async pulsePingAll() {
+    const res = await fetch(`${API_BASE}/pulse/status/ping-all`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  // ── Pulse Settings ─────────────────────────────────────────────────────────
+  async pulseSettings() {
+    return get('/pulse/settings');
+  },
+
+  async pulseSaveSettings(settings) {
+    return put('/pulse/settings', settings);
+  },
+
+  // ── Lead Discovery (LeadGenerator page) ────────────────────────────────────
+  async searchLeads(params = {}) {
+    return post('/pulse/discover', params);
+  },
+
+  async importLeads(leads = []) {
+    // Saves selected discovered leads into the CRM via lead-generator import
+    return post('/lead-generator/import', { leads });
+  },
+
+  async getPulseLeads() {
+    const json = await get('/pulse/leads');
+    return json.leads || [];
+  },
+
+  async validateLeads(leads = []) {
+    return post('/pulse/validate', { leads });
+  },
+
+  // ── CRM Hub ────────────────────────────────────────────────────────────────
+  async crmLeads(params = {}) {
+    return get('/pulse/crm/leads', params);
+  },
+
+  async updateLeadStage(id, stage, note) {
+    return patch(`/pulse/crm/leads/${id}/stage`, { stage, note });
+  },
+
+  async addLeadNote(id, note, nextAction) {
+    return post(`/pulse/crm/leads/${id}/notes`, { note, nextAction });
+  },
+
+  // ── Autopilot ──────────────────────────────────────────────────────────────
+  async getAutopilot() {
+    return get('/pulse/autopilot');
+  },
+
+  async pushToAutopilot(leads, level, channels) {
+    return post('/pulse/autopilot/push', { leads, level, channels });
+  },
+
+  // ── Calls Studio (Sarvam-backed) ───────────────────────────────────────────
+  async pulseCallLogs(params = {}) {
+    return get('/pulse/logs/calls', params);
+  },
+
+  async dialAiCall(params) {
+    return post('/pulse/calls/dial', params);
+  },
+
+  // ── WhatsApp ───────────────────────────────────────────────────────────────
+  async sendWhatsApp(params) {
+    return post('/pulse/whatsapp/send', params);
+  },
+
+  async whatsappMessages(params = {}) {
+    return get('/pulse/logs/messages', { ...params, channel: 'whatsapp' });
+  },
+
+  // ── Email ──────────────────────────────────────────────────────────────────
+  async sendEmail(params) {
+    return post('/pulse/email/send', params);
+  },
+
+  // ── Channel Tests ──────────────────────────────────────────────────────────
+  async testChannel(channel, body = {}) {
+    return post('/pulse/channels/test', { channel, ...body });
+  },
+
+  async testAllChannels() {
+    return post('/pulse/channels/test-all', {});
+  },
+
+  // ── Webhooks ───────────────────────────────────────────────────────────────
+  async getWebhooks() {
+    return get('/pulse/webhooks');
+  },
+
+  async saveWebhooks(webhooks) {
+    return put('/pulse/webhooks', { webhooks });
+  },
+
+  async testWebhooks() {
+    return post('/pulse/webhooks/test', {});
+  },
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  async getNotifications(limit = 30) {
+    return get('/pulse/notifications', { limit });
+  },
+
+  async markNotificationsRead(ids = []) {
+    return post('/pulse/notifications/mark-read', { ids });
+  },
+
+  // ── Export ─────────────────────────────────────────────────────────────────
+  async exportMasterLeads(format = 'csv') {
+    return get('/pulse/export/master', { format });
+  },
+
+  // ── Sarvam Voice AI ────────────────────────────────────────────────────────
+  async sarvamGetConfig() {
+    return get('/sarvam/config');
+  },
+
+  async sarvamSaveConfig(data) {
+    return post('/sarvam/config', data);
+  },
+
+  async sarvamTestConnection() {
+    return post('/sarvam/test-connection', {});
+  },
+
+  async sarvamTriggerCall(params) {
+    return post('/sarvam/calls/outbound', params);
+  },
+
+  async sarvamGetInteractions(params = {}) {
+    return get('/sarvam/calls/interactions', params);
+  },
+
+  async sarvamGetTranscript(interactionId, appId) {
+    return get(`/sarvam/calls/transcripts/${interactionId}`, appId ? { appId } : {});
+  },
+
+  async sarvamGetRecording(interactionId, appId) {
+    return get(`/sarvam/calls/recordings/${interactionId}`, appId ? { appId } : {});
+  },
+
+  async sarvamCreateCampaign(campaignData) {
+    return post('/sarvam/campaigns', campaignData);
+  },
+
+  // ── Commercial Suite (Google Sheet inventory) ──────────────────────────────
+  async commercialMeta() {
+    return get('/commercial/meta');
+  },
+
+  async commercialInventory(params = {}) {
+    return get('/commercial/inventory', params);
+  },
+
+  async commercialRefresh() {
+    return post('/commercial/refresh', {});
+  },
+
+  // ── Sheet Sync ─────────────────────────────────────────────────────────────
+  async sheetStatus() {
+    return get('/sheet/status');
+  },
+
+  async sheetSync() {
+    return post('/sheet/sync', {});
+  },
+
+  // ── Reports ────────────────────────────────────────────────────────────────
+  async getReports(params = {}) {
+    return get('/reports', params);
+  },
+
+  // ── Workspace ─────────────────────────────────────────────────────────────
+  async getWorkspace() {
+    return get('/workspace');
+  },
+
+  // ── Audit Log ─────────────────────────────────────────────────────────────
+  async getAuditLog(params = {}) {
+    return get('/audit', params);
+  },
+
+  // ── Pitch Pilot ───────────────────────────────────────────────────────────
+  async generatePitch(lead, channel) {
+    return post('/pulse/pitch', { lead, channel });
+  },
+
+  // ── SuperAdmin ────────────────────────────────────────────────────────────
+  async superAdminSelfTest(params = {}) {
+    return post('/pulse/superadmin/self-test', params);
+  },
+
+  async dbProbe() {
+    return get('/pulse/db-probe');
+  },
 };
-

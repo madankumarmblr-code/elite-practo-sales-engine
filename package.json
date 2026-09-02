@@ -11,7 +11,7 @@
     "dev": "concurrently -n api,web -c teal,cyan \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
-    "build": "npx vite build frontend --outDir dist",
+    "build": "vite build",
     "start": "NODE_ENV=production node backend/src/index.js",
     "start:prod": "npm run build && npm start",
     "seed": "npm run seed -w backend",
@@ -21,7 +21,9 @@
     "docker:logs": "docker compose logs -f"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "vite": "^6.1.0"
   },
   "engines": {
     "node": ">=20"

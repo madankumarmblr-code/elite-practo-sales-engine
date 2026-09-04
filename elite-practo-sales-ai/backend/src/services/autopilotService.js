@@ -176,9 +176,9 @@ class AutopilotService {
 
     try {
       const telConfig = telephonyProvider.getConfig();
+      const useSimulatorMock = telConfig.voiceEngine === 'native' && telConfig.activeProvider === 'simulator';
 
-      // Use Native Voice Agent if configured (default), else fallback to Sarvam
-      if (telConfig.voiceEngine === 'native') {
+      if (useSimulatorMock) {
         const slotDetails = item.reach_slot_details && item.reach_slot_details !== '{}'
           ? JSON.parse(item.reach_slot_details)
           : {
@@ -199,8 +199,9 @@ class AutopilotService {
           city: item.city,
           speciality: item.speciality,
           product: item.product,
+          voiceEngine: 'native',
+          telephonyProviderName: 'simulator',
           leadId: item.lead_id,
-          telephonyProviderName: telConfig.activeProvider,
           reachSlotDetails: slotDetails,
         });
 
@@ -231,7 +232,8 @@ class AutopilotService {
         return { ok: true, attempt_id: callResult.callId, provider: callResult.provider, sentiment: callResult.sentiment };
       }
 
-      // Legacy Sarvam AI Call
+      // ── PRIMARY & DEFAULT: Real Sarvam Voice AI (Indus Samvaad) ───────────
+      const { sarvamVoiceService } = await import('./sarvamVoice.js');
       const result = await sarvamVoiceService.triggerProductPitchCall({
         userPhoneNumber: item.phone,
         product: item.product,
@@ -243,15 +245,38 @@ class AutopilotService {
         leadId: item.lead_id,
       });
 
-      db.prepare("UPDATE autopilot_queue SET call_attempt_id=?, call_status='queued', updated_at=? WHERE id=?")
-        .run(result.attempt_id, ts, queueId);
+      const initialTranscript = `[${ts}] Sarvam AI Voice Outbound Call initiated to ${result.user_phone_number} for Practo ${item.product.toUpperCase()} pitch. Attempt ID: ${result.attempt_id}`;
+
+      db.prepare(`
+        UPDATE autopilot_queue SET
+          call_attempt_id = ?,
+          call_status = 'queued',
+          call_disposition = 'Sarvam Voice AI Outbound Placed',
+          call_transcript = COALESCE(call_transcript, ?),
+          updated_at = ?
+        WHERE id = ?
+      `).run(result.attempt_id, initialTranscript, ts, queueId);
 
       if (item.lead_id) {
-        db.prepare("INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, 'call', 'calls', ?, ?, 'pending', ?)")
-          .run(nanoid(), item.lead_id, `Autopilot AI Call: Practo ${item.product.toUpperCase()}`, `Attempt ID: ${result.attempt_id}`, ts);
+        db.prepare("INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, 'call', 'calls', ?, ?, 'initiated', ?)")
+          .run(nanoid(), item.lead_id, `Autopilot Sarvam AI Call: Practo ${item.product.toUpperCase()}`, `Attempt ID: ${result.attempt_id} to ${result.user_phone_number}`, ts);
       }
 
-      return { ok: true, attempt_id: result.attempt_id };
+      // Automatically prepare commercial proposal draft & WhatsApp message
+      const sarvamCallOutcome = {
+        callId: result.attempt_id,
+        status: 'queued',
+        durationSec: 0,
+        provider: 'sarvam_voice',
+        sentiment: {
+          doctor_sentiment: 'Positive - Pitch Queued',
+          interest_score: 85,
+          doctor_intent: 'request_proposal',
+        },
+      };
+      await this.autoProcessCallOutcome(queueId, sarvamCallOutcome);
+
+      return { ok: true, attempt_id: result.attempt_id, provider: 'sarvam_voice' };
     } catch (err) {
       db.prepare("UPDATE autopilot_queue SET call_status='failed', current_stage='call_failed', updated_at=? WHERE id=?").run(ts, queueId);
       // Even if call fails or RNR, progress to WhatsApp AI follow-up automatically

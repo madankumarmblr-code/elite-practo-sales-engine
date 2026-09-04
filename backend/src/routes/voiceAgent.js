@@ -44,7 +44,8 @@ export function registerVoiceAgentRoutes(app) {
     const speciality = body.speciality || 'General Physician';
     const product = body.product || 'prime';
     const agentType = (body.agentType === 'human_agent' || body.agentType === 'human') ? 'human' : 'ai';
-    const telephonyProviderName = body.telephonyProviderName || body.telephonyProvider || null;
+    const voiceEngine = body.voiceEngine || 'sarvam';
+    const telephonyProviderName = body.telephonyProviderName || body.telephonyProvider || (voiceEngine === 'sarvam' ? 'sarvam' : null);
     const leadId = body.leadId || null;
     const customNotes = body.customNotes || '';
     const reachSlotDetails = body.reachSlotDetails || (body.reach_slot_details ? (typeof body.reach_slot_details === 'string' ? JSON.parse(body.reach_slot_details) : body.reach_slot_details) : null);
@@ -64,6 +65,7 @@ export function registerVoiceAgentRoutes(app) {
         speciality: speciality || 'General Physician',
         product,
         agentType,
+        voiceEngine,
         telephonyProviderName,
         leadId,
         customNotes,

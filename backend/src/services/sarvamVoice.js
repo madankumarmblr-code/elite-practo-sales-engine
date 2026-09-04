@@ -1,7 +1,21 @@
 import db from '../db/db.js';
 import { logEvent } from './logger.js';
+import { nanoid } from 'nanoid';
 
 const SARVAM_API_BASE = 'https://apps.sarvam.ai/api';
+
+/**
+ * Standardize Indian and international phone numbers into E.164 (+91XXXXXXXXXX)
+ */
+export function sanitizeIndianPhone(raw) {
+  let str = String(raw || '').trim();
+  let digits = str.replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = digits.slice(1);
+  if (digits.startsWith('91') && digits.length === 12) digits = digits.slice(2);
+  if (digits.length === 10) return `+91${digits}`;
+  if (str.startsWith('+')) return `+${str.replace(/\D/g, '')}`;
+  return `+91${digits}`;
+}
 
 /**
  * Sarvam Voice Agents (Indus Samvaad) — Configuration & Client Service
@@ -104,7 +118,7 @@ export class SarvamVoiceService {
 
       const res = await fetch(url, { method: 'GET', headers: this.getHeaders() });
       if (res.status === 401 || res.status === 403) return { success: false, status: res.status, message: 'Invalid X-API-Key or unauthorized access to workspace' };
-      return { success: true, status: res.status, message: 'Sarvam Voice Agents API credentials verified', orgId: config.orgId, workspaceId: config.workspaceId, appId: config.appId };
+      return { success: true, status: res.status, message: 'Sarvam Voice Agents (Indus Samvaad) operational', orgId: config.orgId, workspaceId: config.workspaceId, appId: config.appId };
     } catch (err) {
       return { success: false, message: `Network error: ${err.message}` };
     }
@@ -114,7 +128,7 @@ export class SarvamVoiceService {
    * Place an Instant Outbound Call via Sarvam Voice Agents
    * POST https://apps.sarvam.ai/api/outbounds/v1/orgs/{org_id}/workspaces/{workspace_id}/outbounds
    */
-  async triggerInstantOutbound({ userPhoneNumber, agentVariables = {}, appOverrides = {}, webhookConfig = null, leadId = null, appId = null, appVersion = null, connectionId = null, agentPhoneNumber = null }) {
+  async triggerInstantOutbound({ userPhoneNumber, agentVariables = {}, appOverrides = {}, webhookConfig = null, leadId = null, appId = null, appVersion = null, connectionId = null, agentPhoneNumber = null, callSummary = '' }) {
     const config = this.getConfig();
     const finalAppId = appId || config.appId;
     const finalAppVersion = appVersion || config.appVersion;
@@ -124,17 +138,14 @@ export class SarvamVoiceService {
     if (!config.apiKey) throw new Error('Sarvam Voice API Key is not configured.');
     if (!finalAppId) throw new Error('Sarvam Agent App ID (app_id) is required.');
     if (!finalConnectionId || !finalAgentPhone) throw new Error('Sarvam Telephony Connection ID and Agent Phone Number are required.');
-    if (!userPhoneNumber) throw new Error('Target user_phone_number is required (e.g. +9198XXXXXXXX).');
+    if (!userPhoneNumber) throw new Error('Target doctor phone number is required.');
 
-    let formattedUserPhone = String(userPhoneNumber).trim().replace(/\s+/g, '');
-    if (!formattedUserPhone.startsWith('+')) {
-      formattedUserPhone = formattedUserPhone.startsWith('91') ? `+${formattedUserPhone}` : `+91${formattedUserPhone}`;
+    const formattedUserPhone = sanitizeIndianPhone(userPhoneNumber);
+    if (formattedUserPhone.replace(/\D/g, '').length < 10) {
+      throw new Error(`Invalid phone number "${userPhoneNumber}". Please provide a valid 10-digit mobile number.`);
     }
 
-    let formattedAgentPhone = String(finalAgentPhone).trim().replace(/\s+/g, '');
-    if (!formattedAgentPhone.startsWith('+')) {
-      formattedAgentPhone = formattedAgentPhone.startsWith('91') ? `+${formattedAgentPhone}` : `+91${formattedAgentPhone}`;
-    }
+    const formattedAgentPhone = sanitizeIndianPhone(finalAgentPhone);
 
     const payload = {
       app_config: {
@@ -147,7 +158,7 @@ export class SarvamVoiceService {
       user_config: { user_phone_number: formattedUserPhone },
     };
 
-    // Only include agent_variables if explicitly supplied AND not empty
+    // Only include agent_variables if supplied AND not empty
     if (agentVariables && Object.keys(agentVariables).length > 0) {
       payload.app_config.agent_variables = agentVariables;
     }
@@ -163,7 +174,13 @@ export class SarvamVoiceService {
 
     const url = `${SARVAM_API_BASE}/outbounds/v1/orgs/${config.orgId}/workspaces/${config.workspaceId}/outbounds`;
 
-    logEvent({ type: 'info', category: 'voice_ai', message: `Initiating Sarvam Outbound Call to ${formattedUserPhone}`, detail: `App: ${finalAppId} v${finalAppVersion}`, meta: { url, payload } });
+    logEvent({
+      type: 'info',
+      category: 'voice_ai',
+      message: `Initiating Sarvam Outbound Call to ${formattedUserPhone}`,
+      detail: `App: ${finalAppId} v${finalAppVersion}`,
+      meta: { url, payload }
+    });
 
     const res = await fetch(url, { method: 'POST', headers: this.getHeaders(), body: JSON.stringify(payload) });
     const data = await res.json().catch(() => ({}));
@@ -174,16 +191,84 @@ export class SarvamVoiceService {
       throw new Error(errorDetail);
     }
 
-    logEvent({ type: 'info', category: 'voice_ai', message: `Sarvam Call queued. Attempt ID: ${data.attempt_id}`, meta: { attempt_id: data.attempt_id, userPhoneNumber: formattedUserPhone, leadId } });
+    logEvent({
+      type: 'info',
+      category: 'voice_ai',
+      message: `Sarvam Call queued. Attempt ID: ${data.attempt_id}`,
+      meta: { attempt_id: data.attempt_id, userPhoneNumber: formattedUserPhone, leadId }
+    });
 
-    return { attempt_id: data.attempt_id, user_phone_number: formattedUserPhone, app_id: finalAppId, status: 'queued', timestamp: new Date().toISOString() };
+    // Automatically persist to call_logs table so UI shows live record
+    const ts = new Date().toISOString();
+    const callRecordId = `call_${data.attempt_id}`;
+    try {
+      db.prepare(`
+        INSERT INTO call_logs (
+          id, lead_id, job_id, channel, direction, phone, status, duration_sec,
+          recording_url, transcript, summary, provider, meta, created_at, updated_at
+        ) VALUES (?, ?, ?, 'calls', 'outbound', ?, 'queued', 0, '', '', ?, 'sarvam_voice', ?, ?, ?)
+      `).run(
+        callRecordId,
+        leadId || null,
+        data.attempt_id,
+        formattedUserPhone,
+        callSummary || `Sarvam Voice AI Call (Indus Samvaad) placed to ${formattedUserPhone}`,
+        JSON.stringify({ attempt_id: data.attempt_id, app_id: finalAppId, connection_id: finalConnectionId }),
+        ts,
+        ts
+      );
+    } catch (dbErr) {
+      console.warn('[SarvamVoiceService] call_logs insert warning:', dbErr.message);
+    }
+
+    if (leadId) {
+      try {
+        db.prepare("UPDATE leads SET last_contacted_at=?, updated_at=? WHERE id=?").run(ts, ts, leadId);
+        db.prepare("INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, 'call', 'calls', ?, ?, 'initiated', ?)")
+          .run(nanoid(), leadId, `Sarvam Voice AI Call to ${formattedUserPhone}`, `Attempt ID: ${data.attempt_id}`, ts);
+      } catch { /* ignore */ }
+    }
+
+    return {
+      attempt_id: data.attempt_id,
+      user_phone_number: formattedUserPhone,
+      app_id: finalAppId,
+      status: 'queued',
+      provider: 'sarvam_voice',
+      timestamp: ts
+    };
   }
 
   async handleWebhookPayload(payload) {
     const { attempt_id, status, duration, interaction_id, failure_reason, webhook_config, interaction_transcript } = payload || {};
     const leadId = webhook_config?.metadata?.leadId;
 
-    logEvent({ type: status === 'failed' ? 'warn' : 'info', category: 'voice_ai', message: `Sarvam Webhook: Attempt ${attempt_id} -> ${status}`, detail: `Duration: ${duration || 0}s${failure_reason ? ` (${failure_reason})` : ''}`, meta: { attempt_id, status, duration, interaction_id, leadId } });
+    logEvent({
+      type: status === 'failed' ? 'warn' : 'info',
+      category: 'voice_ai',
+      message: `Sarvam Webhook: Attempt ${attempt_id} -> ${status}`,
+      detail: `Duration: ${duration || 0}s${failure_reason ? ` (${failure_reason})` : ''}`,
+      meta: { attempt_id, status, duration, interaction_id, leadId }
+    });
+
+    // Update call_logs if attempt_id is tracked
+    if (attempt_id) {
+      try {
+        const transcriptText = Array.isArray(interaction_transcript)
+          ? interaction_transcript.map(t => `[${t.speaker || 'Agent'}]: ${t.text || ''}`).join('\n')
+          : '';
+        db.prepare(`
+          UPDATE call_logs SET
+            status = ?,
+            duration_sec = ?,
+            transcript = COALESCE(NULLIF(?, ''), transcript),
+            updated_at = datetime('now')
+          WHERE job_id = ? OR id = ?
+        `).run(status === 'completed' ? 'completed' : status || 'failed', Math.round(duration || 0), transcriptText, attempt_id, `call_${attempt_id}`);
+      } catch (err) {
+        console.warn('[Sarvam Webhook] DB update error:', err.message);
+      }
+    }
 
     return { processed: true, attempt_id, status, duration, interaction_id, leadId, transcriptCount: interaction_transcript?.length || 0, timestamp: new Date().toISOString() };
   }
@@ -229,9 +314,9 @@ export class SarvamVoiceService {
    */
   async triggerProductPitchCall({ userPhoneNumber, product = 'prime', clinicName = '', doctorName = '', locality = '', city = '', speciality = '', leadId = null }) {
     const isReach = String(product).toLowerCase() === 'reach';
-    const docNameClean = doctorName ? doctorName.replace(/^Dr\.?\s*/i, '') : 'Doctor';
+    const docNameClean = doctorName ? doctorName.replace(/^(Dr\.?|Doctor)\s*/i, '').trim() : 'Doctor';
     const locClean = locality || city || 'your area';
-    const specClean = speciality || 'medical';
+    const specClean = speciality || 'Medical';
     const clinicClean = clinicName || 'your clinic';
 
     let initialMessage = '';
@@ -242,10 +327,19 @@ export class SarvamVoiceService {
       initialMessage = `Hello Dr. ${docNameClean}, calling from Practo regarding ${clinicClean} in ${locClean}. We are partnering with select ${specClean} clinics to activate Practo Prime, giving you 24/7 instant online booking on Practo, guaranteed patient appointments, and the official Prime Clinic badge with zero software fee. May I share how this boosts your verified patient visits by 35%?`;
     }
 
+    const agentVariables = {
+      userName: `Dr. ${docNameClean}`,
+      companyName: clinicClean,
+      role: 'Doctor / Clinic Owner',
+      productCategory: isReach ? `Practo Reach Spotlight (${specClean} - ${locClean})` : `Practo Prime (${specClean} - ${locClean})`,
+      campaignId: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
+      salesRepName: 'Practo Growth Specialist',
+    };
+
     return this.triggerInstantOutbound({
       userPhoneNumber,
       leadId,
-      // agent_variables omitted to avoid Sarvam 422 error
+      agentVariables,
       appOverrides: {
         initial_bot_message: initialMessage,
         initial_language_name: 'English',
@@ -258,6 +352,7 @@ export class SarvamVoiceService {
           doctorName: docNameClean,
         },
       },
+      callSummary: `Practo ${isReach ? 'Reach' : 'Prime'} AI Outbound pitch to Dr. ${docNameClean} (${clinicClean}, ${locClean})`,
     });
   }
 

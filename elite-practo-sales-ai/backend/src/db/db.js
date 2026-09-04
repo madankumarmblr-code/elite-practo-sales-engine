@@ -528,8 +528,8 @@ ensureColumn('autopilot_queue', 'reach_monthly_searches', "INTEGER DEFAULT 0");
 ensureColumn('autopilot_queue', 'reach_slot_details', "TEXT DEFAULT '{}'");
 
 // Voice Agent, Telephony & Dual Sentiment Analysis columns
-ensureColumn('call_logs', 'voice_engine', "TEXT DEFAULT 'native'");
-ensureColumn('call_logs', 'telephony_provider', "TEXT DEFAULT 'simulator'");
+ensureColumn('call_logs', 'voice_engine', "TEXT DEFAULT 'sarvam'");
+ensureColumn('call_logs', 'telephony_provider', "TEXT DEFAULT 'sarvam'");
 ensureColumn('call_logs', 'agent_type', "TEXT DEFAULT 'ai'");
 ensureColumn('call_logs', 'transcription_json', "TEXT DEFAULT '[]'");
 ensureColumn('call_logs', 'doctor_sentiment', "TEXT DEFAULT 'neutral'");

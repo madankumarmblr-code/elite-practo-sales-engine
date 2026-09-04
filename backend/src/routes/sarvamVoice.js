@@ -123,6 +123,20 @@ export function registerSarvamVoiceRoutes(app) {
       if (attempt_id) {
         try {
           db.prepare('UPDATE call_logs SET status=?, duration_sec=?, updated_at=? WHERE job_id=?').run(status || 'unknown', Number(duration) || 0, ts, attempt_id);
+          db.prepare(`
+            UPDATE autopilot_queue SET
+              call_status = ?,
+              call_duration = ?,
+              call_disposition = ?,
+              updated_at = ?
+            WHERE call_attempt_id = ?
+          `).run(
+            status === 'completed' ? 'completed' : (status || 'failed'),
+            Number(duration) || 0,
+            `Sarvam Call: ${status || 'updated'} (${duration || 0}s)`,
+            ts,
+            attempt_id
+          );
         } catch { /* ignore */ }
       }
 

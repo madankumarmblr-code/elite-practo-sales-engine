@@ -14,7 +14,7 @@ import { nanoid } from 'nanoid';
  */
 export class TelephonyProviderService {
   constructor() {
-    this.defaultProvider = 'simulator'; // 'simulator' | 'twilio' | 'exotel' | 'plivo' | 'webrtc'
+    this.defaultProvider = 'sarvam'; // 'sarvam' | 'simulator' | 'twilio' | 'exotel' | 'plivo' | 'webrtc'
   }
 
   getConfig() {
@@ -29,8 +29,8 @@ export class TelephonyProviderService {
     } catch { /* table may not be ready */ }
 
     return {
-      activeProvider: dbConfig.activeProvider || process.env.DEFAULT_TELEPHONY_PROVIDER || 'simulator',
-      voiceEngine: dbConfig.voiceEngine || 'native', // 'native' | 'sarvam'
+      activeProvider: dbConfig.activeProvider || process.env.DEFAULT_TELEPHONY_PROVIDER || 'sarvam',
+      voiceEngine: dbConfig.voiceEngine || 'sarvam', // 'sarvam' | 'native'
       twilio: {
         accountSid: dbConfig.twilioAccountSid || process.env.TWILIO_ACCOUNT_SID || '',
         authToken: dbSecrets.twilioAuthToken || process.env.TWILIO_AUTH_TOKEN ? '••••••••' : '',
@@ -148,6 +148,36 @@ export class TelephonyProviderService {
       detail: `Doctor: ${doctorName}, Clinic: ${clinicName}, Product: ${product}`,
       meta: { callId, leadId, provider: activeProvider },
     });
+
+    // ── 0. SARVAM VOICE AI (INDUS SAMVAAD DIRECT PSTN) ─────────────────────
+    if (activeProvider === 'sarvam' || activeProvider === 'sarvam_voice') {
+      const { sarvamVoiceService } = await import('./sarvamVoice.js');
+      const sarvamRes = await sarvamVoiceService.triggerProductPitchCall({
+        userPhoneNumber: cleanToPhone,
+        product,
+        clinicName,
+        doctorName,
+        locality: metadata?.locality || '',
+        city: metadata?.city || '',
+        speciality: metadata?.speciality || '',
+        leadId,
+      });
+
+      return {
+        callId: sarvamRes.attempt_id,
+        provider: 'sarvam_voice',
+        status: 'queued',
+        toPhone: sarvamRes.user_phone_number,
+        doctorName,
+        clinicName,
+        product,
+        durationSec: 0,
+        recordingUrl: '',
+        meta: sarvamRes,
+        timestamp: sarvamRes.timestamp,
+        message: `Sarvam Voice AI call successfully queued. Attempt ID: ${sarvamRes.attempt_id}`,
+      };
+    }
 
     // ── 1. TWILIO PROVIDER ───────────────────────────────────────────────────
     if (activeProvider === 'twilio') {

@@ -14,8 +14,8 @@ export default function VoiceCallsPage() {
 
   // Global Engine & Telephony Configuration
   const [engineConfig, setEngineConfig] = useState({
-    defaultVoiceEngine: 'native',
-    telephonyProvider: 'simulator',
+    defaultVoiceEngine: 'sarvam',
+    telephonyProvider: 'sarvam',
     twilioAccountSid: '',
     twilioAuthToken: '',
     twilioPhoneNumber: '+918047108888',
@@ -157,8 +157,8 @@ export default function VoiceCallsPage() {
     locality: 'Indiranagar',
     speciality: 'Dental Surgeon',
     product: 'prime',
-    voiceEngine: 'native', // 'native' | 'sarvam'
-    telephonyProvider: 'simulator', // 'simulator' | 'twilio' | 'exotel' | 'plivo' | 'webrtc'
+    voiceEngine: 'sarvam', // 'sarvam' | 'native'
+    telephonyProvider: 'sarvam', // 'sarvam' | 'simulator' | 'twilio' | 'exotel' | 'plivo' | 'webrtc'
     agentType: 'voice_agent', // 'voice_agent' | 'human_agent'
   });
   const [dialing, setDialing] = useState(false);
@@ -1282,8 +1282,8 @@ export default function VoiceCallsPage() {
                     value={dialForm.voiceEngine}
                     onChange={(e) => setDialForm({ ...dialForm, voiceEngine: e.target.value })}
                   >
+                    <option value="sarvam">🇮🇳 Sarvam Indus AI (Default)</option>
                     <option value="native">⚡ Proprietary Voice AI</option>
-                    <option value="sarvam">🇮🇳 Sarvam Indus AI</option>
                   </select>
                 </div>
 
@@ -1296,6 +1296,7 @@ export default function VoiceCallsPage() {
                     value={dialForm.telephonyProvider}
                     onChange={(e) => setDialForm({ ...dialForm, telephonyProvider: e.target.value })}
                   >
+                    <option value="sarvam">🇮🇳 Sarvam Direct Outbound PSTN</option>
                     <option value="simulator">🧪 Simulator Sandbox</option>
                     <option value="twilio">Twilio Cloud Voice</option>
                     <option value="exotel">Exotel India PRI</option>
@@ -1603,6 +1604,7 @@ export default function VoiceCallsPage() {
                     value={engineConfig.telephonyProvider}
                     onChange={(e) => setEngineConfig({ ...engineConfig, telephonyProvider: e.target.value })}
                   >
+                    <option value="sarvam">🇮🇳 Sarvam Voice AI (Indus Samvaad Direct PSTN)</option>
                     <option value="simulator">🧪 Simulator Sandbox (Local & Testing)</option>
                     <option value="twilio">Twilio Cloud Voice API</option>
                     <option value="exotel">Exotel India PRI & Cloud PBX</option>

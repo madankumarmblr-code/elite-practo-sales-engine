@@ -250,17 +250,17 @@ export default function AutopilotPage() {
     try {
       const payload = {
         ...callForm,
-        voiceEngine: 'native',
-        telephonyProvider: 'simulator',
+        voiceEngine: 'sarvam',
+        telephonyProvider: 'sarvam',
       };
       if (callForm.product === 'reach') {
         payload.reachSlotId = callForm.reachSlotId || selectedCallReachSlot?.slotId;
         payload.reachSlotDetails = selectedCallReachSlot;
       }
-      const res = await api.dialVoiceAgent(payload);
+      const res = await api.triggerManualCall(payload);
       setMessage({
         type: 'success',
-        text: `Voice Call placed successfully to ${callForm.phone}! Call ID: ${res.call?.callId || res.call_id || 'COMPLETED'}`,
+        text: `Sarvam Voice AI Call placed successfully to ${callForm.phone}! Attempt ID: ${res.attempt_id || res.call?.callId || 'QUEUED'}`,
       });
       setShowCallModal(false);
       loadData();

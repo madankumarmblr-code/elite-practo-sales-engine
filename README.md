@@ -1,18 +1,18 @@
 # Elite Practo Sales AI
 
-Full-stack AI-powered sales automation platform for healthcare outreach — Sarvam Voice AI, Meta WhatsApp Cloud API, Meta Llama intelligence, SQLite persistence, and Vercel-ready deployment.
+Full-stack AI-powered sales automation platform for healthcare outreach — NVIDIA Nemotron 3 Ultra (550B), Sarvam Voice AI, Meta WhatsApp Cloud API, SQLite persistence, and Vercel-ready deployment.
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
 | Backend | Node.js 20 (ESM) + Express |
-| Database | SQLite via `better-sqlite3` |
+| Database | SQLite via `better-sqlite3` / Sql.js Wasm fallback |
 | Frontend | React 18 + Vite |
-| Deployment | Vercel (frontend static + backend serverless) |
+| Deployment | Vercel (frontend static + backend serverless) / Docker |
+| AI Intelligence | NVIDIA Nemotron 3 Ultra (NVIDIA NIM `nvidia/nemotron-3-ultra-550b-a55b`) |
 | Voice AI | Sarvam Indus Samvaad |
 | Messaging | Meta WhatsApp Cloud API |
-| AI | Meta Llama |
 
 ## Quick Start
 

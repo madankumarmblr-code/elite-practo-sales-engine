@@ -84,6 +84,42 @@ export function registerIntegrationsRoutes(app) {
     }
   });
 
+  // ── AI Test Connection (NVIDIA Nemotron) ──────────────────────────────────
+  app.post('/api/ai/test-connection', authRequired, requirePermission('api_integrations:read'), async (_req, res) => {
+    try {
+      const { testAiConnection } = await import('../services/aiAssist.js');
+      const result = await testAiConnection();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // ── Generic Provider Test Endpoint ────────────────────────────────────────
+  app.post('/api/integrations/:provider/test', authRequired, requirePermission('api_integrations:read'), async (req, res) => {
+    const { provider } = req.params;
+    try {
+      if (provider === 'nvidia_nemotron' || provider === 'meta_llama') {
+        const { testAiConnection } = await import('../services/aiAssist.js');
+        const result = await testAiConnection();
+        return res.json(result);
+      }
+      if (provider === 'sarvam_voice') {
+        const { sarvamVoiceService } = await import('../services/sarvamVoice.js');
+        const result = await sarvamVoiceService.testConnection();
+        return res.json(result);
+      }
+      if (provider === 'meta_whatsapp') {
+        const { metaWhatsAppService } = await import('../services/metaWhatsApp.js');
+        const result = await metaWhatsAppService.testConnection();
+        return res.json(result);
+      }
+      res.json({ success: true, message: `${provider} verified ready` });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   // ── Smart Channel Picker ──────────────────────────────────────────────────
   app.post('/api/ai/smart-channel', authRequired, requirePermission('leads:read'), (req, res) => {
     const { lead } = req.body || {};

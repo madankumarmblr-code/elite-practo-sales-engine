@@ -36,7 +36,8 @@ export default function IntegrationsPage() {
       let result;
       if (provider === 'sarvam_voice') result = await api.sarvamTestConnection();
       else if (provider === 'meta_whatsapp') result = await api.whatsappTestConnection();
-      else result = { success: true, message: `${provider} — no test endpoint configured` };
+      else if (provider === 'nvidia_nemotron' || provider === 'meta_llama') result = await api.testAiConnection();
+      else result = await api.testIntegration(provider);
       setTestResult((r) => ({ ...r, [provider]: result }));
       fetchIntegrations();
     } catch (e) {
@@ -71,6 +72,7 @@ export default function IntegrationsPage() {
   }
 
   const PROVIDER_LABELS = {
+    nvidia_nemotron: { icon: '⚡', color: '#76b900' },
     sarvam_voice: { icon: '🎙️', color: '#7c3aed' },
     meta_whatsapp: { icon: '💬', color: '#25d366' },
     meta_llama: { icon: '🤖', color: '#00d4ff' },
@@ -159,6 +161,38 @@ export default function IntegrationsPage() {
                   <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>WABA ID</label><input className="input" value={editForm.wabaId || ''} onChange={(e) => setEditForm((f) => ({ ...f, wabaId: e.target.value }))} /></div>
                   <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Access Token</label><input className="input" type="password" value={editForm.secret_accessToken || ''} onChange={(e) => setEditForm((f) => ({ ...f, secret_accessToken: e.target.value }))} /></div>
                   <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Verify Token</label><input className="input" value={editForm.verifyToken || ''} onChange={(e) => setEditForm((f) => ({ ...f, verifyToken: e.target.value }))} /></div>
+                </div>
+              )}
+
+              {selected.provider === 'nvidia_nemotron' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+                      NVIDIA NIM API Key
+                    </label>
+                    <input
+                      className="input"
+                      type="password"
+                      value={editForm.secret_apiKey || ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, secret_apiKey: e.target.value }))}
+                      placeholder="nvapi-..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+                      NVIDIA Model ID
+                    </label>
+                    <select
+                      className="input"
+                      value={editForm.model || 'nvidia/nemotron-3-ultra-550b-a55b'}
+                      onChange={(e) => setEditForm((f) => ({ ...f, model: e.target.value }))}
+                    >
+                      <option value="nvidia/nemotron-3-ultra-550b-a55b">nvidia/nemotron-3-ultra-550b-a55b (Nemotron 3 Ultra 550B - Default)</option>
+                      <option value="nvidia/llama-3.1-nemotron-70b-instruct">nvidia/llama-3.1-nemotron-70b-instruct (Nemotron 70B)</option>
+                      <option value="nvidia/nemotron-4-340b-instruct">nvidia/nemotron-4-340b-instruct (Nemotron 4 340B)</option>
+                      <option value="nvidia/nemotron-3-super-120b-a12b">nvidia/nemotron-3-super-120b-a12b (Nemotron 3 Super)</option>
+                    </select>
+                  </div>
                 </div>
               )}
 

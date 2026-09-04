@@ -102,9 +102,9 @@ export default function DashboardPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
+                { name: 'NVIDIA Nemotron 3 Ultra', icon: '⚡', desc: 'Enterprise LLM Pitch & Sales Intelligence', status: 'active' },
                 { name: 'Sarvam Voice AI', icon: '🎙️', desc: 'Indus Samvaad Voice Agents', status: 'active' },
                 { name: 'Meta WhatsApp', icon: '💬', desc: 'WhatsApp Cloud API', status: 'active' },
-                { name: 'Meta Llama AI', icon: '🤖', desc: 'AI Pitch Generator', status: 'active' },
                 { name: 'SQLite Database', icon: '🗄️', desc: `better-sqlite3 · ${health?.counts?.leads ?? 0} leads`, status: health?.db?.connected ? 'connected' : 'error' },
               ].map((item) => (
                 <div key={item.name} className="flex items-center gap-3" style={{ padding: '10px 14px', background: 'var(--bg-surface)', borderRadius: 10, border: '1px solid var(--border)' }}>

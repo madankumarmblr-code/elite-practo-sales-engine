@@ -92,8 +92,10 @@ export const api = {
   updateIntegration: (provider, data) => put(`/integrations/${provider}`, data),
 
   // ── AI ─────────────────────────────────────────────────────────────────────
-  generatePitch: (lead, channel) => post('/ai/pitch', { lead, channel }),
+  generatePitch: (lead, channel, product) => post('/ai/pitch', { lead, channel, product }),
   smartChannel: (lead) => post('/ai/smart-channel', { lead }),
+  testAiConnection: () => post('/ai/test-connection'),
+  testIntegration: (provider) => post(`/integrations/${provider}/test`),
 
   // ── Settings ───────────────────────────────────────────────────────────────
   getSettings: () => get('/settings'),

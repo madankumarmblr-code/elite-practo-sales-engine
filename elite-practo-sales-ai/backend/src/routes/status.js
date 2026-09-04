@@ -163,8 +163,8 @@ export function registerStatusRoutes(app) {
       },
       {
         id: 'ai_pitch',
-        name: 'AI Pitch Studio & LLM Personalization Engine',
-        description: 'Contextual doctor pitch generation and multi-channel script customization',
+        name: 'NVIDIA Nemotron 3 Ultra AI Intelligence',
+        description: 'Enterprise doctor pitch synthesis and multi-channel script personalization powered by NVIDIA NIM',
         status: 'operational',
         latencyMs: 24,
         uptimePct: '99.96%',

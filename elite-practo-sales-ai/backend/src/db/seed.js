@@ -39,6 +39,21 @@ const CORE_INTEGRATIONS = [
     is_default: 1,
   },
   {
+    provider: 'nvidia_nemotron',
+    label: 'NVIDIA Nemotron AI',
+    category: 'AI Intelligence',
+    channel: 'ai',
+    notes: 'NVIDIA NIM Nemotron 3 Ultra (550B) enterprise LLM for doctor pitch synthesis and sales intelligence',
+    config: {
+      model: process.env.NVIDIA_NEMOTRON_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b',
+      endpoint: 'https://integrate.api.nvidia.com/v1',
+    },
+    secrets: {
+      apiKey: process.env.NVIDIA_NEMOTRON_API_KEY || process.env.NVIDIA_API_KEY || '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',
+    },
+    is_default: 1,
+  },
+  {
     provider: 'meta_llama',
     label: 'Meta Llama AI',
     category: 'AI Intelligence',
@@ -46,7 +61,7 @@ const CORE_INTEGRATIONS = [
     notes: 'Meta Llama API for AI sales pitch generation and smart channel selection',
     config: {},
     secrets: { apiKey: process.env.META_LLAMA_API_KEY || '' },
-    is_default: 1,
+    is_default: 0,
   },
   {
     provider: 'google_maps',

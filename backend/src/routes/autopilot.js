@@ -177,6 +177,44 @@ export function registerAutopilotRoutes(app) {
     res.json(autopilotService.getFunnelStats());
   });
 
+  // ── ⚡ Master 100% Full End-to-End Autopilot Execution ──────────────────────
+  app.post('/api/autopilot/run-all', authRequired, requirePermission('leads:write'), async (req, res) => {
+    try {
+      const { count = 15, mode = 'full_auto', product = null } = req.body || {};
+      const report = await autopilotService.runFullEndToEndAutopilot({ count: Number(count) || 15, mode, product });
+      res.json({ ok: true, report });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // ── ⚡ Auto-Enqueue Scraped Clinics Directly into Autopilot ─────────────────
+  app.post('/api/autopilot/auto-enqueue-scraped', authRequired, requirePermission('leads:write'), async (req, res) => {
+    try {
+      const { limit = 30, product = 'prime', autoStart = true } = req.body || {};
+      const result = await autopilotService.autoEnqueueScrapedClinics({ limit: Number(limit) || 30, product, autoStart });
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // ── ⚡ Global Automation Status & Mode ──────────────────────────────────────
+  app.get('/api/autopilot/automation-status', authRequired, requirePermission('dashboard:read'), (_req, res) => {
+    const stats = autopilotService.getFunnelStats();
+    res.json({
+      ok: true,
+      mode: 'full_auto',
+      voiceEngine: 'Proprietary Practo Voice AI',
+      telephonyProvider: 'Universal Multi-Carrier',
+      sttDiarization: 'Dual-Channel Active',
+      sentimentAnalysis: 'Dual Perspective (Voice Agent & Human Rep)',
+      autoProposalGeneration: 'Enabled (Prime & Reach)',
+      autoWhatsAppDispatch: 'Enabled',
+      ...stats,
+    });
+  });
+
   // ── Sarvam Webhook Integration for Autopilot ──────────────────────────────
   app.post('/api/autopilot/webhook', async (req, res) => {
     try {

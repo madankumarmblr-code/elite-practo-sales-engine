@@ -374,6 +374,13 @@ ensureColumn('autopilot_queue', 'human_reason', "TEXT DEFAULT ''");
 ensureColumn('autopilot_queue', 'retry_count', "INTEGER DEFAULT 0");
 ensureColumn('autopilot_queue', 'next_retry_at', "TEXT DEFAULT ''");
 ensureColumn('autopilot_queue', 'call_disposition', "TEXT DEFAULT ''");
+ensureColumn('autopilot_queue', 'doctor_sentiment', "TEXT DEFAULT ''");
+ensureColumn('autopilot_queue', 'interest_score', "INTEGER DEFAULT 0");
+ensureColumn('autopilot_queue', 'doctor_intent', "TEXT DEFAULT ''");
+ensureColumn('autopilot_queue', 'objections_detected', "TEXT DEFAULT '[]'");
+ensureColumn('autopilot_queue', 'proposal_id', "TEXT DEFAULT ''");
+ensureColumn('autopilot_queue', 'proposal_amount', "REAL DEFAULT 0");
+ensureColumn('autopilot_queue', 'auto_pilot_mode', "TEXT DEFAULT 'full_auto'");
 
 // Voice Agent, Telephony & Dual Sentiment Analysis columns
 ensureColumn('call_logs', 'voice_engine', "TEXT DEFAULT 'native'");

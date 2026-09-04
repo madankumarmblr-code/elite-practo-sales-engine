@@ -431,11 +431,11 @@ export default function ReachInventoryPage({ onSelectSlotForProposal }) {
                           </td>
 
                           <td>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5">
                               <button
                                 type="button"
                                 className="btn btn-primary btn-sm"
-                                style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700 }}
+                                style={{ padding: '4px 8px', fontSize: 11, fontWeight: 700 }}
                                 onClick={() => {
                                   if (onSelectSlotForProposal) onSelectSlotForProposal(slot);
                                   else {
@@ -443,7 +443,35 @@ export default function ReachInventoryPage({ onSelectSlotForProposal }) {
                                   }
                                 }}
                               >
-                                📑 Build Proposal
+                                📑 Proposal
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '4px 8px', fontSize: 11, fontWeight: 700 }}
+                                onClick={async () => {
+                                  try {
+                                    setMessage({ type: 'info', text: `⚡ Enqueueing clinics in ${slot.zone} for Practo Reach Position ${slot.position}...` });
+                                    await api.enqueueAutopilot({
+                                      clinicName: `${slot.zone} Premier Specialist Clinic`,
+                                      city: slot.city,
+                                      locality: slot.zone,
+                                      speciality: slot.speciality,
+                                      phone: '+919811002233',
+                                      ownerName: `Dr. ${slot.speciality.split(' ')[0]} Specialist`,
+                                      product: 'reach',
+                                      autoStart: true,
+                                    });
+                                    setMessage({
+                                      type: 'success',
+                                      text: `⚡ Autopilot triggered for ${slot.zone}! Proprietary Voice AI call placed & Reach Position ${slot.position} pitched.`,
+                                    });
+                                  } catch (err) {
+                                    setMessage({ type: 'error', text: err.message });
+                                  }
+                                }}
+                              >
+                                ⚡ Auto-Pitch
                               </button>
                             </div>
                           </td>

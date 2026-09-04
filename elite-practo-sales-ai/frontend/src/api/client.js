@@ -145,6 +145,9 @@ export const api = {
   stepAutopilotQueue: () => post('/autopilot/step'),
   approveAutopilotEmail: (id, data) => post(`/autopilot/queue/${id}/approve-email`, data),
   getAutopilotStats: () => get('/autopilot/stats'),
+  runFullAutopilot: (data) => post('/autopilot/run-all', data),
+  autoEnqueueScrapedToAutopilot: (data) => post('/autopilot/auto-enqueue-scraped', data),
+  getAutomationStatus: () => get('/autopilot/automation-status'),
 
   // ── Leads Batch Actions & Export ──────────────────────────────────────────
   batchActionLeads: (data) => post('/leads/batch-action', data),

@@ -165,16 +165,32 @@ export default function LeadScraperPage() {
           </p>
         </div>
 
-        {selectedIds.length > 0 && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold" style={{ color: '#1E2238' }}>
-              {selectedIds.length} Selected
-            </span>
-            <button className="btn btn-primary" onClick={() => setAssignModal(true)}>
-              🚀 Assign to CRM / Auto Pilot
+        <div className="flex items-center gap-3">
+          <button
+            className="btn btn-secondary btn-sm"
+            style={{ fontWeight: 700 }}
+            onClick={async () => {
+              try {
+                setMessage({ type: 'info', text: '⚡ Enqueueing scraped leads and initiating 100% full autonomous outreach...' });
+                const res = await api.autoEnqueueScrapedToAutopilot({ limit: 25, autoStart: true });
+                setMessage({
+                  type: 'success',
+                  text: `⚡ Enqueued ${res.enqueuedCount || 0} scraped healthcare practices into 100% Full Autopilot! Voice AI calling and sentiment analysis running.`,
+                });
+              } catch (err) {
+                setMessage({ type: 'error', text: err.message });
+              }
+            }}
+          >
+            ⚡ Auto-Launch Autopilot (All Leads)
+          </button>
+
+          {selectedIds.length > 0 && (
+            <button className="btn btn-primary btn-sm" onClick={() => setAssignModal(true)}>
+              🚀 Push {selectedIds.length} to Autopilot
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {message && (

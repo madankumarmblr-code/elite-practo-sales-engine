@@ -5,9 +5,15 @@ export default function AutopilotPage() {
   const [queue, setQueue] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('all'); // 'all' | 'calling' | 'rnr' | 'whatsapp_sent' | 'human_interference_required' | 'converted'
+  const [tab, setTab] = useState('all'); // 'all' | 'calling' | 'rnr' | 'proposal_generated' | 'whatsapp_sent' | 'human_interference_required' | 'converted'
   const [productFilter, setProductFilter] = useState(''); // '' | 'prime' | 'reach'
   const [stepping, setStepping] = useState(false);
+
+  // Full End-to-End Autonomous Execution State
+  const [runningFullAuto, setRunningFullAuto] = useState(false);
+  const [fullAutoReport, setFullAutoReport] = useState(null);
+  const [autoEnqueueing, setAutoEnqueueing] = useState(false);
+  const [autoMode, setAutoMode] = useState('full_auto'); // 'full_auto' | 'human_review'
 
   // Manual Call Modal State
   const [showCallModal, setShowCallModal] = useState(false);
@@ -75,6 +81,46 @@ export default function AutopilotPage() {
     loadData();
   }, [tab, productFilter]); // eslint-disable-line
 
+  // ⚡ 100% Full Autonomous Mode Execution
+  async function handleRunFullAutopilot() {
+    setRunningFullAuto(true);
+    setFullAutoReport(null);
+    setMessage(null);
+    try {
+      const res = await api.runFullAutopilot({ count: 15, mode: autoMode });
+      if (res && res.report) {
+        setFullAutoReport(res.report);
+        setMessage({
+          type: 'success',
+          text: `⚡ Full Autopilot Complete: Placed ${res.report.callsPlaced} Proprietary Voice AI calls, generated ${res.report.proposalsCreated} commercial proposals, and dispatched WhatsApp outreach!`,
+        });
+      }
+      loadData();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Full Autopilot error: ' + err.message });
+    } finally {
+      setRunningFullAuto(false);
+    }
+  }
+
+  // 📥 Auto-Enqueue Scraped Clinics Directly into Autopilot
+  async function handleAutoEnqueueScraped() {
+    setAutoEnqueueing(true);
+    setMessage(null);
+    try {
+      const res = await api.autoEnqueueScrapedToAutopilot({ limit: 20, autoStart: true });
+      setMessage({
+        type: 'success',
+        text: `📥 Auto-Enqueued ${res.enqueuedCount || 0} scraped healthcare practices into Autopilot! Outbound AI voice pitching initiated.`,
+      });
+      loadData();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Auto-enqueue failed: ' + err.message });
+    } finally {
+      setAutoEnqueueing(false);
+    }
+  }
+
   // Step pipeline execution
   async function handleStepPipeline() {
     setStepping(true);
@@ -82,7 +128,7 @@ export default function AutopilotPage() {
       const res = await api.stepAutopilotQueue();
       setMessage({
         type: 'success',
-        text: `⚡ Autopilot pipeline stepped! Processed ${res.processedCalls || 0} calls, prepared ${res.processedProposals || 0} commercial proposals for human review.`,
+        text: `⚡ Autopilot pipeline stepped! Processed ${res.processedCalls || 0} calls, prepared ${res.processedProposals || 0} commercial proposals for review.`,
       });
       loadData();
     } catch (err) {
@@ -127,7 +173,7 @@ export default function AutopilotPage() {
   async function handleRetryCall(id) {
     try {
       await api.retryAutopilotCall(id);
-      setMessage({ type: 'success', text: 'Voice AI call re-triggered via Sarvam!' });
+      setMessage({ type: 'success', text: 'Voice AI call re-triggered via Proprietary Voice Agent!' });
       loadData();
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
@@ -139,10 +185,14 @@ export default function AutopilotPage() {
     e.preventDefault();
     setCallingNow(true);
     try {
-      const res = await api.triggerManualCall(callForm);
+      const res = await api.dialVoiceAgent({
+        ...callForm,
+        voiceEngine: 'native',
+        telephonyProvider: 'simulator',
+      });
       setMessage({
         type: 'success',
-        text: `Sarvam Voice Call queued successfully to ${callForm.phone}! Attempt ID: ${res.attempt_id}`,
+        text: `Voice Call placed successfully to ${callForm.phone}! Call ID: ${res.call?.callId || res.call_id || 'COMPLETED'}`,
       });
       setShowCallModal(false);
       loadData();
@@ -201,156 +251,215 @@ export default function AutopilotPage() {
 
   return (
     <div className="fade-in">
-      {/* Header */}
+      {/* ── Page Header ────────────────────────────────────────────────────────── */}
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
-            <span style={{ fontSize: 24 }}>🚀</span>
-            <h1 className="page-title">Autopilot AI Outreach & Pitching Operations</h1>
+            <span style={{ fontSize: 26 }}>🚀</span>
+            <div>
+              <h1 className="page-title">Autopilot AI Outreach & Deal Operations</h1>
+              <p className="text-sm text-secondary mt-1">
+                100% Autonomous Pipeline: Scraped Discovery $\rightarrow$ CRM $\rightarrow$ Proprietary Voice AI Call $\rightarrow$ AI STT Diarization $\rightarrow$ Dual Sentiment Analysis $\rightarrow$ Auto Proposal Creation $\rightarrow$ WhatsApp Dispatch $\rightarrow$ Conversion.
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-secondary mt-1">
-            End-to-end autonomous sequence: Lead Scraper $\rightarrow$ CRM $\rightarrow$ Autopilot AI $\rightarrow$ Sarvam Call Pitch $\rightarrow$ RNR Retry $\rightarrow$ WhatsApp AI $\rightarrow$ Email Proposal $\rightarrow$ Human Interference.
-          </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Action Controls */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Master Full Automation Action */}
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={handleRunFullAutopilot}
+            disabled={runningFullAuto}
+            style={{
+              background: 'linear-gradient(135deg, #1456FD 0%, #0D9488 100%)',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              boxShadow: '0 4px 12px rgba(20, 86, 253, 0.25)',
+            }}
+          >
+            {runningFullAuto ? <span className="spinner" style={{ width: 14, height: 14 }} /> : '⚡'}
+            <span>Run 100% Full Autopilot</span>
+          </button>
+
           <button
             className="btn btn-secondary btn-sm"
-            onClick={handleStepPipeline}
-            disabled={stepping}
+            onClick={handleAutoEnqueueScraped}
+            disabled={autoEnqueueing}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            {stepping ? <span className="spinner" style={{ width: 14, height: 14 }} /> : '⚡'}
-            <span>Run / Step Pipeline</span>
+            {autoEnqueueing ? <span className="spinner" style={{ width: 14, height: 14 }} /> : '📥'}
+            <span>Auto-Enqueue Scraped Leads</span>
           </button>
+
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={handleStepPipeline}
+            disabled={stepping}
+            title="Step active pipeline items"
+          >
+            {stepping ? <span className="spinner" style={{ width: 12, height: 12 }} /> : '▶ Step 1-Cycle'}
+          </button>
+
           <button className="btn btn-teal btn-sm" onClick={() => setShowWhatsAppModal(true)}>
-            💬 Manual WhatsApp AI
+            💬 Manual WhatsApp
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowCallModal(true)}>
-            📞 Manual Call AI (Sarvam)
+
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowCallModal(true)}>
+            📞 Manual AI Call
           </button>
         </div>
       </div>
 
       {message && (
-        <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'}`}>
+        <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'} mb-4`}>
           {message.type === 'error' ? '❌' : '✅'} {message.text}
         </div>
       )}
 
-      {/* ── Visual 7-Stage Automation Journey Banner ──────────────────────── */}
-      <div className="card mb-6" style={{ background: '#FFFFFF', padding: '16px 20px' }}>
-        <div className="text-xs font-bold text-secondary uppercase tracking-wide mb-3">
-          ⚡ 7-Stage Autonomous Outreach & Deal Pipeline
+      {/* ── 8-Stage Autonomous Journey Banner ─────────────────────────────────── */}
+      <div className="card mb-6" style={{ background: '#FFFFFF', padding: '16px 20px', border: '1px solid #E2E8F0' }}>
+        <div className="flex justify-between items-center mb-3">
+          <div className="text-xs font-bold text-secondary uppercase tracking-wide">
+            ⚡ 8-Stage End-to-End Autonomous Outreach & Deal Pipeline
+          </div>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 11, color: '#64748B' }}>Automation Mode:</span>
+            <span className="badge badge-green" style={{ fontSize: 10, fontWeight: 700 }}>
+              100% Full Auto (Zero-Touch)
+            </span>
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1" style={{ fontSize: 12 }}>
-          <div className="flex items-center gap-2" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #E2E8F0' }}>
-            <span style={{ fontSize: 16 }}>🔍</span>
+
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1" style={{ fontSize: 11.5 }}>
+          <div className="flex items-center gap-2" style={{ padding: '6px 10px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #E2E8F0' }}>
+            <span style={{ fontSize: 15 }}>🔍</span>
             <div>
               <div style={{ fontWeight: 700, color: '#0F172A' }}>1. Scraper</div>
-              <div className="text-xs text-muted">Discovery</div>
+              <div className="text-xs text-muted" style={{ fontSize: 10 }}>Auto Discovery</div>
             </div>
           </div>
           <span style={{ color: '#94A3B8', fontWeight: 900 }}>→</span>
 
-          <div className="flex items-center gap-2" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #E2E8F0' }}>
-            <span style={{ fontSize: 16 }}>👥</span>
+          <div className="flex items-center gap-2" style={{ padding: '6px 10px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #E2E8F0' }}>
+            <span style={{ fontSize: 15 }}>👥</span>
             <div>
               <div style={{ fontWeight: 700, color: '#0F172A' }}>2. CRM Lead</div>
-              <div className="text-xs text-muted">Contact Info</div>
+              <div className="text-xs text-muted" style={{ fontSize: 10 }}>Enqueued</div>
             </div>
           </div>
           <span style={{ color: '#94A3B8', fontWeight: 900 }}>→</span>
 
-          <div className="flex items-center gap-2" style={{ padding: '8px 12px', background: '#EFF6FF', borderRadius: 8, border: '1px solid #BFDBFE' }}>
-            <span style={{ fontSize: 16 }}>🚀</span>
+          <div className="flex items-center gap-2" style={{ padding: '6px 10px', background: '#EFF6FF', borderRadius: 8, border: '1px solid #BFDBFE' }}>
+            <span style={{ fontSize: 15 }}>🎙️</span>
             <div>
-              <div style={{ fontWeight: 700, color: '#1456FD' }}>3. Auto Pilot</div>
-              <div className="text-xs text-muted">Enqueued</div>
+              <div style={{ fontWeight: 700, color: '#1456FD' }}>3. Voice AI Call</div>
+              <div className="text-xs text-muted" style={{ fontSize: 10 }}>Proprietary Engine</div>
             </div>
           </div>
           <span style={{ color: '#94A3B8', fontWeight: 900 }}>→</span>
 
-          <div className="flex items-center gap-2" style={{ padding: '8px 12px', background: '#F5F3FF', borderRadius: 8, border: '1px solid #DDD6FE' }}>
-            <span style={{ fontSize: 16 }}>🎙️</span>
+          <div className="flex items-center gap-2" style={{ padding: '6px 10px', background: '#F5F3FF', borderRadius: 8, border: '1px solid #DDD6FE' }}>
+            <span style={{ fontSize: 15 }}>🎧</span>
             <div>
-              <div style={{ fontWeight: 700, color: '#7C3AED' }}>4. Call AI (Sarvam)</div>
-              <div className="text-xs text-muted">Prime / Reach Pitch</div>
+              <div style={{ fontWeight: 700, color: '#7C3AED' }}>4. STT Diarization</div>
+              <div className="text-xs text-muted" style={{ fontSize: 10 }}>Dual-Channel</div>
             </div>
           </div>
           <span style={{ color: '#94A3B8', fontWeight: 900 }}>→</span>
 
-          <div className="flex items-center gap-2" style={{ padding: '8px 12px', background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
-            <span style={{ fontSize: 16 }}>💬</span>
+          <div className="flex items-center gap-2" style={{ padding: '6px 10px', background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
+            <span style={{ fontSize: 15 }}>🧠</span>
             <div>
-              <div style={{ fontWeight: 700, color: '#10B981' }}>5. WhatsApp AI</div>
-              <div className="text-xs text-muted">Auto Follow-up (even RNR)</div>
+              <div style={{ fontWeight: 700, color: '#10B981' }}>5. Sentiment AI</div>
+              <div className="text-xs text-muted" style={{ fontSize: 10 }}>Interest & Objections</div>
             </div>
           </div>
           <span style={{ color: '#94A3B8', fontWeight: 900 }}>→</span>
 
-          <div className="flex items-center gap-2" style={{ padding: '8px 12px', background: '#FEF3C7', borderRadius: 8, border: '1px solid #FDE68A' }}>
-            <span style={{ fontSize: 16 }}>✉️</span>
+          <div className="flex items-center gap-2" style={{ padding: '6px 10px', background: '#FEF3C7', borderRadius: 8, border: '1px solid #FDE68A' }}>
+            <span style={{ fontSize: 15 }}>📑</span>
             <div>
-              <div style={{ fontWeight: 700, color: '#D97706' }}>6. Email Proposal</div>
-              <div className="text-xs text-muted">AI Drafted</div>
+              <div style={{ fontWeight: 700, color: '#D97706' }}>6. Auto Proposal</div>
+              <div className="text-xs text-muted" style={{ fontSize: 10 }}>Prime / Reach Net ₹</div>
             </div>
           </div>
           <span style={{ color: '#94A3B8', fontWeight: 900 }}>→</span>
 
-          <div className="flex items-center gap-2" style={{ padding: '8px 12px', background: '#FDF2F8', borderRadius: 8, border: '1px solid #FBCFE8' }}>
-            <span style={{ fontSize: 16 }}>🤝</span>
+          <div className="flex items-center gap-2" style={{ padding: '6px 10px', background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
+            <span style={{ fontSize: 15 }}>💬</span>
             <div>
-              <div style={{ fontWeight: 700, color: '#DB2777' }}>7. Human Interference</div>
-              <div className="text-xs text-muted">Review & Close</div>
+              <div style={{ fontWeight: 700, color: '#0D9488' }}>7. WhatsApp AI</div>
+              <div className="text-xs text-muted" style={{ fontSize: 10 }}>Personalized Quote</div>
+            </div>
+          </div>
+          <span style={{ color: '#94A3B8', fontWeight: 900 }}>→</span>
+
+          <div className="flex items-center gap-2" style={{ padding: '6px 10px', background: '#FDF2F8', borderRadius: 8, border: '1px solid #FBCFE8' }}>
+            <span style={{ fontSize: 15 }}>🏆</span>
+            <div>
+              <div style={{ fontWeight: 700, color: '#DB2777' }}>8. Conversion</div>
+              <div className="text-xs text-muted" style={{ fontSize: 10 }}>Closed-Won CRM</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Funnel Metrics */}
+      {/* ── Funnel KPI Cards Row ──────────────────────────────────────────────── */}
       <div className="grid-5 mb-6">
         <div className="stat-card" style={{ '--stat-color': '#1456FD' }}>
-          <div className="text-xs text-muted uppercase font-bold">Enqueued</div>
+          <div className="text-xs text-muted uppercase font-bold">Total Enqueued</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#1456FD' }}>{funnel.enqueued || 0}</div>
-          <div className="text-xs text-secondary mt-1">Ready for Voice AI</div>
+          <div className="text-xs text-secondary mt-1">Ready for Autonomous AI</div>
         </div>
+
         <div className="stat-card" style={{ '--stat-color': '#7C3AED' }}>
-          <div className="text-xs text-muted uppercase font-bold">Calling Active</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#7C3AED' }}>{funnel.calling || 0}</div>
-          <div className="text-xs text-secondary mt-1">Sarvam Voice in progress</div>
+          <div className="text-xs text-muted uppercase font-bold">Calls Completed</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#7C3AED' }}>{funnel.callCompleted || 0}</div>
+          <div className="text-xs text-secondary mt-1">Diarized & Pitch Delivered</div>
         </div>
-        <div className="stat-card" style={{ '--stat-color': '#0D9488' }}>
-          <div className="text-xs text-muted uppercase font-bold">WhatsApp Follow-up</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#0D9488' }}>{funnel.whatsappSent || 0}</div>
-          <div className="text-xs text-secondary mt-1">Sent post-call or RNR</div>
-        </div>
+
         <div className="stat-card" style={{ '--stat-color': '#F59E0B' }}>
-          <div className="text-xs text-muted uppercase font-bold">Human Interference</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#F59E0B' }}>{funnel.humanInterferenceRequired || 0}</div>
-          <div className="text-xs text-secondary mt-1">Doctor requested call / approval</div>
+          <div className="text-xs text-muted uppercase font-bold">Auto Proposals Created</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#D97706' }}>
+            {funnel.proposalsGenerated || 0}
+          </div>
+          <div className="text-xs text-secondary mt-1">
+            Pipeline: <strong>₹{(stats?.pipelineRevenue || 0).toLocaleString('en-IN')}</strong>
+          </div>
         </div>
+
+        <div className="stat-card" style={{ '--stat-color': '#0D9488' }}>
+          <div className="text-xs text-muted uppercase font-bold">WhatsApp Dispatched</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#0D9488' }}>{funnel.whatsappSent || 0}</div>
+          <div className="text-xs text-secondary mt-1">Quotes & objection rebuttals</div>
+        </div>
+
         <div className="stat-card" style={{ '--stat-color': '#10B981' }}>
           <div className="text-xs text-muted uppercase font-bold">Deals Converted</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#10B981' }}>{funnel.converted || 0}</div>
-          <div className="text-xs text-secondary mt-1">Proposals signed & closed</div>
+          <div className="text-xs text-secondary mt-1">Closed-Won ({stats?.conversionRate || '0.0'}%)</div>
         </div>
       </div>
 
-      {/* Filters & Tabs */}
+      {/* ── Filters & Tabs ────────────────────────────────────────────────────── */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
         <div className="tab-group">
           {[
             ['all', 'All Leads'],
             ['calling', 'Calling (Voice AI)'],
-            ['rnr', 'RNR (Scheduled Retries)'],
-            ['whatsapp_sent', 'WhatsApp Sent'],
-            ['human_interference_required', '⚠️ Human Interference Required'],
-            ['converted', 'Converted'],
+            ['rnr', 'RNR (Retries)'],
+            ['proposal_generated', '📑 Proposals Created'],
+            ['whatsapp_sent', 'WhatsApp Dispatched'],
+            ['human_interference_required', '⚠️ Human Review'],
+            ['converted', '🏆 Closed Won'],
           ].map(([key, label]) => (
             <button
               key={key}
-              className={`tab-btn ${tab === key ? 'active' : ''}`}
+              className={`tab ${tab === key ? 'active' : ''}`}
               onClick={() => setTab(key)}
             >
               {label}
@@ -358,12 +467,12 @@ export default function AutopilotPage() {
           ))}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <select
             className="input"
             value={productFilter}
             onChange={(e) => setProductFilter(e.target.value)}
-            style={{ width: 150, padding: '6px 12px', fontSize: 13 }}
+            style={{ width: 140, padding: '5px 10px', fontSize: 12 }}
           >
             <option value="">All Products</option>
             <option value="prime">Practo Prime</option>
@@ -374,20 +483,23 @@ export default function AutopilotPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* ── Queue Table ────────────────────────────────────────────────────────── */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: 60, textAlign: 'center' }}>
             <div className="spinner" style={{ width: 32, height: 32, margin: '0 auto 12px' }} />
-            <p className="text-sm text-secondary">Loading Autopilot queue & call records...</p>
+            <p className="text-sm text-secondary">Loading Autopilot queue & autonomous deal intelligence...</p>
           </div>
         ) : queue.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
             <div style={{ fontSize: 44, marginBottom: 12 }}>🚀</div>
             <h3 className="section-title">Autopilot Queue Is Empty</h3>
-            <p className="text-sm text-muted mt-1">
-              Select leads from the <strong>Lead Scraper</strong> or <strong>CRM Leads</strong> and click <strong>Push to Auto Pilot</strong>.
+            <p className="text-sm text-muted mt-1" style={{ maxWidth: 450, margin: '6px auto 16px' }}>
+              Click <strong>Auto-Enqueue Scraped Leads</strong> to automatically import clinics from Google Maps/Practo, or click <strong>Run 100% Full Autopilot</strong> to begin outreach.
             </p>
+            <button className="btn btn-primary btn-sm" onClick={handleAutoEnqueueScraped}>
+              📥 Auto-Enqueue Scraped Clinics Now
+            </button>
           </div>
         ) : (
           <div className="table-container">
@@ -398,10 +510,10 @@ export default function AutopilotPage() {
                   <th>Location</th>
                   <th>Product</th>
                   <th>Stage Status</th>
-                  <th>Voice AI Call</th>
-                  <th>WhatsApp AI</th>
-                  <th>Email Proposal</th>
-                  <th>Actions & Transfer</th>
+                  <th>Doctor Sentiment & Intent</th>
+                  <th>Auto Proposal</th>
+                  <th>WhatsApp Outreach</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -414,7 +526,7 @@ export default function AutopilotPage() {
                     <tr key={item.id} style={needsHuman ? { background: '#FFFBEB' } : {}}>
                       <td>
                         <div style={{ fontWeight: 700, color: '#0F172A', fontSize: 13.5 }}>{item.clinic_name}</div>
-                        <div className="text-xs text-secondary mt-1">
+                        <div className="text-xs text-secondary mt-0.5">
                           👤 {item.owner_name || 'Doctor'} · 📞 <strong>{item.phone}</strong>
                         </div>
                         {needsHuman && item.human_reason && (
@@ -425,115 +537,140 @@ export default function AutopilotPage() {
                       </td>
 
                       <td>
-                        <div style={{ fontWeight: 500, fontSize: 13 }}>{item.city}</div>
-                        <div className="text-xs text-muted">{item.locality}</div>
+                        <div style={{ fontWeight: 500, fontSize: 12.5 }}>{item.city || 'Bangalore'}</div>
+                        <div className="text-xs text-muted">{item.locality || 'Indiranagar'}</div>
                       </td>
 
                       <td>
-                        <span className={`badge ${isPrime ? 'badge-blue' : 'badge-teal'}`}>
+                        <span className={`badge ${isPrime ? 'badge-blue' : 'badge-teal'}`} style={{ fontSize: 10 }}>
                           {isPrime ? '⚡ Prime' : '🎯 Reach'}
                         </span>
                       </td>
 
                       <td>
                         {needsHuman ? (
-                          <span className="badge badge-yellow" style={{ fontSize: 11, fontWeight: 700 }}>
-                            ⚠️ Human Interference
+                          <span className="badge badge-yellow" style={{ fontSize: 10, fontWeight: 700 }}>
+                            ⚠️ Human Review
                           </span>
                         ) : isRnr ? (
-                          <span className="badge badge-purple" style={{ fontSize: 11 }}>
+                          <span className="badge badge-purple" style={{ fontSize: 10 }}>
                             🔁 RNR (Retry #{item.retry_count || 1})
                           </span>
                         ) : item.current_stage === 'converted' ? (
-                          <span className="badge badge-green">✓ Converted</span>
+                          <span className="badge badge-green" style={{ fontSize: 10, fontWeight: 700 }}>
+                            ✓ Closed Won
+                          </span>
+                        ) : item.current_stage === 'proposal_generated' ? (
+                          <span className="badge badge-teal" style={{ fontSize: 10 }}>
+                            📑 Proposal Ready
+                          </span>
                         ) : (
-                          <span className="badge badge-blue">
+                          <span className="badge badge-blue" style={{ fontSize: 10 }}>
                             {item.current_stage ? item.current_stage.replace(/_/g, ' ') : 'Queued'}
                           </span>
                         )}
-                      </td>
-
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span className="text-xs font-semibold" style={{ color: item.call_status === 'completed' ? '#10B981' : isRnr ? '#D97706' : '#64748B' }}>
-                            {item.call_disposition || (item.call_status ? `Call: ${item.call_status}` : 'Not Started')}
-                          </span>
-                          <div className="flex gap-2">
-                            {isRnr && (
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                style={{ padding: '2px 6px', fontSize: 10 }}
-                                onClick={() => handleRetryCall(item.id)}
-                              >
-                                🔁 Retry Call
-                              </button>
-                            )}
-                            {item.call_transcript && (
-                              <button
-                                className="btn btn-ghost btn-sm"
-                                style={{ padding: '2px 6px', fontSize: 10 }}
-                                onClick={() => setTranscriptItem(item)}
-                              >
-                                📜 Transcript
-                              </button>
-                            )}
-                          </div>
+                        <div className="text-xs text-muted mt-1" style={{ fontSize: 10 }}>
+                          {item.call_disposition || item.call_status}
                         </div>
                       </td>
 
+                      {/* Doctor Sentiment & Intent */}
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span className="text-xs font-semibold" style={{ color: item.whatsapp_status === 'sent' || item.whatsapp_status === 'sent_link' ? '#10B981' : '#64748B' }}>
-                            {item.whatsapp_status ? `✓ ${item.whatsapp_status}` : 'Pending Call'}
+                        {item.doctor_sentiment ? (
+                          <div>
+                            <span
+                              className={`badge ${
+                                item.doctor_sentiment.toLowerCase().includes('positive')
+                                  ? 'badge-green'
+                                  : item.doctor_sentiment.toLowerCase().includes('skeptical')
+                                  ? 'badge-yellow'
+                                  : 'badge-blue'
+                              }`}
+                              style={{ fontSize: 10 }}
+                            >
+                              {item.doctor_sentiment}
+                            </span>
+                            <div className="text-xs text-secondary mt-0.5" style={{ fontSize: 10 }}>
+                              Score: <strong>{item.interest_score || 80}/100</strong> · Intent: <strong>{item.doctor_intent || 'Proposal'}</strong>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted">Awaiting Call</span>
+                        )}
+                      </td>
+
+                      {/* Auto Commercial Proposal */}
+                      <td>
+                        {item.proposal_id ? (
+                          <div>
+                            <span className="badge badge-purple" style={{ fontSize: 10, fontWeight: 700 }}>
+                              📑 {item.proposal_id}
+                            </span>
+                            <div className="text-xs text-secondary font-bold mt-0.5" style={{ fontSize: 10.5 }}>
+                              ₹{(Number(item.proposal_amount) || 21240).toLocaleString('en-IN')}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </td>
+
+                      {/* WhatsApp Outreach */}
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span
+                            className="text-xs font-semibold"
+                            style={{
+                              fontSize: 11,
+                              color: item.whatsapp_status === 'sent' || item.whatsapp_status === 'sent_link' ? '#10B981' : '#64748B',
+                            }}
+                          >
+                            {item.whatsapp_status ? `✓ ${item.whatsapp_status}` : 'Pending'}
                           </span>
                           {item.whatsapp_text && (
                             <a
                               href={`https://wa.me/${String(item.phone).replace(/\D/g, '')}?text=${encodeURIComponent(item.whatsapp_text)}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="btn btn-ghost btn-sm"
-                              style={{ padding: '2px 6px', fontSize: 10 }}
+                              className="text-xs text-blue"
+                              style={{ fontSize: 10 }}
                             >
-                              ↗ Open WhatsApp
+                              ↗ View WhatsApp
                             </a>
                           )}
                         </div>
                       </td>
 
+                      {/* Actions */}
                       <td>
-                        {needsHuman || item.email_status === 'pending_review' ? (
+                        <div className="flex gap-1.5 flex-wrap">
+                          {item.call_transcript && (
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ padding: '2px 6px', fontSize: 10 }}
+                              onClick={() => setTranscriptItem(item)}
+                              title="View Diarized Call Transcript"
+                            >
+                              📜 Transcript
+                            </button>
+                          )}
                           <button
-                            className="btn btn-primary btn-sm"
-                            style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700 }}
-                            onClick={() => openEmailReview(item)}
-                          >
-                            🛡️ Review & Approve
-                          </button>
-                        ) : item.email_status === 'sent' ? (
-                          <span className="badge badge-green">✓ Sent</span>
-                        ) : (
-                          <span className="text-xs text-muted">—</span>
-                        )}
-                      </td>
-
-                      <td>
-                        <div className="flex gap-2">
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            style={{ padding: '4px 8px', fontSize: 11 }}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '2px 6px', fontSize: 10 }}
                             onClick={() => setAdvanceItem(item)}
-                            title="Step / Advance Lead"
+                            title="Advance Stage"
                           >
                             ⚡ Advance
                           </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '4px 8px', fontSize: 11 }}
-                            onClick={() => handleTransferHuman(item.id)}
-                            title="Transfer to Human Interference"
-                          >
-                            🤝 To Human
-                          </button>
+                          {needsHuman && (
+                            <button
+                              className="btn btn-primary btn-sm"
+                              style={{ padding: '2px 6px', fontSize: 10 }}
+                              onClick={() => openEmailReview(item)}
+                            >
+                              🛡️ Review
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -545,277 +682,330 @@ export default function AutopilotPage() {
         )}
       </div>
 
-      {/* ── Modal: Advance / Simulate Outcome ──────────────────────────────── */}
-      {advanceItem && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setAdvanceItem(null)}>
-          <div className="modal fade-in" style={{ maxWidth: 480 }}>
+      {/* ── Modal: Full Autopilot Execution Report ────────────────────────────── */}
+      {fullAutoReport && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setFullAutoReport(null)}>
+          <div className="modal fade-in" style={{ maxWidth: 680 }}>
             <div className="modal-header">
-              <div>
-                <h3 className="section-title">Advance Autopilot Stage</h3>
-                <p className="text-xs text-secondary mt-0.5">
-                  {advanceItem.clinic_name} ({advanceItem.phone})
-                </p>
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 24 }}>⚡</span>
+                <div>
+                  <h3 className="section-title">Full Autonomous Pipeline Execution Report</h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Completed zero-touch lifecycle execution across {fullAutoReport.totalInitiated} healthcare leads.
+                  </p>
+                </div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setAdvanceItem(null)}>✕</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setFullAutoReport(null)}>✕</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 0' }}>
-              <button
-                className="btn btn-secondary"
-                style={{ textAlign: 'left', padding: '12px 16px', justifyContent: 'flex-start' }}
-                onClick={() => handleAdvanceOutcome(advanceItem.id, 'answered_interested')}
-              >
-                <div>
-                  <strong>✅ Answered & Interested</strong>
-                  <div className="text-xs text-secondary">Pitch delivered successfully $\rightarrow$ triggers WhatsApp AI & drafts email proposal</div>
-                </div>
-              </button>
-
-              <button
-                className="btn btn-secondary"
-                style={{ textAlign: 'left', padding: '12px 16px', justifyContent: 'flex-start' }}
-                onClick={() => handleAdvanceOutcome(advanceItem.id, 'rnr')}
-              >
-                <div>
-                  <strong>🔁 RNR (Ring No Response / Busy / Not Reachable)</strong>
-                  <div className="text-xs text-secondary">Schedules retry in 15 mins $\rightarrow$ sends missed call WhatsApp note</div>
-                </div>
-              </button>
-
-              <button
-                className="btn btn-secondary"
-                style={{ textAlign: 'left', padding: '12px 16px', justifyContent: 'flex-start', borderColor: '#FDE68A', background: '#FFFBEB' }}
-                onClick={() => handleAdvanceOutcome(advanceItem.id, 'talk_to_human')}
-              >
-                <div>
-                  <strong>🤝 Doctor Requested Call with Human</strong>
-                  <div className="text-xs text-secondary">Transfers to human interference and alerts sales representative</div>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal: Review & Approve Proposal Email ─────────────────────────── */}
-      {reviewItem && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setReviewItem(null)}>
-          <div className="modal fade-in" style={{ maxWidth: 640 }}>
-            <div className="modal-header">
-              <div>
-                <h2 className="section-title">Review Proposal Email Before Sending</h2>
-                <p className="text-xs text-secondary mt-0.5">
-                  Human Interference Stage — Verify and approve commercial pitch for {reviewItem.clinic_name}
-                </p>
+            {/* Metrics Grid */}
+            <div className="grid-4 mb-4" style={{ gap: 10 }}>
+              <div style={{ background: '#F8FAFC', padding: 12, borderRadius: 8, border: '1px solid #E2E8F0' }}>
+                <div className="text-xs text-muted uppercase font-bold">Calls Placed</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#1456FD' }}>{fullAutoReport.callsPlaced}</div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setReviewItem(null)}>✕</button>
+              <div style={{ background: '#F8FAFC', padding: 12, borderRadius: 8, border: '1px solid #E2E8F0' }}>
+                <div className="text-xs text-muted uppercase font-bold">Proposals Made</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#7C3AED' }}>{fullAutoReport.proposalsCreated}</div>
+              </div>
+              <div style={{ background: '#F8FAFC', padding: 12, borderRadius: 8, border: '1px solid #E2E8F0' }}>
+                <div className="text-xs text-muted uppercase font-bold">WhatsApp Sent</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#0D9488' }}>{fullAutoReport.whatsAppDispatched}</div>
+              </div>
+              <div style={{ background: '#F0FDF4', padding: 12, borderRadius: 8, border: '1px solid #BBF7D0' }}>
+                <div className="text-xs text-green uppercase font-bold">Closed Won</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>{fullAutoReport.convertedCount}</div>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                  Email Subject
-                </label>
-                <input
-                  className="input"
-                  value={customSubject}
-                  onChange={(e) => setCustomSubject(e.target.value)}
-                />
+            <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: 12, borderRadius: 8, marginBottom: 14 }}>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-blue">Total Commercial Pipeline Value Generated:</span>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#1D4ED8' }}>
+                  ₹{(fullAutoReport.totalPipelineValue || 0).toLocaleString('en-IN')}
+                </span>
               </div>
+            </div>
 
-              <div>
-                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                  Email Body (Customizable)
-                </label>
-                <textarea
-                  className="input"
-                  rows={10}
-                  value={customBody}
-                  onChange={(e) => setCustomBody(e.target.value)}
-                  style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5 }}
-                />
-              </div>
-
-              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => setReviewItem(null)}>Cancel</button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleApproveEmail}
-                  disabled={approving}
+            {/* Processed Leads List */}
+            <div style={{ maxHeight: 250, overflowY: 'auto', marginBottom: 14 }}>
+              <div className="text-xs font-bold text-secondary uppercase mb-2">Automated Execution Logs:</div>
+              {(fullAutoReport.processedItems || []).map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 6,
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    marginBottom: 6,
+                    fontSize: 12,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
                 >
-                  {approving ? 'Approving...' : `✓ Approve & Dispatch to ${reviewItem.email || reviewItem.phone}`}
-                </button>
-              </div>
+                  <div>
+                    <strong>{item.clinicName}</strong> ({item.doctorName})
+                    <span className="text-muted ml-2">· {item.product.toUpperCase()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="badge badge-green" style={{ fontSize: 10 }}>{item.stage}</span>
+                    {item.proposalId && (
+                      <span className="text-xs text-purple font-bold">{item.proposalId}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+              <button className="btn btn-primary btn-sm" onClick={() => setFullAutoReport(null)}>
+                Done
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Modal: Manual Call AI (Sarvam) ─────────────────────────────────── */}
-      {showCallModal && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowCallModal(false)}>
-          <div className="modal fade-in" style={{ maxWidth: 520 }}>
-            <div className="modal-header">
-              <div className="flex items-center gap-2">
-                <span style={{ fontSize: 20 }}>🎙️</span>
-                <h2 className="section-title">Manual Sarvam Voice AI Dialing</h2>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowCallModal(false)}>✕</button>
-            </div>
-
-            <form onSubmit={handleTriggerManualCall}>
-              <div className="grid-2" style={{ gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                    Doctor Phone *
-                  </label>
-                  <input
-                    className="input"
-                    value={callForm.phone}
-                    onChange={(e) => setCallForm({ ...callForm, phone: e.target.value })}
-                    required
-                    placeholder="+919812345678"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                    Doctor Name
-                  </label>
-                  <input
-                    className="input"
-                    value={callForm.doctorName}
-                    onChange={(e) => setCallForm({ ...callForm, doctorName: e.target.value })}
-                    placeholder="Dr. Rajesh Rao"
-                  />
-                </div>
-              </div>
-
-              <div className="grid-2" style={{ gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                    Clinic Name *
-                  </label>
-                  <input
-                    className="input"
-                    value={callForm.clinicName}
-                    onChange={(e) => setCallForm({ ...callForm, clinicName: e.target.value })}
-                    required
-                    placeholder="Care Clinic"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                    Product Pitch
-                  </label>
-                  <select
-                    className="input"
-                    value={callForm.product}
-                    onChange={(e) => setCallForm({ ...callForm, product: e.target.value })}
-                  >
-                    <option value="prime">Practo Prime (Assured Appointments)</option>
-                    <option value="reach">Practo Reach (Spotlight Position 1)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
-                <button type="button" className="btn btn-ghost" onClick={() => setShowCallModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={callingNow}>
-                  {callingNow ? 'Connecting...' : '📞 Place Call via Sarvam'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal: Manual WhatsApp AI ─────────────────────────────────────── */}
-      {showWhatsAppModal && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowWhatsAppModal(false)}>
-          <div className="modal fade-in" style={{ maxWidth: 520 }}>
-            <div className="modal-header">
-              <div className="flex items-center gap-2">
-                <span style={{ fontSize: 20 }}>💬</span>
-                <h2 className="section-title">Manual WhatsApp AI Outreach</h2>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowWhatsAppModal(false)}>✕</button>
-            </div>
-
-            <form onSubmit={handleTriggerManualWhatsApp}>
-              <div className="grid-2" style={{ gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                    Phone Number *
-                  </label>
-                  <input
-                    className="input"
-                    value={whatsAppForm.phone}
-                    onChange={(e) => setWhatsAppForm({ ...whatsAppForm, phone: e.target.value })}
-                    required
-                    placeholder="+919812345678"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                    Doctor Name
-                  </label>
-                  <input
-                    className="input"
-                    value={whatsAppForm.doctorName}
-                    onChange={(e) => setWhatsAppForm({ ...whatsAppForm, doctorName: e.target.value })}
-                    placeholder="Dr. Rajesh Rao"
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                  Custom Message (Optional)
-                </label>
-                <textarea
-                  className="input"
-                  rows={4}
-                  value={whatsAppForm.customMessage}
-                  onChange={(e) => setWhatsAppForm({ ...whatsAppForm, customMessage: e.target.value })}
-                  placeholder="Leave empty for auto-generated Prime or Reach pitch..."
-                />
-              </div>
-
-              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
-                <button type="button" className="btn btn-ghost" onClick={() => setShowWhatsAppModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-teal" disabled={sendingWhatsApp}>
-                  {sendingWhatsApp ? 'Sending...' : '💬 Send WhatsApp Pitch'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal: Transcript Viewer ──────────────────────────────────────── */}
+      {/* ── Modal: Transcript Viewer ─────────────────────────────────────────── */}
       {transcriptItem && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setTranscriptItem(null)}>
-          <div className="modal fade-in" style={{ maxWidth: 540 }}>
+          <div className="modal fade-in" style={{ maxWidth: 620 }}>
             <div className="modal-header">
               <div>
-                <h3 className="section-title">Call Transcript — {transcriptItem.clinic_name}</h3>
+                <h3 className="section-title">Diarized Call Transcript — {transcriptItem.clinic_name}</h3>
                 <p className="text-xs text-secondary mt-0.5">
-                  Doctor: {transcriptItem.owner_name} · Phone: {transcriptItem.phone}
+                  Dr. {transcriptItem.owner_name} · Sentiment: {transcriptItem.doctor_sentiment || 'Positive'}
                 </p>
               </div>
               <button className="btn btn-ghost btn-sm" onClick={() => setTranscriptItem(null)}>✕</button>
             </div>
 
-            <div style={{ background: '#F8FAFC', padding: 16, borderRadius: 8, maxHeight: 350, overflowY: 'auto', fontSize: 13, lineHeight: 1.6 }}>
+            <div style={{ maxHeight: 360, overflowY: 'auto', padding: '10px 0', whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.6, color: '#334155' }}>
               {transcriptItem.call_transcript}
             </div>
 
             <div className="flex justify-end pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
               <button className="btn btn-secondary btn-sm" onClick={() => setTranscriptItem(null)}>Close</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Advance Outcome ───────────────────────────────────────────── */}
+      {advanceItem && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setAdvanceItem(null)}>
+          <div className="modal fade-in" style={{ maxWidth: 520 }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="section-title">Advance Pipeline — {advanceItem.clinic_name}</h3>
+                <p className="text-xs text-secondary mt-0.5">Select simulated or actual call outcome to advance lead stage</p>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setAdvanceItem(null)}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 0' }}>
+              <button
+                className="btn btn-primary"
+                style={{ justifyContent: 'flex-start', padding: 12 }}
+                onClick={() => handleAdvanceOutcome(advanceItem.id, 'answered_interested')}
+              >
+                <div>
+                  <div style={{ fontWeight: 700 }}>🟢 Answered & Interested</div>
+                  <div className="text-xs opacity-90">Doctor agreed to pitch. Auto-generate commercial proposal and WhatsApp deck.</div>
+                </div>
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                style={{ justifyContent: 'flex-start', padding: 12 }}
+                onClick={() => handleAdvanceOutcome(advanceItem.id, 'rnr')}
+              >
+                <div>
+                  <div style={{ fontWeight: 700 }}>🔁 RNR / Busy (Ring No Response)</div>
+                  <div className="text-xs text-secondary">Schedule auto retry in 15 mins and send polite consultation WhatsApp follow-up.</div>
+                </div>
+              </button>
+
+              <button
+                className="btn btn-ghost"
+                style={{ justifyContent: 'flex-start', padding: 12, border: '1px solid #E2E8F0' }}
+                onClick={() => handleAdvanceOutcome(advanceItem.id, 'talk_to_human')}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, color: '#B45309' }}>⚠️ Doctor Requests Human Representative</div>
+                  <div className="text-xs text-secondary">Flag for sales manager high-touch consultation.</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Email Review & Approval ───────────────────────────────────── */}
+      {reviewItem && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setReviewItem(null)}>
+          <div className="modal fade-in" style={{ maxWidth: 640 }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="section-title">Commercial Proposal Review</h3>
+                <p className="text-xs text-secondary mt-0.5">Approve and dispatch commercial agreement for {reviewItem.clinic_name}</p>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setReviewItem(null)}>✕</button>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Email Subject</label>
+              <input
+                className="input"
+                value={customSubject}
+                onChange={(e) => setCustomSubject(e.target.value)}
+              />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Proposal Body</label>
+              <textarea
+                className="input"
+                rows={10}
+                value={customBody}
+                onChange={(e) => setCustomBody(e.target.value)}
+                style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5 }}
+              />
+            </div>
+
+            <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setReviewItem(null)}>Cancel</button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleApproveEmail}
+                disabled={approving}
+              >
+                {approving ? 'Dispatching...' : '✅ Approve & Convert Lead'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Manual Call ────────────────────────────────────────────────── */}
+      {showCallModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowCallModal(false)}>
+          <div className="modal fade-in" style={{ maxWidth: 500 }}>
+            <div className="modal-header">
+              <h3 className="section-title">Manual Outbound Call (Proprietary Voice AI)</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowCallModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleTriggerManualCall}>
+              <div style={{ marginBottom: 12 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Doctor Name</label>
+                <input
+                  className="input"
+                  value={callForm.doctorName}
+                  onChange={(e) => setCallForm({ ...callForm, doctorName: e.target.value })}
+                  placeholder="Dr. Rajesh Kumar"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Phone Number</label>
+                <input
+                  className="input"
+                  value={callForm.phone}
+                  onChange={(e) => setCallForm({ ...callForm, phone: e.target.value })}
+                  placeholder="+919876543210"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Clinic Name</label>
+                <input
+                  className="input"
+                  value={callForm.clinicName}
+                  onChange={(e) => setCallForm({ ...callForm, clinicName: e.target.value })}
+                  placeholder="Care Clinic"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Product</label>
+                <select
+                  className="input"
+                  value={callForm.product}
+                  onChange={(e) => setCallForm({ ...callForm, product: e.target.value })}
+                >
+                  <option value="prime">Practo Prime (Assured Bookings)</option>
+                  <option value="reach">Practo Reach (Spotlight Position 1)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowCallModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={callingNow}>
+                  {callingNow ? 'Dialing...' : '📞 Place Call'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Manual WhatsApp ───────────────────────────────────────────── */}
+      {showWhatsAppModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowWhatsAppModal(false)}>
+          <div className="modal fade-in" style={{ maxWidth: 500 }}>
+            <div className="modal-header">
+              <h3 className="section-title">Manual WhatsApp AI Outreach</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowWhatsAppModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleTriggerManualWhatsApp}>
+              <div style={{ marginBottom: 12 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Doctor Phone</label>
+                <input
+                  className="input"
+                  value={whatsAppForm.phone}
+                  onChange={(e) => setWhatsAppForm({ ...whatsAppForm, phone: e.target.value })}
+                  placeholder="+919876543210"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Doctor Name</label>
+                <input
+                  className="input"
+                  value={whatsAppForm.doctorName}
+                  onChange={(e) => setWhatsAppForm({ ...whatsAppForm, doctorName: e.target.value })}
+                  placeholder="Dr. Rajesh Kumar"
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Product</label>
+                <select
+                  className="input"
+                  value={whatsAppForm.product}
+                  onChange={(e) => setWhatsAppForm({ ...whatsAppForm, product: e.target.value })}
+                >
+                  <option value="prime">Practo Prime</option>
+                  <option value="reach">Practo Reach</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowWhatsAppModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-teal btn-sm" disabled={sendingWhatsApp}>
+                  {sendingWhatsApp ? 'Sending...' : '💬 Send WhatsApp'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

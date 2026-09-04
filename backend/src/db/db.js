@@ -1,13 +1,105 @@
-import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { getDataDir } from '../config.js';
 
 const dataDir = getDataDir();
 const dbPath = path.join(dataDir, 'elite-sales.db');
-const db = new Database(dbPath);
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+class SqliteShim {
+  constructor(rawDb, savePath) {
+    this.rawDb = rawDb;
+    this.savePath = savePath;
+  }
+
+  pragma(sql) {
+    try { this.rawDb.run(`PRAGMA ${sql};`); } catch {}
+  }
+
+  exec(sql) {
+    this.rawDb.run(sql);
+    this._persist();
+  }
+
+  prepare(sql) {
+    const raw = this.rawDb;
+    const self = this;
+    return {
+      get(...params) {
+        const args = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
+        const stmt = raw.prepare(sql);
+        stmt.bind(args);
+        let row = undefined;
+        if (stmt.step()) row = stmt.getAsObject();
+        stmt.free();
+        return row;
+      },
+      all(...params) {
+        const args = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
+        const stmt = raw.prepare(sql);
+        stmt.bind(args);
+        const rows = [];
+        while (stmt.step()) rows.push(stmt.getAsObject());
+        stmt.free();
+        return rows;
+      },
+      run(...params) {
+        const args = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
+        raw.run(sql, args);
+        self._persist();
+        return { changes: raw.getRowsModified ? raw.getRowsModified() : 1, lastInsertRowid: 1 };
+      }
+    };
+  }
+
+  transaction(fn) {
+    return (...args) => {
+      this.exec('BEGIN;');
+      try {
+        const res = fn(...args);
+        this.exec('COMMIT;');
+        return res;
+      } catch (err) {
+        this.exec('ROLLBACK;');
+        throw err;
+      }
+    };
+  }
+
+  _persist() {
+    if (this.savePath) {
+      try {
+        const data = this.rawDb.export();
+        fs.writeFileSync(this.savePath, Buffer.from(data));
+      } catch {}
+    }
+  }
+}
+
+let db;
+try {
+  const betterSqlite = await import('better-sqlite3');
+  const Database = betterSqlite.default || betterSqlite;
+  db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+} catch (err) {
+  console.warn('[DB Engine] Falling back to WebAssembly SQLite engine (serverless safe):', err.message);
+  const { default: initSqlJs } = await import('sql.js');
+  const SQL = await initSqlJs();
+  let rawDb;
+  if (fs.existsSync(dbPath)) {
+    try {
+      const fileBuffer = fs.readFileSync(dbPath);
+      rawDb = new SQL.Database(fileBuffer);
+    } catch {
+      rawDb = new SQL.Database();
+    }
+  } else {
+    rawDb = new SQL.Database();
+  }
+  db = new SqliteShim(rawDb, dbPath);
+  db.pragma('foreign_keys = ON');
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

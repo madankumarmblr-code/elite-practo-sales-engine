@@ -167,7 +167,21 @@ export function bootstrap() {
     db.prepare(`UPDATE users SET password_hash=?, role='superadmin', active=1, updated_at=? WHERE id=?`).run(karanPassword, ts, karanUser.id);
   }
 
+  // Admin user (admin / admin123)
+  const adminPassword = bcrypt.hashSync('admin123', 10);
+  let adminUser = db.prepare("SELECT * FROM users WHERE lower(username) = 'admin' LIMIT 1").get();
+  if (!adminUser) {
+    db.prepare(`
+      INSERT INTO users (id, name, email, username, password_hash, role, permissions, active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'superadmin', ?, 1, ?, ?)
+    `).run('user_admin', 'Administrator', 'admin@elite.sales', 'admin', adminPassword, JSON.stringify(permissionsForRole('superadmin')), ts, ts);
+    console.log('✅ Created Admin user (admin / admin123)');
+  } else {
+    db.prepare(`UPDATE users SET password_hash=?, role='superadmin', active=1, updated_at=? WHERE id=?`).run(adminPassword, ts, adminUser.id);
+  }
+
   console.log('\n🚀 Elite Practo Sales AI — Ready!');
+  console.log('   User: admin        | Password: admin123');
   console.log('   User: karan        | Password: admin123');
   console.log('   User: superadmin   | Password: SuperAdmin@123\n');
 }

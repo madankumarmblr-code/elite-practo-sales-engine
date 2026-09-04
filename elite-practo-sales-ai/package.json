@@ -11,7 +11,7 @@
     "dev": "concurrently -n api,web -c teal,cyan \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
-    "build": "vite build",
+    "build": "vite build && mkdir -p backend/dist && cp -r dist/* backend/dist/ 2>/dev/null || true",
     "start": "NODE_ENV=production node --env-file=.env backend/src/index.js",
     "start:prod": "npm run build && npm start",
     "seed": "npm run seed -w backend",
@@ -34,6 +34,7 @@
     "better-sqlite3": "^11.10.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "nanoid": "^5.1.0"
+    "nanoid": "^5.1.0",
+    "sql.js": "^1.14.2"
   }
 }

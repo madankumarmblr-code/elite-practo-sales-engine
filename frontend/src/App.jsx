@@ -18,24 +18,26 @@ import UsersManagementPage from './pages/UsersManagementPage.jsx';
 import IntegrationsPage from './pages/IntegrationsPage.jsx';
 import AuditPage from './pages/AuditPage.jsx';
 
+import EnterpriseIcon from './components/EnterpriseIcon.jsx';
+
 const NAV = [
-  { id: 'dashboard', icon: '⚡', label: 'Dashboard' },
+  { id: 'dashboard', iconName: 'bar-chart', label: 'Dashboard' },
   { id: null, label: 'DISCOVERY & CRM', section: true },
-  { id: 'scraper', icon: '🔍', label: 'Lead Scraper' },
-  { id: 'leads', icon: '👥', label: 'CRM Leads' },
+  { id: 'scraper', iconName: 'search', label: 'Lead Scraper' },
+  { id: 'leads', iconName: 'users', label: 'CRM Leads' },
   { id: null, label: 'AUTOMATION & OUTREACH', section: true },
-  { id: 'autopilot', icon: '🚀', label: 'Autopilot AI' },
-  { id: 'voice', icon: '🎙️', label: 'Call AI Studio' },
-  { id: 'whatsapp', icon: '💬', label: 'WhatsApp AI Studio' },
-  { id: 'email', icon: '✉️', label: 'Email AI Studio' },
+  { id: 'autopilot', iconName: 'zap', label: 'Autopilot AI' },
+  { id: 'voice', iconName: 'phone', label: 'Call AI Studio' },
+  { id: 'whatsapp', iconName: 'message', label: 'WhatsApp AI Studio' },
+  { id: 'email', iconName: 'mail', label: 'Email AI Studio' },
   { id: null, label: 'COMMERCIAL & INVENTORY', section: true },
-  { id: 'proposals', icon: '📑', label: 'Proposal Suite' },
-  { id: 'inventory', icon: '📊', label: 'Reach Inventory Check' },
+  { id: 'proposals', iconName: 'file-text', label: 'Proposal Suite' },
+  { id: 'inventory', iconName: 'layers', label: 'Reach Inventory Check' },
   { id: null, label: 'SYSTEM & SETTINGS', section: true },
-  { id: 'status', icon: '🟢', label: 'Server Status' },
-  { id: 'users', icon: '👥', label: 'Users & Permissions' },
-  { id: 'integrations', icon: '🔌', label: 'API Integrations' },
-  { id: 'audit', icon: '🛡️', label: 'Audit & Compliance' },
+  { id: 'status', iconName: 'activity', label: 'Server Status' },
+  { id: 'users', iconName: 'users', label: 'Users & Permissions' },
+  { id: 'integrations', iconName: 'sliders', label: 'API & Storage' },
+  { id: 'audit', iconName: 'shield', label: 'Audit & Compliance' },
 ];
 
 function Sidebar({ user, activePage, setActivePage, onLogout, onShowLogin }) {
@@ -62,7 +64,9 @@ function Sidebar({ user, activePage, setActivePage, onLogout, onShowLogin }) {
               className={`nav-item ${activePage === item.id ? 'active' : ''}`}
               onClick={() => setActivePage(item.id)}
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <EnterpriseIcon name={item.iconName} size={17} />
+              </span>
               <span>{item.label}</span>
             </button>
           );
@@ -102,18 +106,18 @@ function Sidebar({ user, activePage, setActivePage, onLogout, onShowLogin }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <button
             className="btn btn-secondary btn-sm w-full"
-            style={{ justifyContent: 'center', fontSize: 12 }}
+            style={{ justifyContent: 'center', fontSize: 12, gap: 6 }}
             onClick={onShowLogin}
-            title="Return to Login Screen to switch user or review demo login"
+            title="Switch user or review login"
           >
-            🔒 Switch User / Login Screen
+            <EnterpriseIcon name="users" size={14} /> Switch User
           </button>
           <button
             className="btn btn-ghost btn-sm w-full"
-            style={{ justifyContent: 'center', fontSize: 12, color: '#64748B' }}
+            style={{ justifyContent: 'center', fontSize: 12, color: '#64748B', gap: 6 }}
             onClick={onLogout}
           >
-            ↩️ Sign Out
+            <EnterpriseIcon name="shield" size={14} /> Sign Out
           </button>
         </div>
       </div>

@@ -4,6 +4,12 @@ import db from '../db/db.js';
 import { nanoid } from 'nanoid';
 import { persistDurableDbNow } from '../services/dbSnapshot.js';
 import { logEvent } from '../services/logger.js';
+import {
+  getStorageStatus,
+  testStorageConnection,
+  exportDatabaseSnapshot,
+  importDatabaseSnapshot,
+} from '../services/storageSync.js';
 
 const now = () => new Date().toISOString();
 
@@ -208,4 +214,53 @@ export function registerIntegrationsRoutes(app) {
       updatedAt: new Date().toISOString(),
     });
   });
+
+  // ── Enterprise Storage Management (Vercel, Neon/Postgres, Turso & Snapshots) ──
+  app.get('/api/storage/status', authRequired, requirePermission('api_integrations:read'), async (_req, res) => {
+    try {
+      const status = await getStorageStatus();
+      res.json(status);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/storage/test', authRequired, requirePermission('api_integrations:write'), async (req, res) => {
+    try {
+      const result = await testStorageConnection(req.body || {});
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post('/api/storage/sync-now', authRequired, requirePermission('api_integrations:write'), async (req, res) => {
+    try {
+      const result = await persistDurableDbNow({ force: true });
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/storage/export-snapshot', authRequired, requirePermission('api_integrations:read'), (_req, res) => {
+    try {
+      const snapshot = exportDatabaseSnapshot();
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename=elite-sales-snapshot-${new Date().toISOString().split('T')[0]}.json`);
+      res.json(snapshot);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/storage/import-snapshot', authRequired, requirePermission('api_integrations:write'), (req, res) => {
+    try {
+      const result = importDatabaseSnapshot(req.body);
+      res.json({ success: true, ...result });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
 }
+

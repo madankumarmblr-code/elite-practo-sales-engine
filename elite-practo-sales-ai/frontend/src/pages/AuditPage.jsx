@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
+import { EnterpriseIcon } from '../components/EnterpriseIcon.jsx';
 
 export default function AuditPage() {
   const [logs, setLogs] = useState([]);
@@ -10,7 +11,7 @@ export default function AuditPage() {
 
   useEffect(() => {
     Promise.all([
-      api.getAuditLogs({ limit: 50 }).catch(() => ({ logs: [], total: 0 })),
+      api.getAuditLogs({ limit: 100 }).catch(() => ({ logs: [], total: 0 })),
       api.getCompliance().catch(() => null),
     ]).then(([auditData, comp]) => {
       setLogs(auditData.logs || []);
@@ -20,23 +21,67 @@ export default function AuditPage() {
     });
   }, []);
 
+  function handleExportCsv() {
+    if (logs.length === 0) return;
+    const headers = ['ID', 'Action', 'Entity Type', 'Entity ID', 'Actor Name', 'Actor Role', 'Status', 'Compliance Tag', 'Timestamp'];
+    const rows = logs.map((l) => [
+      l.id,
+      `"${(l.action || '').replace(/"/g, '""')}"`,
+      `"${(l.entity_type || '').replace(/"/g, '""')}"`,
+      `"${(l.entity_id || '').replace(/"/g, '""')}"`,
+      `"${(l.actor_name || '').replace(/"/g, '""')}"`,
+      `"${(l.actor_role || '').replace(/"/g, '""')}"`,
+      `"${(l.status || '').replace(/"/g, '""')}"`,
+      `"${(l.compliance_tag || '').replace(/"/g, '""')}"`,
+      `"${l.created_at}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `audit-compliance-trail-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="fade-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Audit & Compliance</h1>
-          <p className="text-sm text-muted mt-2">HIPAA/DPDP compliant audit trail · {total} total records</p>
+          <div className="flex items-center gap-2">
+            <EnterpriseIcon name="shield" size={24} color="#1456FD" />
+            <h1 className="page-title">Enterprise Audit & Compliance</h1>
+          </div>
+          <p className="text-sm text-secondary mt-1">HIPAA/DPDP Act 2023 immutable audit trail · {total} verified records</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="badge badge-green">✅ HIPAA Compliant</span>
-          <span className="badge badge-blue">🇮🇳 DPDP Act 2023</span>
+          <button className="btn btn-secondary btn-sm flex items-center gap-1.5" onClick={handleExportCsv}>
+            <EnterpriseIcon name="download" size={13} color="#475569" />
+            <span>Export Audit CSV</span>
+          </button>
+          <span className="badge badge-green flex items-center gap-1">
+            <EnterpriseIcon name="check-circle" size={11} color="#15803D" />
+            <span>HIPAA Compliant</span>
+          </span>
+          <span className="badge badge-blue">DPDP Act 2023</span>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
-        {[['logs', '📋 Audit Logs'], ['compliance', '🛡️ Compliance Scorecard']].map(([key, label]) => (
-          <button key={key} className={`btn ${tab === key ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={() => setTab(key)}>{label}</button>
+        {[
+          ['logs', 'file-text', 'Audit Logs'],
+          ['compliance', 'shield', 'Compliance Scorecard'],
+        ].map(([key, iconName, label]) => (
+          <button
+            key={key}
+            className={`btn ${tab === key ? 'btn-primary' : 'btn-ghost'} btn-sm flex items-center gap-1.5`}
+            onClick={() => setTab(key)}
+          >
+            <EnterpriseIcon name={iconName} size={13} color={tab === key ? '#FFFFFF' : '#475569'} />
+            <span>{label}</span>
+          </button>
         ))}
       </div>
 

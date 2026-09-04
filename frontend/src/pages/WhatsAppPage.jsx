@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
+import { EnterpriseIcon } from '../components/EnterpriseIcon.jsx';
 
 export default function WhatsAppPage() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'logs' | 'send' | 'settings'
@@ -152,16 +153,29 @@ export default function WhatsAppPage() {
     setTimeout(() => setSettingsSaved(false), 3000);
   }
 
+  const totalMessages = messages.length;
+  const deliveredCount = messages.filter((m) => ['delivered', 'sent', 'read', 'replied'].includes(m.status)).length;
+  const deliveryRate = totalMessages > 0 ? ((deliveredCount / totalMessages) * 100).toFixed(1) : '100.0';
+  const readCount = messages.filter((m) => ['read', 'replied'].includes(m.status)).length;
+  const readRate = deliveredCount > 0 ? ((readCount / deliveredCount) * 100).toFixed(1) : '0.0';
+  const replyCount = messages.filter((m) => m.reply || m.status === 'replied').length;
+  const replyRate = totalMessages > 0 ? ((replyCount / totalMessages) * 100).toFixed(1) : '0.0';
+
+  const primeMessages = messages.filter((m) => m.product === 'prime').length;
+  const reachMessages = messages.filter((m) => m.product === 'reach').length;
+
   return (
     <div className="fade-in">
       {/* Header */}
       <div className="page-header">
         <div>
           <div className="flex items-center gap-3">
-            <span style={{ fontSize: 26 }}>💬</span>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <EnterpriseIcon name="message" size={24} color="#1456FD" />
+            </div>
             <div>
               <h1 className="page-title">WhatsApp AI Studio</h1>
-              <p className="text-sm text-secondary mt-1">
+              <p className="text-sm text-secondary mt-0.5">
                 Autonomous WhatsApp outreach, proposal summaries, and doctor follow-up sequences.
               </p>
             </div>
@@ -169,11 +183,13 @@ export default function WhatsAppPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowImportModal(true)}>
-            📤 Import Contacts CSV
+          <button className="btn btn-secondary btn-sm flex items-center gap-1.5" onClick={() => setShowImportModal(true)}>
+            <EnterpriseIcon name="download" size={13} color="#475569" />
+            <span>Import Contacts CSV</span>
           </button>
-          <button className="btn btn-primary btn-sm" onClick={handleExportMessages}>
-            📥 Export Messages CSV
+          <button className="btn btn-primary btn-sm flex items-center gap-1.5" onClick={handleExportMessages}>
+            <EnterpriseIcon name="download" size={13} color="#FFFFFF" />
+            <span>Export Messages CSV</span>
           </button>
           <div
             style={{
@@ -195,17 +211,18 @@ export default function WhatsAppPage() {
       {/* Tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
         {[
-          ['dashboard', '📊 WhatsApp Dashboard'],
-          ['logs', `📥 Message Logs (${messages.length})`],
-          ['send', '💬 Send WhatsApp Pitch'],
-          ['settings', '⚙️ WhatsApp AI Settings'],
-        ].map(([key, label]) => (
+          ['dashboard', 'bar-chart', 'WhatsApp Dashboard'],
+          ['logs', 'file-text', `Message Logs (${messages.length})`],
+          ['send', 'message', 'Send WhatsApp Pitch'],
+          ['settings', 'sliders', 'WhatsApp AI Settings'],
+        ].map(([key, iconName, label]) => (
           <button
             key={key}
-            className={`btn ${activeTab === key ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+            className={`btn ${activeTab === key ? 'btn-primary' : 'btn-ghost'} btn-sm flex items-center gap-1.5`}
             onClick={() => setActiveTab(key)}
           >
-            {label}
+            <EnterpriseIcon name={iconName} size={13} color={activeTab === key ? '#FFFFFF' : '#475569'} />
+            <span>{label}</span>
           </button>
         ))}
       </div>
@@ -217,51 +234,51 @@ export default function WhatsAppPage() {
         <div>
           <div className="grid-4 mb-6">
             <div className="card" style={{ padding: 18 }}>
-              <div className="text-xs text-muted font-bold uppercase">Messages Sent</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: '#0F172A', marginTop: 4 }}>1,120</div>
-              <div className="text-xs text-green mt-1">↑ 22% this week</div>
+              <div className="text-xs text-muted font-bold uppercase">Messages Dispatched</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: '#0F172A', marginTop: 4 }}>{totalMessages}</div>
+              <div className="text-xs text-secondary mt-1">Total live dispatched messages</div>
             </div>
 
             <div className="card" style={{ padding: 18 }}>
               <div className="text-xs text-muted font-bold uppercase">Delivery Rate</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: '#10B981', marginTop: 4 }}>98.2%</div>
-              <div className="text-xs text-secondary mt-1">1,100 delivered successfully</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: '#10B981', marginTop: 4 }}>{deliveryRate}%</div>
+              <div className="text-xs text-secondary mt-1">{deliveredCount} delivered successfully</div>
             </div>
 
             <div className="card" style={{ padding: 18 }}>
               <div className="text-xs text-muted font-bold uppercase">Doctor Read Rate</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: '#1456FD', marginTop: 4 }}>84.6%</div>
-              <div className="text-xs text-secondary mt-1">Read within 15 minutes</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: '#1456FD', marginTop: 4 }}>{readRate}%</div>
+              <div className="text-xs text-secondary mt-1">{readCount} read confirmations</div>
             </div>
 
             <div className="card" style={{ padding: 18 }}>
               <div className="text-xs text-muted font-bold uppercase">Inbound Doctor Replies</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: '#7C3AED', marginTop: 4 }}>248</div>
-              <div className="text-xs text-purple mt-1">22.1% reply rate</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: '#7C3AED', marginTop: 4 }}>{replyCount}</div>
+              <div className="text-xs text-purple mt-1">{replyRate}% direct reply rate</div>
             </div>
           </div>
 
           <div className="grid-2 mb-6">
             <div className="card">
-              <h3 className="section-title mb-3">Template Conversion by Product</h3>
+              <h3 className="section-title mb-3">Live Outreach by Product</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
-                    <span>Practo Prime Activation Template</span>
-                    <span className="text-blue">620 Sent · 24.5% Reply Rate</span>
+                    <span>Practo Prime Activation Outreach</span>
+                    <span className="text-blue">{primeMessages} Sent</span>
                   </div>
                   <div style={{ height: 8, background: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ width: '55.3%', height: '100%', background: '#1456FD', borderRadius: 4 }} />
+                    <div style={{ width: `${totalMessages > 0 ? (primeMessages / totalMessages) * 100 : 50}%`, height: '100%', background: '#1456FD', borderRadius: 4 }} />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
-                    <span>Practo Reach Spotlight Slot Template</span>
-                    <span className="text-teal">500 Sent · 19.8% Reply Rate</span>
+                    <span>Practo Reach Spotlight Slot Outreach</span>
+                    <span className="text-teal">{reachMessages} Sent</span>
                   </div>
                   <div style={{ height: 8, background: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ width: '44.7%', height: '100%', background: '#0D9488', borderRadius: 4 }} />
+                    <div style={{ width: `${totalMessages > 0 ? (reachMessages / totalMessages) * 100 : 50}%`, height: '100%', background: '#0D9488', borderRadius: 4 }} />
                   </div>
                 </div>
               </div>
@@ -271,22 +288,22 @@ export default function WhatsAppPage() {
               <h3 className="section-title mb-3">Outreach Automation Funnel</h3>
               <div className="flex justify-between items-center" style={{ gap: 8, textAlign: 'center' }}>
                 <div style={{ flex: 1, background: '#F8FAFC', padding: 12, borderRadius: 8 }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0F172A' }}>1,120</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0F172A' }}>{totalMessages}</div>
                   <div className="text-xs text-secondary mt-1">Dispatched</div>
                 </div>
                 <span>→</span>
                 <div style={{ flex: 1, background: '#EFF6FF', padding: 12, borderRadius: 8 }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#1456FD' }}>1,100</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#1456FD' }}>{deliveredCount}</div>
                   <div className="text-xs text-secondary mt-1">Delivered</div>
                 </div>
                 <span>→</span>
                 <div style={{ flex: 1, background: '#F0FDF4', padding: 12, borderRadius: 8 }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0D9488' }}>931</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0D9488' }}>{readCount}</div>
                   <div className="text-xs text-secondary mt-1">Read</div>
                 </div>
                 <span>→</span>
                 <div style={{ flex: 1, background: '#FAF5FF', padding: 12, borderRadius: 8 }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#7C3AED' }}>248</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#7C3AED' }}>{replyCount}</div>
                   <div className="text-xs text-secondary mt-1">Replied</div>
                 </div>
               </div>

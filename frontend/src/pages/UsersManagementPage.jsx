@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
+import { EnterpriseIcon } from '../components/EnterpriseIcon.jsx';
 
 const ROLES = [
   { id: 'superadmin', label: 'Super Admin', badge: 'badge-purple', desc: 'Unrestricted full access across all modules, users & billing' },
@@ -226,19 +227,19 @@ export default function UsersManagementPage() {
                         <div className="flex gap-2">
                           <button
                             className="btn btn-ghost btn-sm"
-                            style={{ padding: '3px 8px', fontSize: 11 }}
+                            style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
                             onClick={() => handleToggleStatus(u)}
                             title={isActive ? 'Suspend User' : 'Activate User'}
                           >
-                            {isActive ? '⏸️' : '▶️'}
+                            <EnterpriseIcon name={isActive ? 'pause' : 'play'} size={12} color="#475569" />
                           </button>
                           <button
                             className="btn btn-danger btn-sm"
-                            style={{ padding: '3px 8px', fontSize: 11 }}
+                            style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
                             onClick={() => handleDeleteUser(u.id, u.name)}
                             title="Delete User"
                           >
-                            🗑
+                            <EnterpriseIcon name="trash" size={12} color="#DC2626" />
                           </button>
                         </div>
                       </td>

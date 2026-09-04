@@ -498,6 +498,15 @@ ensureColumn('leads', 'reception_phone', "TEXT DEFAULT ''");
 ensureColumn('leads', 'product_interest', "TEXT DEFAULT 'prime'");
 ensureColumn('leads', 'workflow_stage', "TEXT DEFAULT 'manual'");
 
+// Scraped Clinics SEO Ads & GMB enrichment columns
+ensureColumn('scraped_clinics', 'is_ad_advertiser', 'INTEGER DEFAULT 0');
+ensureColumn('scraped_clinics', 'ad_channel', "TEXT DEFAULT ''");
+ensureColumn('scraped_clinics', 'gmb_rating', 'REAL DEFAULT 0');
+ensureColumn('scraped_clinics', 'gmb_reviews', 'INTEGER DEFAULT 0');
+ensureColumn('scraped_clinics', 'gmb_url', "TEXT DEFAULT ''");
+ensureColumn('scraped_clinics', 'consultation_fee', 'INTEGER DEFAULT 0');
+ensureColumn('scraped_clinics', 'experience_years', 'INTEGER DEFAULT 0');
+
 // User-level & SuperAdmin extra settings columns
 ensureColumn('users', 'territory', "TEXT DEFAULT '[\"Bangalore\"]'");
 ensureColumn('users', 'monthly_quota', "INTEGER DEFAULT 50");

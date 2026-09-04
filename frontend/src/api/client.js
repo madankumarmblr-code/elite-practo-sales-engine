@@ -91,6 +91,13 @@ export const api = {
   getIntegration: (provider) => get(`/integrations/${provider}`),
   updateIntegration: (provider, data) => put(`/integrations/${provider}`, data),
 
+  // ── Enterprise Storage & Vercel Sync ─────────────────────────────────────
+  getStorageStatus: () => get('/storage/status'),
+  testStorage: (data) => post('/storage/test', data),
+  syncStorageNow: () => post('/storage/sync-now'),
+  exportStorageSnapshot: () => get('/storage/export-snapshot'),
+  importStorageSnapshot: (snapshot) => post('/storage/import-snapshot', snapshot),
+
   // ── AI ─────────────────────────────────────────────────────────────────────
   generatePitch: (lead, channel, product) => post('/ai/pitch', { lead, channel, product }),
   smartChannel: (lead) => post('/ai/smart-channel', { lead }),

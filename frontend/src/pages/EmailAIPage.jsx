@@ -1,101 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
 
-const SAMPLE_EMAIL_PROPOSALS = [
-  {
-    id: 'prop_email_301',
-    doctorName: 'Dr. Ramesh Rao',
-    clinicName: "Dr. Rao's Multi-Care Hospital",
-    email: 'dr.ramesh.rao@dr-raos-hospital.in',
-    locality: 'Indiranagar, Bangalore',
-    product: 'prime',
-    productLabel: 'Practo Prime (1 Year Growth Pack)',
-    tenure: '12 Months',
-    netAmount: '₹ 1,06,200',
-    status: 'pending_approval',
-    statusLabel: 'Pending Human Approval',
-    createdAt: 'Today at 04:25 PM',
-    subject: 'Commercial Proposal: Practo Prime Activation for Dr. Rao’s Multi-Care Hospital',
-    body: `Dear Dr. Ramesh Rao,
-
-Thank you for speaking with our healthcare advisory team earlier today.
-
-We are delighted to present the official onboarding proposal for Practo Prime activation for Dr. Rao's Multi-Care Hospital, Indiranagar.
-
-Summary of Inclusions:
-1. 24/7 Verified Instant Appointment Booking on Practo App
-2. Assured Patient Visit Guarantee with Zero Wait Times
-3. Front-Desk Calendar & OPD Synchronization
-4. Practo Prime Gold Clinic Badge
-
-Commercial Tariff (12-Month Tenure):
-- Base Package: ₹ 90,000
-- Exclusive Zone Incentive Discount: - ₹ 10,000
-- Subtotal: ₹ 80,000
-- GST (18%): ₹ 14,400
-- Net Payable: ₹ 94,400
-
-To accept and schedule onboarding, reply directly to this email or contact your assigned account manager.
-
-Warm regards,
-Enterprise Healthcare Partnerships
-Practo Technologies India`,
-  },
-  {
-    id: 'prop_email_302',
-    doctorName: 'Dr. Allu Venkateswara Reddy',
-    clinicName: 'The Dental Venue',
-    email: 'dr.allu.reddy@dental-venue.in',
-    locality: 'Koramangala, Bangalore',
-    product: 'reach',
-    productLabel: 'Practo Reach (Position 1 Spotlight)',
-    tenure: '6 Months',
-    netAmount: '₹ 1,32,160',
-    status: 'dispatched',
-    statusLabel: 'Dispatched to Doctor',
-    createdAt: 'Today at 02:50 PM',
-    subject: 'Practo Reach Spotlight Reservation: Dental Surgeon Position 1 — Koramangala',
-    body: `Dear Dr. Allu Venkateswara Reddy,
-
-Pursuant to our phone consultation, Practo Reach has reserved the exclusive Position 1 Spotlight placement for Dental Surgeons in Koramangala for The Dental Venue.
-
-This single slot captures over 2,400 monthly patient searches in Koramangala.
-
-Campaign Terms:
-- Position: 1 (Top Placement)
-- Tenure: 6 Months
-- Net Payable: ₹ 1,32,160 (Inclusive of 18% GST)
-
-Best regards,
-Practo Enterprise Reach Desk`,
-  },
-  {
-    id: 'prop_email_303',
-    doctorName: 'Dr. Gute Samrat Sambhajirao',
-    clinicName: 'Aartas Clinishare',
-    email: 'dr.gute@aartas-clinishare.in',
-    locality: 'Connaught Place, Delhi',
-    product: 'prime',
-    productLabel: 'Practo Prime',
-    tenure: '3 Months',
-    netAmount: '₹ 28,320',
-    status: 'accepted',
-    statusLabel: 'Accepted by Doctor',
-    createdAt: 'Yesterday at 05:20 PM',
-    subject: 'Welcome to Practo Prime: Aartas Clinishare (Connaught Place)',
-    body: `Dear Dr. Gute,
-
-We are pleased to confirm acceptance of Practo Prime for Aartas Clinishare.
-
-Our technical onboarding specialist will connect tomorrow morning for OPD synchronization.`,
-  },
-];
-
 export default function EmailAIPage() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'proposals' | 'settings'
-  const [proposals, setProposals] = useState(SAMPLE_EMAIL_PROPOSALS);
+  const [proposals, setProposals] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState(null); // For review modal
   const [reviewMessage, setReviewMessage] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    api.listCommercialProposals()
+      .then((res) => {
+        const raw = Array.isArray(res) ? res : (res?.proposals || []);
+        const formatted = raw.map((p) => ({
+          id: p.id,
+          doctorName: p.client_name || p.doctorName || 'Doctor',
+          clinicName: p.clinic_name || p.clinicName || 'Clinic',
+          email: p.email || 'contact@clinic.in',
+          locality: `${p.city || 'Bangalore'}`,
+          product: p.reach_campaigns && p.reach_campaigns !== '[]' ? 'reach' : 'prime',
+          productLabel: p.reach_campaigns && p.reach_campaigns !== '[]' ? 'Practo Reach Spotlight' : 'Practo Prime Activation',
+          tenure: `${p.term_months || 3} Months`,
+          netAmount: `₹ ${(Number(p.net_amount) || 0).toLocaleString('en-IN')}`,
+          status: p.status || 'pending_approval',
+          statusLabel: p.status === 'dispatched' ? 'Dispatched to Doctor' : (p.status === 'accepted' ? 'Accepted' : 'Pending Human Approval'),
+          createdAt: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Recent',
+          subject: `Commercial Proposal: Practo Onboarding for ${p.clinic_name || 'Clinic'}`,
+          body: `Dear Dr. ${p.client_name || 'Doctor'},\n\nWe are pleased to present the commercial onboarding proposal for ${p.clinic_name || 'your clinic'}.\n\nTotal Payable: ₹ ${(Number(p.net_amount) || 0).toLocaleString('en-IN')}\n\nWarm regards,\nPracto Enterprise Team`,
+        }));
+        setProposals(formatted);
+      })
+      .catch(() => setProposals([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   // Email AI Settings (Enterprise settings — no raw API keys shown)
   const [settings, setSettings] = useState({

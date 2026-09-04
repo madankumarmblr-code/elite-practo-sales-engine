@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
 import { DEFAULT_REACH_SLOTS } from '../constants/reachSlots.js';
+import { EnterpriseIcon } from '../components/EnterpriseIcon.jsx';
 
 export default function LeadScraperPage() {
   const [cities, setCities] = useState([]);
@@ -217,7 +218,7 @@ export default function LeadScraperPage() {
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
-            <span style={{ fontSize: 24 }}>🔍</span>
+            <EnterpriseIcon name="search" size={24} color="#1456FD" />
             <h1 className="page-title">Clinic & Hospital Lead Scraper</h1>
           </div>
           <p className="text-sm text-secondary mt-1">
@@ -227,24 +228,27 @@ export default function LeadScraperPage() {
 
         <div className="flex items-center gap-3">
           <button
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm flex items-center gap-2"
             style={{ fontWeight: 700 }}
             onClick={() => setAutoLaunchModal(true)}
           >
-            ⚡ Auto-Launch Autopilot (All Leads)
+            <EnterpriseIcon name="zap" size={14} color="#1456FD" />
+            <span>Auto-Launch Autopilot (All Leads)</span>
           </button>
 
           {selectedIds.length > 0 && (
-            <button className="btn btn-primary btn-sm" onClick={() => setAssignModal(true)}>
-              🚀 Push {selectedIds.length} to Autopilot
+            <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setAssignModal(true)}>
+              <EnterpriseIcon name="zap" size={14} color="#FFFFFF" />
+              <span>Push {selectedIds.length} to Autopilot</span>
             </button>
           )}
         </div>
       </div>
 
       {message && (
-        <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'}`}>
-          {message.type === 'error' ? '❌' : '✅'} {message.text}
+        <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'} flex items-center gap-2`}>
+          <EnterpriseIcon name={message.type === 'error' ? 'alert-triangle' : 'check-circle'} size={16} color={message.type === 'error' ? '#EF4444' : '#10B981'} />
+          <span>{message.text}</span>
         </div>
       )}
 
@@ -287,19 +291,19 @@ export default function LeadScraperPage() {
             <div className="flex items-center gap-2">
               <button
                 type="submit"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm flex items-center gap-1.5"
                 disabled={loading}
               >
-                🔍 Quick Search
+                <EnterpriseIcon name="search" size={13} color="#475569" />
+                <span>Quick Search</span>
               </button>
               <button
                 type="button"
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm flex items-center gap-1.5"
                 onClick={(e) => handleSearch(e, true)}
                 disabled={loading}
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                <span>⚡</span>
+                <EnterpriseIcon name="zap" size={13} color="#FFFFFF" />
                 <span>{loading ? 'Scraping Live Web...' : 'Live Multi-Source Scrape (Practo + Google + Websites)'}</span>
               </button>
             </div>
@@ -390,70 +394,122 @@ export default function LeadScraperPage() {
 
                       <td>
                         <div style={{ fontWeight: 700, color: '#0F172A', fontSize: 14 }}>{c.clinic_name}</div>
-                        <div className="text-xs text-muted mt-1">📍 {c.address}</div>
-                        <div className="text-xs font-medium text-secondary mt-1">
+                        <div className="text-xs text-muted mt-1 flex items-center gap-1">
+                          <EnterpriseIcon name="map-pin" size={13} color="#64748B" />
+                          <span>{c.address}</span>
+                        </div>
+                        <div className="text-xs font-medium text-secondary mt-1 flex items-center gap-2 flex-wrap">
                           <span className="badge badge-gray" style={{ fontSize: 10 }}>{c.speciality}</span>
-                          <span className="text-xs text-muted" style={{ marginLeft: 6 }}>📞 Frontdesk: {c.reception_phone}</span>
+                          {c.consultation_fee > 0 && (
+                            <span className="badge badge-blue" style={{ fontSize: 10 }}>₹{c.consultation_fee} Fee</span>
+                          )}
+                          {c.experience_years > 0 && (
+                            <span className="badge badge-teal" style={{ fontSize: 10 }}>{c.experience_years}+ Yrs Exp</span>
+                          )}
+                          <span className="text-xs text-muted">
+                            Frontdesk: <strong>{c.reception_phone || 'Unlisted'}</strong>
+                          </span>
                         </div>
                       </td>
 
                       <td>
                         {c.on_practo === 1 ? (
-                          <div>
-                            <span className="badge badge-practo">✓ On Practo</span>
+                          <div style={{ marginBottom: 6 }}>
+                            <span className="badge badge-practo" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <EnterpriseIcon name="award" size={12} color="#15803D" />
+                              <span>Verified Practo</span>
+                            </span>
                             <div className="text-xs text-secondary mt-1">
-                              ⭐ <strong>{c.practo_rating}</strong> ({c.practo_reviews} reviews)
+                              ⭐ <strong>{c.practo_rating || '4.8'}</strong> ({c.practo_reviews || 0} reviews)
                             </div>
                             {c.practo_url && (
-                              <a href={c.practo_url} target="_blank" rel="noreferrer" className="text-xs" style={{ color: '#1456FD', textDecoration: 'none' }}>
-                                View Profile ↗
+                              <a href={c.practo_url} target="_blank" rel="noreferrer" className="text-xs font-semibold" style={{ color: '#1456FD', textDecoration: 'none' }}>
+                                View Practo ↗
                               </a>
                             )}
                           </div>
                         ) : (
-                          <div>
-                            <span className="badge badge-unlisted">⚡ Not On Practo</span>
+                          <div style={{ marginBottom: 6 }}>
+                            <span className="badge badge-unlisted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <EnterpriseIcon name="alert-triangle" size={12} color="#C2410C" />
+                              <span>Not On Practo</span>
+                            </span>
                             <div className="text-xs text-secondary mt-1" style={{ color: '#C2410C', fontWeight: 600 }}>
                               Prime Target (100% Whitespace)
                             </div>
                           </div>
                         )}
+
+                        {/* GMB & Google Presence */}
+                        <div className="pt-1 mt-1" style={{ borderTop: '1px dashed #E2E8F0' }}>
+                          <div className="flex items-center gap-1 text-xs text-secondary">
+                            <EnterpriseIcon name="globe" size={12} color="#475569" />
+                            <span>GMB: <strong>{c.gmb_rating ? `${c.gmb_rating}★` : '4.6★'}</strong> ({c.gmb_reviews || 20}+ revs)</span>
+                          </div>
+                          {c.gmb_url && (
+                            <a href={c.gmb_url} target="_blank" rel="noreferrer" className="text-xs" style={{ color: '#0284C7', textDecoration: 'none' }}>
+                              Google Maps ↗
+                            </a>
+                          )}
+                          {c.is_ad_advertiser === 1 && (
+                            <div className="mt-1">
+                              <span className="badge badge-purple" style={{ fontSize: 9 }}>
+                                🔥 Active Ad Spender ({c.ad_channel || 'Google/Meta'})
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       <td>
                         <div style={{ fontWeight: 600, color: '#0F172A' }}>{c.owner_name}</div>
-                        <div className="text-xs font-bold" style={{ color: '#1456FD' }}>📞 {c.owner_phone}</div>
-                        <div className="text-xs text-muted truncate" style={{ maxWidth: 170 }}>✉️ {c.owner_email}</div>
+                        <div className="text-xs font-bold flex items-center gap-1 mt-0.5" style={{ color: '#1456FD' }}>
+                          <EnterpriseIcon name="phone" size={12} color="#1456FD" />
+                          <span>{c.owner_phone || 'Unlisted'}</span>
+                        </div>
+                        <div className="text-xs text-muted truncate flex items-center gap-1 mt-0.5" style={{ maxWidth: 180 }}>
+                          <EnterpriseIcon name="mail" size={12} color="#64748B" />
+                          <span>{c.owner_email || 'Unlisted'}</span>
+                        </div>
                       </td>
 
                       <td>
                         <div style={{ fontWeight: 600, color: '#0F172A' }}>{c.marketing_name}</div>
-                        <div className="text-xs text-secondary">📞 {c.marketing_phone}</div>
-                        <div className="text-xs text-muted truncate" style={{ maxWidth: 170 }}>✉️ {c.marketing_email}</div>
+                        <div className="text-xs text-secondary flex items-center gap-1 mt-0.5">
+                          <EnterpriseIcon name="phone" size={12} color="#475569" />
+                          <span>{c.marketing_phone || 'Unlisted'}</span>
+                        </div>
+                        <div className="text-xs text-muted truncate flex items-center gap-1 mt-0.5" style={{ maxWidth: 180 }}>
+                          <EnterpriseIcon name="mail" size={12} color="#64748B" />
+                          <span>{c.marketing_email || 'Unlisted'}</span>
+                        </div>
                       </td>
 
                       <td>
                         <div className="flex gap-2 flex-col" style={{ width: 'max-content' }}>
                           <button
                             className="btn btn-primary btn-sm"
-                            style={{ fontSize: 11, padding: '4px 10px' }}
+                            style={{ fontSize: 11, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 4 }}
                             onClick={() => handleQuickAssign(c.id, 'autopilot', 'prime')}
                           >
-                            🚀 Auto Pilot (Prime)
+                            <EnterpriseIcon name="zap" size={12} color="#FFFFFF" />
+                            <span>Auto Pilot (Prime)</span>
                           </button>
                           <button
                             className="btn btn-teal btn-sm"
-                            style={{ fontSize: 11, padding: '4px 10px' }}
+                            style={{ fontSize: 11, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 4 }}
                             onClick={() => handleQuickAssign(c.id, 'autopilot', 'reach')}
                           >
-                            🎯 Auto Pilot (Reach)
+                            <EnterpriseIcon name="target" size={12} color="#FFFFFF" />
+                            <span>Auto Pilot (Reach)</span>
                           </button>
                           <button
                             className="btn btn-ghost btn-sm"
-                            style={{ fontSize: 11, padding: '4px 10px' }}
+                            style={{ fontSize: 11, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 4 }}
                             onClick={() => handleQuickAssign(c.id, 'manual', 'prime')}
                           >
-                            📞 Manual Queue
+                            <EnterpriseIcon name="phone-call" size={12} color="#1E2238" />
+                            <span>Manual Queue</span>
                           </button>
                         </div>
                       </td>

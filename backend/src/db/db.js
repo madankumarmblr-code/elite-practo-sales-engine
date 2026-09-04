@@ -3,7 +3,7 @@ import path from 'path';
 import { getDataDir } from '../config.js';
 
 const dataDir = getDataDir();
-const dbPath = path.join(dataDir, 'sales.db');
+const dbPath = path.join(dataDir, 'elite-sales.db');
 const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
@@ -71,9 +71,14 @@ db.exec(`
     last_contacted_at TEXT,
     next_action TEXT,
     notes TEXT DEFAULT '',
+    tags TEXT DEFAULT '[]',
+    temperature TEXT DEFAULT '',
+    preferred_channel TEXT DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+
+  CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_at);
 
   CREATE TABLE IF NOT EXISTS activities (
     id TEXT PRIMARY KEY,
@@ -99,6 +104,14 @@ db.exec(`
     daily_limit INTEGER DEFAULT 50,
     sent_today INTEGER DEFAULT 0,
     success_rate REAL DEFAULT 0,
+    integration_id TEXT,
+    subject TEXT DEFAULT '',
+    channel_config TEXT DEFAULT '{}',
+    ai_personalize INTEGER DEFAULT 0,
+    run_mode TEXT DEFAULT 'live',
+    last_run_day TEXT,
+    product_pitch TEXT DEFAULT '',
+    dialogue_id TEXT DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -123,15 +136,12 @@ db.exec(`
     config TEXT DEFAULT '{}',
     secrets TEXT DEFAULT '{}',
     last_tested_at TEXT,
+    last_test_message TEXT DEFAULT '',
+    last_test_ok INTEGER,
     notes TEXT DEFAULT '',
-    updated_at TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS lead_sources (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    enabled INTEGER DEFAULT 1,
-    weight INTEGER DEFAULT 50
+    updated_at TEXT NOT NULL,
+    channel TEXT DEFAULT '',
+    is_default INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS pipeline_stages (
@@ -141,58 +151,6 @@ db.exec(`
     color TEXT DEFAULT '#1DB8A0',
     position INTEGER DEFAULT 0
   );
-`);
-
-// Migrations for existing databases
-const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
-if (!userCols.includes('username')) {
-  db.exec('ALTER TABLE users ADD COLUMN username TEXT');
-}
-db.exec(`
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL AND username != ''
-`);
-
-const campaignCols = db.prepare('PRAGMA table_info(autopilot_campaigns)').all().map((c) => c.name);
-const campaignAlters = [
-  ['integration_id', 'TEXT'],
-  ['subject', "TEXT DEFAULT ''"],
-  ['channel_config', "TEXT DEFAULT '{}'"],
-  ['ai_personalize', 'INTEGER DEFAULT 0'],
-  ['run_mode', "TEXT DEFAULT 'live'"],
-  ['last_run_day', 'TEXT'],
-  ['product_pitch', "TEXT DEFAULT ''"],
-  ['dialogue_id', "TEXT DEFAULT ''"],
-];
-for (const [col, type] of campaignAlters) {
-  if (!campaignCols.includes(col)) {
-    db.exec(`ALTER TABLE autopilot_campaigns ADD COLUMN ${col} ${type}`);
-  }
-}
-
-const integCols = db.prepare('PRAGMA table_info(api_integrations)').all().map((c) => c.name);
-if (!integCols.includes('channel')) {
-  db.exec(`ALTER TABLE api_integrations ADD COLUMN channel TEXT DEFAULT ''`);
-}
-if (!integCols.includes('is_default')) {
-  db.exec(`ALTER TABLE api_integrations ADD COLUMN is_default INTEGER DEFAULT 0`);
-}
-if (!integCols.includes('last_test_message')) {
-  db.exec(`ALTER TABLE api_integrations ADD COLUMN last_test_message TEXT DEFAULT ''`);
-}
-if (!integCols.includes('last_test_ok')) {
-  db.exec(`ALTER TABLE api_integrations ADD COLUMN last_test_ok INTEGER`);
-}
-
-const leadCols = db.prepare('PRAGMA table_info(leads)').all().map((c) => c.name);
-if (!leadCols.includes('temperature')) {
-  db.exec(`ALTER TABLE leads ADD COLUMN temperature TEXT DEFAULT ''`);
-}
-if (!leadCols.includes('preferred_channel')) {
-  db.exec(`ALTER TABLE leads ADD COLUMN preferred_channel TEXT DEFAULT ''`);
-}
-
-db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_at);
 
   CREATE TABLE IF NOT EXISTS outreach_messages (
     id TEXT PRIMARY KEY,
@@ -210,6 +168,8 @@ db.exec(`
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+
+  CREATE INDEX IF NOT EXISTS idx_outreach_created ON outreach_messages(created_at);
 
   CREATE TABLE IF NOT EXISTS call_logs (
     id TEXT PRIMARY KEY,
@@ -229,7 +189,6 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
 
-  CREATE INDEX IF NOT EXISTS idx_outreach_created ON outreach_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_call_logs_created ON call_logs(created_at);
 
   CREATE TABLE IF NOT EXISTS notifications (
@@ -267,21 +226,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action);
   CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id);
 
-  CREATE TABLE IF NOT EXISTS custom_reports (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT DEFAULT '',
-    user_id TEXT NOT NULL,
-    filters TEXT NOT NULL DEFAULT '{}',
-    metrics TEXT NOT NULL DEFAULT '[]',
-    chart_type TEXT DEFAULT 'bar',
-    is_shared INTEGER DEFAULT 1,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_reports_user ON custom_reports(user_id);
-
   CREATE TABLE IF NOT EXISTS compliance_consents (
     id TEXT PRIMARY KEY,
     lead_id TEXT,
@@ -295,24 +239,140 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
 
-  CREATE INDEX IF NOT EXISTS idx_compliance_lead ON compliance_consents(lead_id);
+  CREATE TABLE IF NOT EXISTS scraped_clinics (
+    id TEXT PRIMARY KEY,
+    clinic_name TEXT NOT NULL,
+    city TEXT NOT NULL,
+    locality TEXT NOT NULL,
+    speciality TEXT NOT NULL,
+    address TEXT DEFAULT '',
+    on_practo INTEGER DEFAULT 0,
+    practo_rating REAL DEFAULT 0,
+    practo_reviews INTEGER DEFAULT 0,
+    practo_url TEXT DEFAULT '',
+    owner_name TEXT DEFAULT '',
+    owner_phone TEXT DEFAULT '',
+    owner_email TEXT DEFAULT '',
+    marketing_name TEXT DEFAULT '',
+    marketing_phone TEXT DEFAULT '',
+    marketing_email TEXT DEFAULT '',
+    reception_phone TEXT DEFAULT '',
+    assigned_crm INTEGER DEFAULT 0,
+    assigned_type TEXT DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
 
-  CREATE TABLE IF NOT EXISTS doctor_pitch_history (
+  CREATE INDEX IF NOT EXISTS idx_scraped_city_loc ON scraped_clinics(city, locality);
+  CREATE INDEX IF NOT EXISTS idx_scraped_spec ON scraped_clinics(speciality);
+
+  CREATE TABLE IF NOT EXISTS autopilot_queue (
     id TEXT PRIMARY KEY,
     lead_id TEXT,
     clinic_name TEXT NOT NULL,
-    doctor_name TEXT,
-    specialty TEXT,
-    city TEXT,
-    product TEXT NOT NULL,
-    pitch_deck TEXT,
-    objection_handled TEXT,
-    created_by TEXT,
+    city TEXT DEFAULT '',
+    locality TEXT DEFAULT '',
+    speciality TEXT DEFAULT '',
+    phone TEXT NOT NULL,
+    email TEXT DEFAULT '',
+    owner_name TEXT DEFAULT '',
+    marketing_name TEXT DEFAULT '',
+    product TEXT DEFAULT 'prime',
+    current_stage TEXT DEFAULT 'queued',
+    call_attempt_id TEXT,
+    call_status TEXT DEFAULT '',
+    call_duration INTEGER DEFAULT 0,
+    call_transcript TEXT DEFAULT '',
+    call_recording_url TEXT DEFAULT '',
+    whatsapp_status TEXT DEFAULT '',
+    whatsapp_message_id TEXT DEFAULT '',
+    whatsapp_text TEXT DEFAULT '',
+    email_status TEXT DEFAULT 'pending_review',
+    email_subject TEXT DEFAULT '',
+    email_body TEXT DEFAULT '',
+    approved_by TEXT DEFAULT '',
+    approved_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_autopilot_stage ON autopilot_queue(current_stage);
+  CREATE INDEX IF NOT EXISTS idx_autopilot_lead ON autopilot_queue(lead_id);
+
+  CREATE TABLE IF NOT EXISTS commercial_proposals (
+    id TEXT PRIMARY KEY,
+    lead_id TEXT,
+    client_name TEXT NOT NULL,
+    clinic_name TEXT NOT NULL,
+    city TEXT NOT NULL,
+    doc_type TEXT DEFAULT 'proposal',
+    term_months INTEGER DEFAULT 3,
+    prime_config TEXT DEFAULT '{}',
+    reach_campaigns TEXT DEFAULT '[]',
+    discount_type TEXT DEFAULT 'amount',
+    discount_val REAL DEFAULT 0,
+    subtotal REAL DEFAULT 0,
+    gst_amount REAL DEFAULT 0,
+    net_amount REAL DEFAULT 0,
+    sender_name TEXT DEFAULT 'Karan Patel',
+    sender_phone TEXT DEFAULT '+918071579481',
     created_at TEXT NOT NULL
   );
 
-  CREATE INDEX IF NOT EXISTS idx_pitch_history_lead ON doctor_pitch_history(lead_id);
-  CREATE INDEX IF NOT EXISTS idx_pitch_history_created ON doctor_pitch_history(created_at);
+  CREATE INDEX IF NOT EXISTS idx_proposals_created ON commercial_proposals(created_at);
 `);
+
+// username index (safe for existing DBs)
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)
+  WHERE username IS NOT NULL AND username != ''
+`);
+
+function ensureColumn(table, column, def) {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!cols.some((c) => c.name === column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`);
+    }
+  } catch { /* ignore */ }
+}
+
+ensureColumn('leads', 'tags', "TEXT DEFAULT '[]'");
+ensureColumn('leads', 'temperature', "TEXT DEFAULT ''");
+ensureColumn('leads', 'preferred_channel', "TEXT DEFAULT ''");
+ensureColumn('leads', 'next_action', "TEXT DEFAULT ''");
+ensureColumn('leads', 'city', "TEXT DEFAULT ''");
+ensureColumn('leads', 'locality', "TEXT DEFAULT ''");
+ensureColumn('leads', 'speciality', "TEXT DEFAULT ''");
+ensureColumn('leads', 'on_practo', "INTEGER DEFAULT 0");
+ensureColumn('leads', 'practo_rating', "REAL DEFAULT 0");
+ensureColumn('leads', 'practo_reviews', "INTEGER DEFAULT 0");
+ensureColumn('leads', 'practo_url', "TEXT DEFAULT ''");
+ensureColumn('leads', 'owner_name', "TEXT DEFAULT ''");
+ensureColumn('leads', 'owner_phone', "TEXT DEFAULT ''");
+ensureColumn('leads', 'owner_email', "TEXT DEFAULT ''");
+ensureColumn('leads', 'marketing_name', "TEXT DEFAULT ''");
+ensureColumn('leads', 'marketing_phone', "TEXT DEFAULT ''");
+ensureColumn('leads', 'marketing_email', "TEXT DEFAULT ''");
+ensureColumn('leads', 'reception_phone', "TEXT DEFAULT ''");
+ensureColumn('leads', 'product_interest', "TEXT DEFAULT 'prime'");
+ensureColumn('leads', 'workflow_stage', "TEXT DEFAULT 'manual'");
+
+// User-level & SuperAdmin extra settings columns
+ensureColumn('users', 'territory', "TEXT DEFAULT '[\"Bangalore\"]'");
+ensureColumn('users', 'monthly_quota', "INTEGER DEFAULT 50");
+ensureColumn('users', 'daily_call_limit', "INTEGER DEFAULT 100");
+ensureColumn('users', 'can_export', "INTEGER DEFAULT 1");
+ensureColumn('users', 'can_trigger_autopilot', "INTEGER DEFAULT 1");
+ensureColumn('users', 'can_approve_proposals', "INTEGER DEFAULT 0");
+ensureColumn('users', 'status', "TEXT DEFAULT 'active'");
+ensureColumn('users', 'phone', "TEXT DEFAULT ''");
+
+// Autopilot human interference & retry columns
+ensureColumn('autopilot_queue', 'human_interference_required', "INTEGER DEFAULT 0");
+ensureColumn('autopilot_queue', 'human_reason', "TEXT DEFAULT ''");
+ensureColumn('autopilot_queue', 'retry_count', "INTEGER DEFAULT 0");
+ensureColumn('autopilot_queue', 'next_retry_at', "TEXT DEFAULT ''");
+ensureColumn('autopilot_queue', 'call_disposition', "TEXT DEFAULT ''");
 
 export default db;

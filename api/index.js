@@ -1,49 +1,40 @@
-/**
- * Vercel Serverless Entry Point
- * All /api/* requests are routed here by vercel.json rewrites.
- *
- * On cold start:
- *  1. Restores durable SQLite snapshot from Vercel Blob into /tmp
- *  2. Builds the full Express app with ALL routes registered
- *  3. Caches the promise so subsequent warm invocations skip setup
- */
+import { createApp } from '../backend/src/app.js';
+import { bootstrap } from '../backend/src/db/seed.js';
+import { restoreFromBlobIfEmpty } from '../backend/src/services/dbSnapshot.js';
 
-let appPromise;
+let app = null;
+let ready = false;
+let readyPromise = null;
 
-async function loadApp() {
-  if (!process.env.DATA_DIR) {
-    process.env.DATA_DIR = '/tmp/practo-sales-data';
-  }
+async function init() {
+  if (ready && app) return app;
+  if (readyPromise) return readyPromise;
 
-  if (!appPromise) {
-    appPromise = (async () => {
-      // Restore durable DB snapshot if available (Vercel Blob / KV)
-      try {
-        const { restoreDurableDb } = await import('../backend/src/services/dbSnapshot.js');
-        await restoreDurableDb();
-      } catch (err) {
-        console.warn('[api/index] DB snapshot restore skipped:', err.message);
-      }
+  readyPromise = (async () => {
+    await restoreFromBlobIfEmpty();
+    bootstrap();
+    app = createApp();
+    ready = true;
+    return app;
+  })();
 
-      // Build and return the full Express app (all routes registered)
-      const mod = await import('../backend/src/app.js');
-      const createApp = mod.createApp;
-      if (typeof createApp !== 'function') {
-        throw new Error('[api/index] createApp is not a function — check backend/src/app.js exports');
-      }
-      return createApp({ serveStatic: false, warmSheet: true });
-    })();
-  }
-
-  return appPromise;
+  return readyPromise;
 }
 
 export default async function handler(req, res) {
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-auth-token,x-api-key');
+    return res.status(204).end();
+  }
+
   try {
-    const app = await loadApp();
-    return app(req, res);
+    const expressApp = await init();
+    return expressApp(req, res);
   } catch (err) {
-    console.error('[api/index] Fatal handler error:', err);
-    res.status(500).json({ error: 'Server initialization failed', detail: err.message });
+    console.error('[Vercel Handler] Fatal:', err);
+    res.status(500).json({ error: 'Service initialization error', message: err.message });
   }
 }

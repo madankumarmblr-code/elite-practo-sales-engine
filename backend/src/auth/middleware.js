@@ -15,8 +15,8 @@ function userFromRow(user) {
 
 /**
  * Resolve the caller from a bearer token.
- * Prefer signed tokens (work across Vercel isolates). Fall back to legacy
- * SQLite sessions for older local tokens.
+ * Prefers signed tokens (work across Vercel isolates).
+ * Falls back to legacy SQLite sessions for local tokens.
  */
 export function getUserFromToken(token) {
   if (!token) return null;
@@ -25,14 +25,10 @@ export function getUserFromToken(token) {
   if (signed) {
     const row =
       db.prepare('SELECT * FROM users WHERE id = ? AND active = 1').get(signed.id) ||
-      db
-        .prepare('SELECT * FROM users WHERE lower(email) = ? AND active = 1')
-        .get(String(signed.email).toLowerCase()) ||
-      db
-        .prepare('SELECT * FROM users WHERE lower(username) = ? AND active = 1')
-        .get(String(signed.username || '').toLowerCase());
+      db.prepare('SELECT * FROM users WHERE lower(email) = ? AND active = 1').get(String(signed.email).toLowerCase()) ||
+      db.prepare('SELECT * FROM users WHERE lower(username) = ? AND active = 1').get(String(signed.username || '').toLowerCase());
     if (row) return userFromRow(row);
-    // Fresh serverless DB may have re-seeded users with new ids — trust signed claims
+    // Fresh serverless DB (re-seeded) — trust signed claims
     return signed;
   }
 

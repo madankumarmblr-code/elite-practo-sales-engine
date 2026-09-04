@@ -1,255 +1,250 @@
 import { nanoid } from 'nanoid';
 import db from '../db/db.js';
-import { discoverClinics, getDiscoveryMeta } from '../services/clinicDiscovery.js';
-import {
-  leadDedupeKeys,
-  normalizeName,
-  normalizePhone,
-  isAuthenticLead,
-} from '../services/liveDiscovery.js';
-import { pickSmartChannel } from '../services/aiAssist.js';
+import { authRequired, requirePermission } from '../auth/middleware.js';
+import { persistDurableDbNow } from '../services/dbSnapshot.js';
+import { logEvent } from '../services/logger.js';
+import { recordAuditLog } from '../services/auditLogger.js';
 
 const now = () => new Date().toISOString();
 
-export function registerLeadRoutes(app) {
-  app.get('/api/lead-generator/meta', (_req, res) => {
-    res.json(getDiscoveryMeta());
+function publicLead(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    tags: (() => { try { return JSON.parse(row.tags || '[]'); } catch { return []; } })(),
+  };
+}
+
+export function registerLeadsRoutes(app) {
+  // ── List leads ─────────────────────────────────────────────────────────────
+  app.get('/api/leads', authRequired, requirePermission('leads:read'), (req, res) => {
+    const { stage, status, search, limit = 100, offset = 0, assignedTo } = req.query;
+    let query = 'SELECT * FROM leads WHERE 1=1';
+    const params = [];
+
+    if (stage) { query += ' AND stage = ?'; params.push(stage); }
+    if (status) { query += ' AND status = ?'; params.push(status); }
+    if (assignedTo) { query += ' AND lower(assigned_to) = ?'; params.push(String(assignedTo).toLowerCase()); }
+    if (search) {
+      query += ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR company LIKE ?)';
+      const t = `%${search}%`;
+      params.push(t, t, t, t);
+    }
+
+    const countQuery = query.replace('SELECT *', 'SELECT COUNT(*) as total');
+    const total = db.prepare(countQuery).get(...params)?.total || 0;
+
+    query += ' ORDER BY updated_at DESC LIMIT ? OFFSET ?';
+    params.push(Number(limit), Number(offset));
+
+    const leads = db.prepare(query).all(...params).map(publicLead);
+    res.json({ leads, total, limit: Number(limit), offset: Number(offset) });
   });
 
-  app.post('/api/lead-generator/search', async (req, res) => {
-    const body = req.body || {};
-    const city = body.city || body.location;
-    const {
-      zone = 'All',
-      zones,
-      localities,
-      specialty,
-      keyword,
-      keywords,
-      limit = null,
-      live = true,
-      maxLocalities = 40,
-      fullScan = false,
-    } = body;
-    const kw = keyword || specialty || (Array.isArray(keywords) ? keywords[0] : null);
+  // ── CSV Export (Declared BEFORE :id to avoid route collision) ─────────────
+  app.get('/api/leads/export', authRequired, requirePermission('leads:read'), (req, res) => {
+    const { stage, workflowStage, productInterest } = req.query;
+    let query = 'SELECT * FROM leads WHERE 1=1';
+    const params = [];
+    if (stage) { query += ' AND stage = ?'; params.push(stage); }
+    if (workflowStage) { query += ' AND workflow_stage = ?'; params.push(workflowStage); }
+    if (productInterest) { query += ' AND product_interest = ?'; params.push(productInterest); }
+    query += ' ORDER BY created_at DESC';
 
-    if (!city || !kw) {
-      return res.status(400).json({
-        error:
-          'Select city and keyword/specialty (zone can be All; localities auto-expand under zone)',
-      });
+    const rows = db.prepare(query).all(...params);
+
+    const headers = ['ID', 'Name', 'Company', 'Phone', 'Email', 'City', 'Locality', 'Speciality', 'Practo Status', 'Stage', 'Score', 'Product Interest', 'Workflow Stage', 'Created At'];
+    const csvLines = [headers.join(',')];
+
+    for (const r of rows) {
+      const line = [
+        r.id,
+        `"${(r.name || '').replace(/"/g, '""')}"`,
+        `"${(r.company || '').replace(/"/g, '""')}"`,
+        `"${r.phone || ''}"`,
+        `"${r.email || ''}"`,
+        `"${(r.city || '').replace(/"/g, '""')}"`,
+        `"${(r.locality || '').replace(/"/g, '""')}"`,
+        `"${(r.speciality || '').replace(/"/g, '""')}"`,
+        r.on_practo ? 'On Practo' : 'Not On Practo',
+        r.stage,
+        r.score || 0,
+        r.product_interest || 'prime',
+        r.workflow_stage || 'manual',
+        r.created_at,
+      ];
+      csvLines.push(line.join(','));
     }
 
-    try {
-      const discovery = await discoverClinics({
-        city,
-        zone,
-        zones,
-        localities,
-        specialty: kw,
-        keyword: kw,
-        keywords,
-        limit,
-        live,
-        maxLocalities,
-        fullScan: fullScan === true || fullScan === '1',
-      });
-      if (discovery.error && !discovery.results?.length) {
-        return res.status(400).json({ error: discovery.error });
-      }
-      res.json(discovery);
-    } catch (err) {
-      res.status(500).json({ error: err.message || 'Discovery failed' });
-    }
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="practo_leads_${Date.now()}.csv"`);
+    res.send(csvLines.join('\n'));
   });
 
-  app.get('/api/lead-generator/options', (req, res) => {
-    const city = (req.query.city || '').toString();
-    const zone = (req.query.zone || '').toString();
-    const keyword = (req.query.keyword || req.query.specialty || '').toString();
-    const meta = getDiscoveryMeta();
-    const zones = city ? meta.zonesByCity[city] || [] : [];
-    const zoneMeta = city ? meta.zoneMetaByCity[city] || {} : {};
-    let keywords = meta.keywords || meta.specialties || [];
-    if (city && zone && zone !== 'All') {
-      keywords = meta.keywordsByCityZone[`${city}||${zone}`] || [];
-    } else if (city) {
-      keywords = meta.keywordsByCity[city] || keywords;
-    }
-    let filteredZones = zones;
-    if (city && keyword) {
-      filteredZones = zones.filter((z) =>
-        (meta.keywordsByCityZone[`${city}||${z}`] || []).includes(keyword)
-      );
-      if (!filteredZones.length) filteredZones = zones;
-    }
-    res.json({
-      city,
-      zone,
-      keyword,
-      zones: filteredZones,
-      zoneMeta,
-      keywords,
-      cities: meta.cities,
-    });
+  // ── Get single lead ────────────────────────────────────────────────────────
+  app.get('/api/leads/:id', authRequired, requirePermission('leads:read'), (req, res) => {
+    const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    const activities = db.prepare('SELECT * FROM activities WHERE lead_id = ? ORDER BY created_at DESC LIMIT 50').all(lead.id);
+    res.json({ ...publicLead(lead), activities });
   });
 
-  /** Optional persist of discovered leads (export remains primary). */
-  app.post('/api/lead-generator/import', (req, res) => {
-    const { leads: incoming = [] } = req.body || {};
-    if (!Array.isArray(incoming) || !incoming.length) {
-      return res.status(400).json({ error: 'leads array required' });
-    }
-    const insert = db.prepare(`
-      INSERT INTO leads (
-        id, name, email, phone, company, title, source, stage, score, value,
-        status, assigned_to, last_contacted_at, next_action, notes, created_at, updated_at,
-        temperature, preferred_channel
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', 'Unassigned', NULL, ?, ?, ?, ?, ?, ?)
-    `);
-    const findByPhone = db.prepare(
-      `SELECT id FROM leads WHERE replace(replace(replace(replace(phone,' ',''),'+',''),'-',''),'(','') LIKE ? LIMIT 1`
-    );
-    const findByEmail = db.prepare(`SELECT id FROM leads WHERE lower(email) = lower(?) LIMIT 1`);
-    const findByCompanyCity = db.prepare(
-      `SELECT id, company, notes FROM leads WHERE lower(company) = lower(?) LIMIT 20`
-    );
-    const findByPlaceId = db.prepare(`SELECT id FROM leads WHERE notes LIKE ? LIMIT 1`);
-    const created = [];
-    const skipped = [];
+  // ── Create lead ────────────────────────────────────────────────────────────
+  app.post('/api/leads', authRequired, requirePermission('leads:write'), async (req, res) => {
+    const { name, email, phone, company, title, source = 'manual', stage = 'new', score = 0, value = 0, notes = '', assignedTo, tags, temperature = '', preferredChannel = '' } = req.body || {};
+    if (!name) return res.status(400).json({ error: 'Lead name is required' });
+
+    const id = nanoid();
     const ts = now();
-    const tx = db.transaction((items) => {
-      const seen = new Set();
-      for (const item of items) {
-        if (!isAuthenticLead(item) && item.discoverySource === 'sheet_locality') {
-          skipped.push({
-            reason: 'synthetic_rejected',
-            company: item.clinicName || item.company || '',
-          });
-          continue;
-        }
-        if (
-          /sheet_locality|zone locality expansion|sheet \+ locality/i.test(
-            `${item.discoverySource || ''} ${item.source || ''} ${item.matchReason || ''}`
-          )
-        ) {
-          skipped.push({
-            reason: 'synthetic_rejected',
-            company: item.clinicName || item.company || '',
-          });
-          continue;
-        }
-        const owner = item.owner || {};
-        const phone = normalizePhone(owner.phone || item.phone || '');
-        const email = String(owner.email || item.email || '').trim().toLowerCase();
-        const company = String(item.clinicName || item.company || '').trim();
-        const contactName = String(owner.name || item.name || company || 'Clinic contact').trim();
-        const city = String(item.city || '').trim();
-        const placeId = item.placeId || null;
-        const batchKeys = leadDedupeKeys({
-          ...item,
-          phone,
-          email,
-          clinicName: company,
-          owner: { ...owner, phone, email },
-        });
-        if (batchKeys.some((k) => seen.has(k))) {
-          skipped.push({ reason: 'duplicate_in_batch', company });
-          continue;
-        }
-        for (const k of batchKeys) seen.add(k);
+    db.prepare(`
+      INSERT INTO leads (id, name, email, phone, company, title, source, stage, score, value, status, assigned_to, notes, tags, temperature, preferred_channel, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, name, email || '', phone || '', company || '', title || '', source, stage, Number(score), Number(value), assignedTo || 'Unassigned', notes, JSON.stringify(Array.isArray(tags) ? tags : []), temperature, preferredChannel, ts, ts);
 
-        if (placeId && findByPlaceId.get(`%Place ID: ${placeId}%`)) {
-          skipped.push({ reason: 'duplicate_place', company, placeId });
-          continue;
-        }
-        if (phone && findByPhone.get(`%${phone}`)) {
-          skipped.push({ reason: 'duplicate_phone', company, phone });
-          continue;
-        }
-        if (email && findByEmail.get(email)) {
-          skipped.push({ reason: 'duplicate_email', company, email });
-          continue;
-        }
-        if (company && city) {
-          const companyHits = findByCompanyCity.all(company);
-          const cityLower = city.toLowerCase();
-          const locality = String(item.locality || item.zone || '')
-            .trim()
-            .toLowerCase();
-          const dupCompany = companyHits.find((row) => {
-            const notes = String(row.notes || '').toLowerCase();
-            if (!notes.includes(cityLower)) return false;
-            if (locality && notes.includes(locality)) return true;
-            return normalizeName(row.company) === normalizeName(company);
-          });
-          if (dupCompany) {
-            skipped.push({ reason: 'duplicate_company', company });
-            continue;
-          }
-        }
+    recordAuditLog({ req, action: 'lead.create', entityType: 'lead', entityId: id, details: `Created lead: ${name}`, newState: { name, email, phone, company, source, stage } });
+    logEvent({ type: 'info', category: 'leads', message: `Lead created: ${name}`, userId: req.user.id });
+    await persistDurableDbNow();
+    res.status(201).json(publicLead(db.prepare('SELECT * FROM leads WHERE id = ?').get(id)));
+  });
 
-        const id = nanoid();
-        const marketing = item.marketingHead || null;
-        const practo = item.practo || {};
-        const platforms = item.platformNames || item.platforms?.map((p) => p.name) || [];
-        const channelPick = pickSmartChannel({
-          phone: owner.phone || item.phone,
-          email: owner.email || item.email,
-          score: item.score,
-          website: item.website,
-          practo,
-          notes: practo.hasProfile ? 'Practo profile: Yes' : 'Practo profile: No',
-        });
-        const notes = [
-          item.matchReason || 'Imported from lead generator',
-          `Clinic: ${company}`,
-          `Specialty: ${item.specialty || item.keyword || ''}`,
-          `Location: ${item.locality || item.zone || ''}, ${city || item.location || ''}`,
-          `Zone: ${item.zone || ''}`,
-          `Address: ${item.address || ''}`,
-          `Website: ${item.website || ''}`,
-          item.placeId ? `Place ID: ${item.placeId}` : null,
-          item.openingHours?.length ? `Hours: ${item.openingHours.join(' | ')}` : null,
-          `Owner: ${owner.name || item.name || ''} | ${owner.phone || item.phone || ''} | ${owner.email || item.email || ''}`,
-          marketing
-            ? `Marketing Head: ${marketing.name} | ${marketing.phone || ''} | ${marketing.email || ''}`
-            : 'Marketing Head: Not listed',
-          `Practo profile: ${practo.hasProfile ? 'Yes' : 'No'}${practo.url ? ` (${practo.url})` : ''}`,
-          `Platforms: ${platforms.join(', ') || 'n/a'}`,
-          `Discovery source: ${item.discoverySource || item.source || 'n/a'}`,
-          `Smart channel: ${channelPick.channel} (${channelPick.reasons[0] || ''})`,
-        ]
-          .filter(Boolean)
-          .join('\n');
+  // ── Update lead ────────────────────────────────────────────────────────────
+  app.put('/api/leads/:id', authRequired, requirePermission('leads:write'), async (req, res) => {
+    const existing = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Lead not found' });
 
-        insert.run(
-          id,
-          contactName,
-          owner.email || item.email || '',
-          owner.phone || item.phone || '',
-          company || contactName,
-          owner.title || item.title || 'Clinic Owner',
-          item.source || 'Lead Generator',
-          item.temperature === 'hot' ? 'qualified' : 'new',
-          item.score ?? 50,
-          item.estimatedValue ?? item.value ?? 0,
-          `Engage via ${item.suggestedChannel || channelPick.channel}`,
-          notes,
-          ts,
-          ts,
-          item.temperature || '',
-          item.suggestedChannel || channelPick.channel
-        );
-        created.push(db.prepare('SELECT * FROM leads WHERE id = ?').get(id));
+    const b = req.body || {};
+    const ts = now();
+    db.prepare(`
+      UPDATE leads SET name=?, email=?, phone=?, company=?, title=?, source=?, stage=?, score=?, value=?, status=?, assigned_to=?, notes=?, tags=?, temperature=?, preferred_channel=?, next_action=?, updated_at=? WHERE id=?
+    `).run(
+      b.name ?? existing.name, b.email ?? existing.email, b.phone ?? existing.phone,
+      b.company ?? existing.company, b.title ?? existing.title, b.source ?? existing.source,
+      b.stage ?? existing.stage, b.score != null ? Number(b.score) : existing.score,
+      b.value != null ? Number(b.value) : existing.value,
+      b.status ?? existing.status, b.assignedTo ?? existing.assigned_to,
+      b.notes ?? existing.notes,
+      Array.isArray(b.tags) ? JSON.stringify(b.tags) : existing.tags,
+      b.temperature ?? existing.temperature,
+      b.preferredChannel ?? existing.preferred_channel,
+      b.nextAction ?? existing.next_action,
+      ts, existing.id
+    );
+
+    if (b.stage && b.stage !== existing.stage) {
+      db.prepare('INSERT INTO activities (id, lead_id, type, title, detail, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(nanoid(), existing.id, 'stage_change', `Stage updated to ${b.stage}`, `${existing.stage} → ${b.stage}`, ts);
+    }
+
+    recordAuditLog({ req, action: 'lead.update', entityType: 'lead', entityId: existing.id, details: `Updated lead: ${existing.name}`, oldState: existing, newState: b });
+    await persistDurableDbNow();
+    res.json(publicLead(db.prepare('SELECT * FROM leads WHERE id = ?').get(existing.id)));
+  });
+
+  // ── Delete lead ────────────────────────────────────────────────────────────
+  app.delete('/api/leads/:id', authRequired, requirePermission('leads:write'), async (req, res) => {
+    const existing = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Lead not found' });
+    db.prepare('DELETE FROM leads WHERE id = ?').run(req.params.id);
+    recordAuditLog({ req, action: 'lead.delete', entityType: 'lead', entityId: existing.id, details: `Deleted lead: ${existing.name}`, oldState: existing });
+    await persistDurableDbNow();
+    res.json({ ok: true });
+  });
+
+  // ── Bulk import leads ──────────────────────────────────────────────────────
+  app.post('/api/leads/bulk-import', authRequired, requirePermission('leads:write'), async (req, res) => {
+    const { leads = [] } = req.body || {};
+    if (!Array.isArray(leads) || !leads.length) return res.status(400).json({ error: 'leads array required' });
+
+    const ts = now();
+    const insertStmt = db.prepare(`
+      INSERT INTO leads (id, name, email, phone, company, title, source, stage, score, value, status, assigned_to, notes, tags, temperature, preferred_channel, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', 'Unassigned', ?, '[]', '', '', ?, ?)
+    `);
+
+    let imported = 0;
+    const tx = db.transaction(() => {
+      for (const lead of leads) {
+        if (!lead.name) continue;
+        insertStmt.run(nanoid(), lead.name, lead.email || '', lead.phone || '', lead.company || '', lead.title || '', lead.source || 'import', lead.stage || 'new', Number(lead.score || 0), Number(lead.value || 0), lead.notes || '', ts, ts);
+        imported++;
       }
     });
-    tx(incoming);
-    res.status(201).json({
-      imported: created.length,
-      skipped: skipped.length,
-      skipReasons: skipped,
-      leads: created,
+    tx();
+
+    logEvent({ type: 'info', category: 'leads', message: `Bulk imported ${imported} leads`, userId: req.user.id });
+    await persistDurableDbNow();
+    res.json({ ok: true, imported, total: leads.length });
+  });
+
+  // ── Lead activities ────────────────────────────────────────────────────────
+  app.post('/api/leads/:id/activities', authRequired, requirePermission('leads:write'), async (req, res) => {
+    const lead = db.prepare('SELECT id FROM leads WHERE id = ?').get(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    const { type = 'note', title, detail = '', channel = '' } = req.body || {};
+    if (!title) return res.status(400).json({ error: 'title is required' });
+    const ts = now();
+    const id = nanoid();
+    db.prepare('INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(id, lead.id, type, channel, title, detail, 'completed', ts);
+    if (req.body.nextAction) {
+      db.prepare('UPDATE leads SET next_action=?, updated_at=? WHERE id=?').run(req.body.nextAction, ts, lead.id);
+    }
+    res.status(201).json({ id, leadId: lead.id, type, title, detail, createdAt: ts });
+  });
+
+  // ── Batch Actions (Push to Autopilot / Assign Manual / Stage Change) ───────
+  app.post('/api/leads/batch-action', authRequired, requirePermission('leads:write'), async (req, res) => {
+    const { leadIds = [], action, product = 'prime', stage = 'contacted' } = req.body || {};
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      return res.status(400).json({ error: 'leadIds array required' });
+    }
+
+    const { autopilotService } = await import('../services/autopilotService.js');
+    const ts = now();
+    let processed = 0;
+
+    if (action === 'push_autopilot') {
+      for (const id of leadIds) {
+        const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
+        if (!lead || !lead.phone) continue;
+        try {
+          await autopilotService.enqueueLead({
+            leadId: lead.id,
+            clinicName: lead.company || lead.name,
+            city: lead.city || '',
+            locality: lead.locality || '',
+            speciality: lead.speciality || lead.title || '',
+            phone: lead.phone,
+            email: lead.email,
+            ownerName: lead.owner_name || lead.name,
+            marketingName: lead.marketing_name || '',
+            product,
+            autoStart: true,
+          });
+          db.prepare("UPDATE leads SET workflow_stage = 'autopilot', product_interest = ?, updated_at = ? WHERE id = ?").run(product, ts, lead.id);
+          processed++;
+        } catch (e) {
+          console.warn(`[BatchAutopilot] Error on lead ${id}:`, e.message);
+        }
+      }
+    } else if (action === 'assign_manual') {
+      const stmt = db.prepare("UPDATE leads SET workflow_stage = 'manual', updated_at = ? WHERE id = ?");
+      for (const id of leadIds) { stmt.run(ts, id); processed++; }
+    } else if (action === 'change_stage') {
+      const stmt = db.prepare("UPDATE leads SET stage = ?, updated_at = ? WHERE id = ?");
+      for (const id of leadIds) { stmt.run(stage, ts, id); processed++; }
+    } else if (action === 'delete') {
+      const stmt = db.prepare('DELETE FROM leads WHERE id = ?');
+      for (const id of leadIds) { stmt.run(id); processed++; }
+    } else {
+      return res.status(400).json({ error: `Unknown batch action: ${action}` });
+    }
+
+    recordAuditLog({
+      req,
+      action: `leads.batch_${action}`,
+      entityType: 'leads',
+      details: `Batch action "${action}" on ${processed} leads [Product: ${product}]`,
     });
+
+    res.json({ ok: true, action, processed, total: leadIds.length });
   });
 }

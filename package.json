@@ -1,5 +1,5 @@
 {
-  "name": "practo-sales-automation",
+  "name": "elite-practo-sales-ai",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
     "build": "vite build",
-    "start": "NODE_ENV=production node backend/src/index.js",
+    "start": "NODE_ENV=production node --env-file=.env backend/src/index.js",
     "start:prod": "npm run build && npm start",
     "seed": "npm run seed -w backend",
     "docker:build": "docker compose build",

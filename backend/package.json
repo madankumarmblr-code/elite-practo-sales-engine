@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/index.js",
+    "build": "echo 'No build required for backend'",
+    "dev": "node --watch --env-file=../.env src/index.js",
     "start": "node src/index.js",
-    "seed": "node src/db/seed.js"
+    "seed": "node --env-file=../.env src/db/seed.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

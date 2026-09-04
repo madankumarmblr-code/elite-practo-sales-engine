@@ -532,7 +532,7 @@ tr:hover td { background: #f8fafc; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.2s ease-out; }
 
-/* ── Google Antigravity Particle Constellation Login ───────────────────────── */
+/* ── Google Antigravity Particle Vortex Login ─────────────────────────────── */
 .login-page-antigravity {
   position: relative;
   min-height: 100vh;
@@ -542,9 +542,11 @@ tr:hover td { background: #f8fafc; }
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  padding: 24px 16px;
+  box-sizing: border-box;
 }
 
-.antigravity-canvas {
+.google-antigravity-canvas {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
   z-index: 0;
@@ -555,15 +557,63 @@ tr:hover td { background: #f8fafc; }
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 440px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  max-width: 430px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
   border-radius: 24px;
-  padding: 40px 36px;
-  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.12), 0 0 1px 1px rgba(0, 0, 0, 0.05);
-  animation: fadeIn 0.4s ease-out;
+  padding: 38px 36px 30px;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+  animation: fadeIn 0.35s ease-out;
+  box-sizing: border-box;
+}
+
+.antigravity-login-btn {
+  width: 100%;
+  height: 48px;
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 14.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+  letter-spacing: -0.01em;
+}
+
+.antigravity-login-btn:hover:not(:disabled) {
+  background: #1e293b;
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.24);
+}
+
+.antigravity-login-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+
+.antigravity-login-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+#login-user:focus, #login-pass:focus {
+  border-color: #1456FD !important;
+  box-shadow: 0 0 0 3px rgba(20, 86, 253, 0.12) !important;
+}
+
+@media (max-width: 480px) {
+  .login-glass-card {
+    padding: 28px 20px 24px;
+    border-radius: 20px;
+  }
 }
 
 /* ── Tabs ──────────────────────────────────────────────────────────────────── */

@@ -1,145 +1,59 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
-import path from 'path';
 import { config } from './config.js';
-import { healthRouter } from './routes/health.js';
-import { apiRouter } from './routes/api.js';
-import { registerPulseRoutes } from './routes/pulse.js';
-import { registerSarvamVoiceRoutes } from './routes/sarvamVoice.js';
-import { registerCommercialRoutes } from './routes/commercial.js';
-import { registerLeadRoutes } from './routes/leads.js';
-import { registerWhatsAppRoutes } from './routes/whatsapp.js';
-import { registerWorkspaceRoutes } from './routes/workspace.js';
-import { registerAuditRoutes } from './routes/audit.js';
 import { registerAuthRoutes } from './routes/auth.js';
-import { registerPitchRoutes } from './routes/pitchPilot.js';
-import { registerReportRoutes } from './routes/reports.js';
+import { registerLeadsRoutes } from './routes/leads.js';
+import { registerSarvamVoiceRoutes } from './routes/sarvamVoice.js';
+import { registerWhatsAppRoutes } from './routes/whatsapp.js';
+import { registerIntegrationsRoutes } from './routes/integrations.js';
+import { registerScraperRoutes } from './routes/scraper.js';
+import { registerProposalRoutes } from './routes/proposal.js';
+import { registerAutopilotRoutes } from './routes/autopilot.js';
+import { registerUsersRoutes } from './routes/users.js';
+import { registerStatusRoutes } from './routes/status.js';
 
-/**
- * Factory function — used by both the local server and the Vercel serverless handler.
- * @param {object} opts
- * @param {boolean} [opts.serveStatic=true]  Serve frontend/dist static assets
- * @param {boolean} [opts.warmSheet=false]   Trigger Google-Sheet sync on startup
- */
-export async function createApp({ serveStatic = true, warmSheet = false } = {}) {
-  const application = express();
+const corsOptions = {
+  origin: config.corsOrigin === '*' ? true : config.corsOrigin.split(',').map((o) => o.trim()),
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'x-api-key'],
+  credentials: true,
+};
 
-  // ── Security & Parsing Middlewares ────────────────────────────────────────
-  application.use(
-    cors({
-      origin: config.corsOrigin === '*' ? true : config.corsOrigin.split(','),
-      credentials: true,
-    })
-  );
-  application.use(express.json({ limit: '10mb' }));
-  application.use(express.urlencoded({ extended: true, limit: '10mb' }));
+export function createApp() {
+  const app = express();
 
-  // ── Request Logger ─────────────────────────────────────────────────────────
-  application.use((req, res, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      if (!req.path.startsWith('/assets') && !req.path.endsWith('.ico')) {
-        console.log(
-          `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${res.statusCode} (${duration}ms)`
-        );
-      }
-    });
-    next();
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true }));
+
+  // ── Health (public) ────────────────────────────────────────────────────────
+  app.get('/api/health', (_req, res) => {
+    res.json({ ok: true, service: 'elite-practo-sales-api', timestamp: new Date().toISOString(), env: config.nodeEnv });
   });
 
-  // ── Core API routes ────────────────────────────────────────────────────────
-  application.use('/api/health', healthRouter);
-  application.use('/api', apiRouter);
+  // ── Register all route groups ──────────────────────────────────────────────
+  registerAuthRoutes(app);
+  registerLeadsRoutes(app);
+  registerSarvamVoiceRoutes(app);
+  registerWhatsAppRoutes(app);
+  registerIntegrationsRoutes(app);
+  registerScraperRoutes(app);
+  registerProposalRoutes(app);
+  registerAutopilotRoutes(app);
+  registerUsersRoutes(app);
+  registerStatusRoutes(app);
 
-  // ── Auth routes ────────────────────────────────────────────────────────────
-  registerAuthRoutes(application);
-
-  // ── Pulse (Lead Engine, CRM, Autopilot, Calls, Email, WhatsApp) ───────────
-  registerPulseRoutes(application);
-
-  // ── Sarvam Voice AI ────────────────────────────────────────────────────────
-  registerSarvamVoiceRoutes(application);
-
-  // ── Commercial Suite (Google Sheet inventory + filtering) ─────────────────
-  registerCommercialRoutes(application);
-
-  // ── Leads (import / export / save) ────────────────────────────────────────
-  registerLeadRoutes(application);
-
-  // ── WhatsApp Cloud API ────────────────────────────────────────────────────
-  registerWhatsAppRoutes(application);
-
-  // ── Workspace & Team ──────────────────────────────────────────────────────
-  registerWorkspaceRoutes(application);
-
-  // ── Audit Log ─────────────────────────────────────────────────────────────
-  registerAuditRoutes(application);
-
-  // ── Pitch Pilot (AI pitch generation) ─────────────────────────────────────
-  registerPitchRoutes(application);
-
-  // ── Custom Reports ────────────────────────────────────────────────────────
-  registerReportRoutes(application);
-
-  // ── Warm Google Sheet Cache on boot ───────────────────────────────────────
-  if (warmSheet) {
-    try {
-      const { startSheetAutoSync } = await import('./services/sheetSync.js');
-      startSheetAutoSync();
-    } catch (err) {
-      console.warn('[app] Sheet warm-up skipped:', err.message);
-    }
-  }
-
-  // ── Serve frontend static assets in production ────────────────────────────
-  if (serveStatic) {
-    const frontendDist = config.frontendDistDir;
-    if (fs.existsSync(frontendDist)) {
-      application.use(express.static(frontendDist));
-      // Serve commercial-suite.html from public/ if present
-      const publicDir = path.join(frontendDist, '..', 'public');
-      if (fs.existsSync(publicDir)) {
-        application.use(express.static(publicDir));
-      }
-      application.get('*', (req, res, next) => {
-        if (req.path.startsWith('/api')) return next();
-        res.sendFile(path.join(frontendDist, 'index.html'));
-      });
-    } else {
-      application.get('/', (_req, res) => {
-        res.json({
-          message: 'Practo Sales Automation API is running',
-          version: '2.0.0',
-          health: '/api/health',
-          sarvam: '/api/sarvam/config',
-          pulse: '/api/pulse/meta',
-          commercial: '/api/commercial/meta',
-        });
-      });
-    }
-  }
-
-  // ── 404 Handler ───────────────────────────────────────────────────────────
-  application.use((req, res) => {
-    res.status(404).json({
-      success: false,
-      error: `Route not found: ${req.method} ${req.originalUrl}`,
-    });
+  // ── 404 for unknown /api/* routes ─────────────────────────────────────────
+  app.use('/api/*', (_req, res) => {
+    res.status(404).json({ error: 'Not found' });
   });
 
-  // ── Global Error Handler ──────────────────────────────────────────────────
-  application.use((err, _req, res, _next) => {
-    console.error('[Unhandled Error]', err);
-    res.status(err.status || 500).json({
-      success: false,
-      error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-    });
+  // ── Global error handler ───────────────────────────────────────────────────
+  app.use((err, _req, res, _next) => {
+    console.error('[API Error]', err);
+    res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
   });
 
-  return application;
+  return app;
 }
-
-// NOTE: Do NOT add top-level await here.
-// The local dev server (index.js) and Vercel handler (api/index.js) both call createApp() themselves.

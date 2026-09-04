@@ -6,8 +6,7 @@ function getSecret() {
   return (
     process.env.AUTH_TOKEN_SECRET ||
     process.env.JWT_SECRET ||
-    // Demo fallback — set AUTH_TOKEN_SECRET in production for durable signing
-    'practo-sales-demo-auth-secret-change-me'
+    'elite-practo-sales-ai-demo-secret-change-me'
   );
 }
 
@@ -23,8 +22,7 @@ function timingSafeEqualStr(a, b) {
 }
 
 /**
- * Signed bearer token that any serverless isolate can verify
- * without sharing the SQLite sessions table (critical on Vercel /tmp).
+ * Issue a signed bearer token (stateless — works across Vercel isolates).
  */
 export function issueAuthToken(user, { days = SESSION_DAYS } = {}) {
   const payload = {

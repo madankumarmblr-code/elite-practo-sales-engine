@@ -27,3 +27,8 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Scratch & temporary zips
+scratch/
+*.zip
+

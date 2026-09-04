@@ -1,46 +1,78 @@
-# NexusHub — Full-Stack Project Studio
+# Elite Practo Sales AI
 
-A modern, high-performance Full-Stack application powered by **React 19 (Vite)** and **Node.js (Express)**.
+Full-stack AI-powered sales automation platform for healthcare outreach — Sarvam Voice AI, Meta WhatsApp Cloud API, Meta Llama intelligence, SQLite persistence, and Vercel-ready deployment.
 
-## 🚀 Quick Start
+## Stack
 
-### 1. Install Dependencies
+| Layer | Technology |
+|---|---|
+| Backend | Node.js 20 (ESM) + Express |
+| Database | SQLite via `better-sqlite3` |
+| Frontend | React 18 + Vite |
+| Deployment | Vercel (frontend static + backend serverless) |
+| Voice AI | Sarvam Indus Samvaad |
+| Messaging | Meta WhatsApp Cloud API |
+| AI | Meta Llama |
+
+## Quick Start
+
 ```bash
+# Install all dependencies (root + backend + frontend)
 npm install
-```
 
-### 2. Run in Development Mode
-Starts both Express backend (`http://localhost:5001`) and Vite React frontend (`http://localhost:5173`) concurrently:
-```bash
+# Copy and fill in secrets
+cp .env.example .env
+
+# Seed the database (creates default users + integrations)
+npm run seed
+
+# Start dev servers (backend :5060, frontend :5173)
 npm run dev
 ```
 
-### 3. Individual Commands
-- **Backend only**: `npm run dev:backend`
-- **Frontend only**: `npm run dev:frontend`
-- **Production Build**: `npm run build`
-- **Production Server**: `npm run start:prod`
+## Default Login Credentials
 
----
+| User | Password |
+|---|---|
+| `karan` | `admin123` |
+| `superadmin` | `SuperAdmin@123` |
 
-## 🏗️ Project Architecture
+## API Endpoints
 
-```text
-├── backend/
-│   ├── src/
-│   │   ├── config.js         # Environment & directory configuration
-│   │   ├── app.js            # Express middlewares, routing & error handling
-│   │   ├── index.js          # HTTP server bootstrap & graceful shutdown
-│   │   ├── routes/           # REST endpoints (/api/health, /api/projects, etc.)
-│   │   └── services/         # State store & business logic
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── api/client.js     # Centralized API service
-│   │   ├── components/       # Header, StatsGrid, ProjectCard, Modals, Feed
-│   │   ├── styles/index.css  # Custom modern design system (vanilla CSS)
-│   │   ├── App.jsx           # Main dashboard & live orchestration
-│   │   └── main.jsx          # React 19 entry point
-│   └── vite.config.js        # Vite config with backend proxy
-└── package.json              # Monorepo workspace orchestration
+| Route | Description |
+|---|---|
+| `GET /api/health` | Health check |
+| `POST /api/auth/login` | Login |
+| `GET /api/auth/me` | Current user |
+| `GET /api/sarvam/config` | Sarvam Voice config |
+| `POST /api/sarvam/calls/outbound` | Trigger voice call |
+| `GET /api/sarvam/calls/interactions` | Call logs |
+| `GET /api/whatsapp/config` | WhatsApp config |
+| `POST /api/whatsapp/send-message` | Send WhatsApp text |
+| `POST /api/whatsapp/send-template` | Send template message |
+| `GET /api/leads` | List leads |
+| `POST /api/leads` | Create lead |
+
+## Deployment (Vercel)
+
+1. Push to GitHub
+2. Import repo in Vercel
+3. Set all environment variables from `.env.example` in Vercel dashboard
+4. Deploy — Vercel auto-routes `/api/*` to the serverless function
+
+## Docker
+
+```bash
+# Build & run
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
 ```
+
+## Environment Variables
+
+See [`.env.example`](.env.example) for all required and optional variables.

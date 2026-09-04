@@ -1,24 +1,6 @@
-# Docker
-.dockerignore
-Dockerfile
-docker-compose*.yml
-
-# Dependencies / build
-node_modules
-npm-debug.log*
-.git
-.github
-.cursor
-*.md
-!README.md
-
-# Local data & env
-.env
-.env.*
-backend/data
+node_modules/
+dist/
+.git/
+*.log
+data/
 *.db
-*.db-*
-dist
-.vite
-coverage
-uploads

@@ -1,355 +1,157 @@
 /**
- * Frontend API Client
- * All methods map 1-to-1 to backend route handlers.
- * Auth token is read from localStorage and sent as Bearer header on every request.
+ * Elite Practo Sales AI — Frontend API Client
+ * Maps 1-to-1 to backend route handlers.
  */
 
 const API_BASE = '/api';
-const TOKEN_KEY = 'practo-auth-token';
+const TOKEN_KEY = 'elite-auth-token';
 
-// ── Auth token helpers (used by CommercialSuite iframe postMessage too) ────────
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || '';
-}
+// Clear any legacy persistent token so opening links requires fresh login
+try { localStorage.removeItem(TOKEN_KEY); } catch {}
 
+export function getToken() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
 export function setToken(token) {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
-  }
+  if (token) sessionStorage.setItem(TOKEN_KEY, token);
+  else sessionStorage.removeItem(TOKEN_KEY);
 }
 
 function authHeaders(extra = {}) {
   const token = getToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extra,
-  };
+  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra };
 }
 
-async function handleResponse(response) {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
+async function handleResponse(res) {
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || data.message || `HTTP error ${res.status}`);
   }
-  return response.json();
+  return res.json();
 }
 
-async function get(path, query = {}) {
-  const qs = Object.keys(query).length
-    ? '?' + new URLSearchParams(Object.fromEntries(Object.entries(query).filter(([, v]) => v != null && v !== ''))).toString()
-    : '';
-  const res = await fetch(`${API_BASE}${path}${qs}`, { headers: authHeaders() });
-  return handleResponse(res);
+function qs(query = {}) {
+  const params = Object.entries(query).filter(([, v]) => v != null && v !== '');
+  return params.length ? '?' + new URLSearchParams(params).toString() : '';
 }
 
-async function post(path, body = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(body),
-  });
-  return handleResponse(res);
-}
-
-async function put(path, body = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'PUT',
-    headers: authHeaders(),
-    body: JSON.stringify(body),
-  });
-  return handleResponse(res);
-}
-
-async function patch(path, body = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'PATCH',
-    headers: authHeaders(),
-    body: JSON.stringify(body),
-  });
-  return handleResponse(res);
-}
-
-async function del(path) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'DELETE',
-    headers: authHeaders(),
-  });
-  return handleResponse(res);
-}
+const get = (path, query) => fetch(`${API_BASE}${path}${qs(query)}`, { headers: authHeaders() }).then(handleResponse);
+const post = (path, body = {}) => fetch(`${API_BASE}${path}`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }).then(handleResponse);
+const put = (path, body = {}) => fetch(`${API_BASE}${path}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) }).then(handleResponse);
+const patch = (path, body = {}) => fetch(`${API_BASE}${path}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(body) }).then(handleResponse);
+const del = (path) => fetch(`${API_BASE}${path}`, { method: 'DELETE', headers: authHeaders() }).then(handleResponse);
 
 export const api = {
   // ── Health ─────────────────────────────────────────────────────────────────
   async getHealth() {
-    try {
-      const res = await fetch(`${API_BASE}/health`);
-      return await handleResponse(res);
-    } catch (err) {
-      console.error('API getHealth error:', err);
-      return { status: 'offline', error: err.message };
-    }
-  },
-
-  // ── Projects (basic CRUD) ──────────────────────────────────────────────────
-  async getStats() {
-    const json = await get('/stats');
-    return json.data;
-  },
-
-  async getProjects(params = {}) {
-    const query = {};
-    if (params.status && params.status !== 'all') query.status = params.status;
-    if (params.category && params.category !== 'all') query.category = params.category;
-    if (params.search) query.search = params.search;
-    const json = await get('/projects', query);
-    return json.data;
-  },
-
-  async createProject(projectData) {
-    const json = await post('/projects', projectData);
-    return json.data;
-  },
-
-  async updateProject(id, updates) {
-    const json = await put(`/projects/${id}`, updates);
-    return json.data;
-  },
-
-  async deleteProject(id) {
-    return del(`/projects/${id}`);
-  },
-
-  async getActivities() {
-    const json = await get('/activities');
-    return json.data;
+    try { return await fetch(`${API_BASE}/health`).then(handleResponse); }
+    catch (err) { return { ok: false, error: err.message }; }
   },
 
   // ── Auth ───────────────────────────────────────────────────────────────────
-  async login(credentials) {
-    return post('/auth/login', credentials);
-  },
+  login: (credentials) => post('/auth/login', credentials),
+  logout: () => post('/auth/logout'),
+  getMe: () => get('/auth/me'),
+  getRoles: () => get('/auth/roles'),
 
-  async logout() {
-    return post('/auth/logout');
-  },
+  // ── Users ──────────────────────────────────────────────────────────────────
+  getUsers: () => get('/users'),
+  createUser: (data) => post('/users', data),
+  updateUser: (id, data) => put(`/users/${id}`, data),
+  deleteUser: (id) => del(`/users/${id}`),
 
-  async getMe() {
-    return get('/auth/me');
-  },
+  // ── Leads ──────────────────────────────────────────────────────────────────
+  getLeads: (params) => get('/leads', params),
+  getLead: (id) => get(`/leads/${id}`),
+  createLead: (data) => post('/leads', data),
+  updateLead: (id, data) => put(`/leads/${id}`, data),
+  deleteLead: (id) => del(`/leads/${id}`),
+  bulkImportLeads: (leads) => post('/leads/bulk-import', { leads }),
+  addLeadActivity: (id, data) => post(`/leads/${id}/activities`, data),
 
-  // ── Pulse Meta (city/zone/keyword discovery config) ────────────────────────
-  async getLeadGeneratorMeta() {
-    return get('/pulse/meta');
-  },
-
-  async pulsePresets() {
-    return get('/pulse/presets');
-  },
-
-  async pulseStatus() {
-    return get('/pulse/status');
-  },
-
-  async pulsePingAll() {
-    const res = await fetch(`${API_BASE}/pulse/status/ping-all`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    return handleResponse(res);
-  },
-
-  // ── Pulse Settings ─────────────────────────────────────────────────────────
-  async pulseSettings() {
-    return get('/pulse/settings');
-  },
-
-  async pulseSaveSettings(settings) {
-    return put('/pulse/settings', settings);
-  },
-
-  // ── Lead Discovery (LeadGenerator page) ────────────────────────────────────
-  async searchLeads(params = {}) {
-    return post('/pulse/discover', params);
-  },
-
-  async importLeads(leads = []) {
-    // Saves selected discovered leads into the CRM via lead-generator import
-    return post('/lead-generator/import', { leads });
-  },
-
-  async getPulseLeads() {
-    const json = await get('/pulse/leads');
-    return json.leads || [];
-  },
-
-  async validateLeads(leads = []) {
-    return post('/pulse/validate', { leads });
-  },
-
-  // ── CRM Hub ────────────────────────────────────────────────────────────────
-  async crmLeads(params = {}) {
-    return get('/pulse/crm/leads', params);
-  },
-
-  async updateLeadStage(id, stage, note) {
-    return patch(`/pulse/crm/leads/${id}/stage`, { stage, note });
-  },
-
-  async addLeadNote(id, note, nextAction) {
-    return post(`/pulse/crm/leads/${id}/notes`, { note, nextAction });
-  },
-
-  // ── Autopilot ──────────────────────────────────────────────────────────────
-  async getAutopilot() {
-    return get('/pulse/autopilot');
-  },
-
-  async pushToAutopilot(leads, level, channels) {
-    return post('/pulse/autopilot/push', { leads, level, channels });
-  },
-
-  // ── Calls Studio (Sarvam-backed) ───────────────────────────────────────────
-  async pulseCallLogs(params = {}) {
-    return get('/pulse/logs/calls', params);
-  },
-
-  async dialAiCall(params) {
-    return post('/pulse/calls/dial', params);
-  },
+  // ── Sarvam Voice ──────────────────────────────────────────────────────────
+  sarvamGetConfig: () => get('/sarvam/config'),
+  sarvamSaveConfig: (data) => post('/sarvam/config', data),
+  sarvamTestConnection: () => post('/sarvam/test-connection'),
+  sarvamOutboundCall: (params) => post('/sarvam/calls/outbound', params),
+  sarvamGetInteractions: (params) => get('/sarvam/calls/interactions', params),
+  sarvamGetTranscript: (id, appId) => get(`/sarvam/calls/transcripts/${id}`, appId ? { appId } : {}),
+  sarvamGetRecording: (id, appId) => get(`/sarvam/calls/recordings/${id}`, appId ? { appId } : {}),
+  sarvamCreateCampaign: (data) => post('/sarvam/campaigns', data),
+  sarvamCallLogs: (params) => get('/sarvam/call-logs', params),
 
   // ── WhatsApp ───────────────────────────────────────────────────────────────
-  async sendWhatsApp(params) {
-    return post('/pulse/whatsapp/send', params);
-  },
+  whatsappGetConfig: () => get('/whatsapp/config'),
+  whatsappSaveConfig: (data) => post('/whatsapp/config', data),
+  whatsappTestConnection: () => post('/whatsapp/test-connection'),
+  whatsappSendMessage: (params) => post('/whatsapp/send-message', params),
+  whatsappSendTemplate: (params) => post('/whatsapp/send-template', params),
+  whatsappMessages: (params) => get('/whatsapp/messages', params),
 
-  async whatsappMessages(params = {}) {
-    return get('/pulse/logs/messages', { ...params, channel: 'whatsapp' });
-  },
+  // ── Integrations ───────────────────────────────────────────────────────────
+  getIntegrations: () => get('/integrations'),
+  getIntegration: (provider) => get(`/integrations/${provider}`),
+  updateIntegration: (provider, data) => put(`/integrations/${provider}`, data),
 
-  // ── Email ──────────────────────────────────────────────────────────────────
-  async sendEmail(params) {
-    return post('/pulse/email/send', params);
-  },
+  // ── AI ─────────────────────────────────────────────────────────────────────
+  generatePitch: (lead, channel) => post('/ai/pitch', { lead, channel }),
+  smartChannel: (lead) => post('/ai/smart-channel', { lead }),
 
-  // ── Channel Tests ──────────────────────────────────────────────────────────
-  async testChannel(channel, body = {}) {
-    return post('/pulse/channels/test', { channel, ...body });
-  },
+  // ── Settings ───────────────────────────────────────────────────────────────
+  getSettings: () => get('/settings'),
+  saveSettings: (data) => put('/settings', data),
 
-  async testAllChannels() {
-    return post('/pulse/channels/test-all', {});
-  },
+  // ── Dashboard ──────────────────────────────────────────────────────────────
+  getDashboardStats: () => get('/dashboard/stats'),
 
-  // ── Webhooks ───────────────────────────────────────────────────────────────
-  async getWebhooks() {
-    return get('/pulse/webhooks');
-  },
-
-  async saveWebhooks(webhooks) {
-    return put('/pulse/webhooks', { webhooks });
-  },
-
-  async testWebhooks() {
-    return post('/pulse/webhooks/test', {});
-  },
+  // ── Audit & Compliance ─────────────────────────────────────────────────────
+  getAuditLogs: (params) => get('/audit', params),
+  getCompliance: () => get('/compliance'),
 
   // ── Notifications ──────────────────────────────────────────────────────────
-  async getNotifications(limit = 30) {
-    return get('/pulse/notifications', { limit });
-  },
+  getNotifications: (limit) => get('/notifications', { limit }),
+  markNotificationsRead: (ids) => post('/notifications/mark-read', { ids }),
 
-  async markNotificationsRead(ids = []) {
-    return post('/pulse/notifications/mark-read', { ids });
-  },
+  // ── Pipeline ───────────────────────────────────────────────────────────────
+  getPipelineStages: () => get('/pipeline-stages'),
 
-  // ── Export ─────────────────────────────────────────────────────────────────
-  async exportMasterLeads(format = 'csv') {
-    return get('/pulse/export/master', { format });
-  },
+  // ── Scraper & Clinic Discovery ───────────────────────────────────────────
+  searchClinics: (params) => get('/scraper/search', params),
+  assignScrapedToCrm: (data) => post('/scraper/assign-crm', data),
 
-  // ── Sarvam Voice AI ────────────────────────────────────────────────────────
-  async sarvamGetConfig() {
-    return get('/sarvam/config');
-  },
+  // ── Reach Inventory & Master Catalog ──────────────────────────────────────
+  getInventoryCities: () => get('/inventory/cities'),
+  getInventoryZones: (city) => get('/inventory/zones', { city }),
+  getInventorySpecialities: (city, zone) => get('/inventory/specialities', { city, zone }),
+  checkInventory: (city, zone, speciality) => get('/inventory/check', { city, zone, speciality }),
+  searchInventory: (params) => get('/inventory/search', params),
+  getInventoryStats: () => get('/inventory/stats'),
+  getNewlyOpenedSlots: (params) => get('/inventory/newly-opened', params),
 
-  async sarvamSaveConfig(data) {
-    return post('/sarvam/config', data);
-  },
+  // ── Commercial Proposals ──────────────────────────────────────────────────
+  createProposal: (data) => post('/proposals', data),
+  getProposals: () => get('/proposals'),
+  generateWhatsAppSummary: (data) => post('/proposals/whatsapp-summary', data),
 
-  async sarvamTestConnection() {
-    return post('/sarvam/test-connection', {});
-  },
+  // ── Autopilot AI Pipeline ─────────────────────────────────────────────────
+  getAutopilotQueue: (params) => get('/autopilot/queue', params),
+  getAutopilotQueueItem: (id) => get(`/autopilot/queue/${id}`),
+  enqueueAutopilot: (data) => post('/autopilot/enqueue', data),
+  triggerAutopilotCall: (id) => post(`/autopilot/queue/${id}/trigger-call`),
+  triggerAutopilotWhatsApp: (id) => post(`/autopilot/queue/${id}/trigger-whatsapp`),
+  triggerManualCall: (data) => post('/autopilot/manual-call', data),
+  triggerManualWhatsApp: (data) => post('/autopilot/manual-whatsapp', data),
+  advanceAutopilotQueue: (id, data) => post(`/autopilot/queue/${id}/advance`, data),
+  transferAutopilotToHuman: (id, data) => post(`/autopilot/queue/${id}/transfer-human`, data),
+  retryAutopilotCall: (id) => post(`/autopilot/queue/${id}/retry-call`),
+  stepAutopilotQueue: () => post('/autopilot/step'),
+  approveAutopilotEmail: (id, data) => post(`/autopilot/queue/${id}/approve-email`, data),
+  getAutopilotStats: () => get('/autopilot/stats'),
 
-  async sarvamTriggerCall(params) {
-    return post('/sarvam/calls/outbound', params);
-  },
+  // ── Leads Batch Actions & Export ──────────────────────────────────────────
+  batchActionLeads: (data) => post('/leads/batch-action', data),
+  exportLeadsUrl: (params) => `/api/leads/export${qs(params)}`,
 
-  async sarvamGetInteractions(params = {}) {
-    return get('/sarvam/calls/interactions', params);
-  },
-
-  async sarvamGetTranscript(interactionId, appId) {
-    return get(`/sarvam/calls/transcripts/${interactionId}`, appId ? { appId } : {});
-  },
-
-  async sarvamGetRecording(interactionId, appId) {
-    return get(`/sarvam/calls/recordings/${interactionId}`, appId ? { appId } : {});
-  },
-
-  async sarvamCreateCampaign(campaignData) {
-    return post('/sarvam/campaigns', campaignData);
-  },
-
-  // ── Commercial Suite (Google Sheet inventory) ──────────────────────────────
-  async commercialMeta() {
-    return get('/commercial/meta');
-  },
-
-  async commercialInventory(params = {}) {
-    return get('/commercial/inventory', params);
-  },
-
-  async commercialRefresh() {
-    return post('/commercial/refresh', {});
-  },
-
-  // ── Sheet Sync ─────────────────────────────────────────────────────────────
-  async sheetStatus() {
-    return get('/sheet/status');
-  },
-
-  async sheetSync() {
-    return post('/sheet/sync', {});
-  },
-
-  // ── Reports ────────────────────────────────────────────────────────────────
-  async getReports(params = {}) {
-    return get('/reports', params);
-  },
-
-  // ── Workspace ─────────────────────────────────────────────────────────────
-  async getWorkspace() {
-    return get('/workspace');
-  },
-
-  // ── Audit Log ─────────────────────────────────────────────────────────────
-  async getAuditLog(params = {}) {
-    return get('/audit', params);
-  },
-
-  // ── Pitch Pilot ───────────────────────────────────────────────────────────
-  async generatePitch(lead, channel) {
-    return post('/pulse/pitch', { lead, channel });
-  },
-
-  // ── SuperAdmin ────────────────────────────────────────────────────────────
-  async superAdminSelfTest(params = {}) {
-    return post('/pulse/superadmin/self-test', params);
-  },
-
-  async dbProbe() {
-    return get('/pulse/db-probe');
-  },
+  // ── System ─────────────────────────────────────────────────────────────────
+  getSystemEvents: (params) => get('/system/events', params),
+  getSystemHealth: () => get('/system/health'),
+  getServerStatus: () => get('/system/status'),
 };

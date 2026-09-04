@@ -1,0 +1,175 @@
+import { authRequired, requirePermission } from '../auth/middleware.js';
+import { generateSalesPitch, pickSmartChannel } from '../services/aiAssist.js';
+import db from '../db/db.js';
+import { nanoid } from 'nanoid';
+import { persistDurableDbNow } from '../services/dbSnapshot.js';
+import { logEvent } from '../services/logger.js';
+
+const now = () => new Date().toISOString();
+
+export function registerIntegrationsRoutes(app) {
+  // ── List all integrations ─────────────────────────────────────────────────
+  app.get('/api/integrations', authRequired, requirePermission('api_integrations:read'), (_req, res) => {
+    const rows = db.prepare('SELECT * FROM api_integrations ORDER BY category, label').all();
+    const masked = rows.map((row) => {
+      let secrets = {};
+      try { secrets = JSON.parse(row.secrets || '{}'); } catch { secrets = {}; }
+      const maskedSecrets = Object.fromEntries(Object.entries(secrets).map(([k, v]) => [k, v ? '••••••••' : '']));
+      return { ...row, secrets: maskedSecrets, config: (() => { try { return JSON.parse(row.config || '{}'); } catch { return {}; } })() };
+    });
+    res.json(masked);
+  });
+
+  // ── Get single integration ────────────────────────────────────────────────
+  app.get('/api/integrations/:provider', authRequired, requirePermission('api_integrations:read'), (req, res) => {
+    const row = db.prepare('SELECT * FROM api_integrations WHERE provider = ?').get(req.params.provider);
+    if (!row) return res.status(404).json({ error: 'Integration not found' });
+    let secrets = {};
+    try { secrets = JSON.parse(row.secrets || '{}'); } catch { /* ignore */ }
+    const maskedSecrets = Object.fromEntries(Object.entries(secrets).map(([k, v]) => [k, v ? '••••••••' : '']));
+    res.json({ ...row, secrets: maskedSecrets, config: (() => { try { return JSON.parse(row.config || '{}'); } catch { return {}; } })() });
+  });
+
+  // ── Update integration ────────────────────────────────────────────────────
+  app.put('/api/integrations/:provider', authRequired, requirePermission('api_integrations:write'), async (req, res) => {
+    const existing = db.prepare('SELECT * FROM api_integrations WHERE provider = ?').get(req.params.provider);
+    if (!existing) return res.status(404).json({ error: 'Integration not found' });
+
+    const b = req.body || {};
+    const ts = now();
+
+    let curSecrets = {};
+    let curConfig = {};
+    try { curSecrets = JSON.parse(existing.secrets || '{}'); } catch { curSecrets = {}; }
+    try { curConfig = JSON.parse(existing.config || '{}'); } catch { curConfig = {}; }
+
+    const nextSecrets = { ...curSecrets };
+    if (b.secrets && typeof b.secrets === 'object') {
+      for (const [k, v] of Object.entries(b.secrets)) {
+        if (v && v !== '••••••••') nextSecrets[k] = v;
+      }
+    }
+    const nextConfig = b.config && typeof b.config === 'object' ? { ...curConfig, ...b.config } : curConfig;
+    const hasSecrets = Object.values(nextSecrets).some(Boolean);
+    const nextEnabled = b.enabled !== undefined ? (b.enabled ? 1 : 0) : existing.enabled;
+    let nextStatus = b.status ?? existing.status;
+    if (!hasSecrets && (nextStatus === 'connected')) nextStatus = 'ready';
+
+    db.prepare('UPDATE api_integrations SET enabled=?, status=?, config=?, secrets=?, notes=?, updated_at=? WHERE provider=?')
+      .run(nextEnabled, nextStatus, JSON.stringify(nextConfig), JSON.stringify(nextSecrets), b.notes !== undefined ? b.notes : existing.notes, ts, existing.provider);
+
+    logEvent({ type: 'info', category: 'integrations', message: `Integration ${existing.provider} updated`, userId: req.user.id });
+    await persistDurableDbNow();
+
+    const updated = db.prepare('SELECT * FROM api_integrations WHERE provider = ?').get(existing.provider);
+    const maskedSecrets = Object.fromEntries(Object.entries(nextSecrets).map(([k, v]) => [k, v ? '••••••••' : '']));
+    res.json({ ...updated, secrets: maskedSecrets, config: nextConfig });
+  });
+
+  // ── AI Pitch Generator ────────────────────────────────────────────────────
+  app.post('/api/ai/pitch', authRequired, requirePermission('pitch:write'), async (req, res) => {
+    const { lead, channel = 'whatsapp', product } = req.body || {};
+    if (!lead) return res.status(400).json({ error: '"lead" object is required' });
+
+    try {
+      const pitch = await generateSalesPitch({ lead, channel, product });
+      const ts = now();
+      try {
+        db.prepare('INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+          .run(nanoid(), lead.id || null, 'pitch', channel, `AI Pitch generated for ${channel}`, pitch.substring(0, 200), 'completed', ts);
+      } catch { /* ignore */ }
+      res.json({ pitch, channel, lead: { id: lead.id, name: lead.name }, generatedAt: ts });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Smart Channel Picker ──────────────────────────────────────────────────
+  app.post('/api/ai/smart-channel', authRequired, requirePermission('leads:read'), (req, res) => {
+    const { lead } = req.body || {};
+    if (!lead) return res.status(400).json({ error: '"lead" object is required' });
+    res.json(pickSmartChannel(lead));
+  });
+
+  // ── Settings ──────────────────────────────────────────────────────────────
+  app.get('/api/settings', authRequired, requirePermission('settings:read'), (_req, res) => {
+    const rows = db.prepare('SELECT * FROM app_settings').all();
+    const settings = {};
+    for (const r of rows) {
+      try { settings[r.key] = JSON.parse(r.value); } catch { settings[r.key] = r.value; }
+    }
+    res.json(settings);
+  });
+
+  app.put('/api/settings', authRequired, requirePermission('settings:write'), async (req, res) => {
+    const body = req.body || {};
+    const upsert = db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
+    const tx = db.transaction(() => {
+      for (const [key, value] of Object.entries(body)) {
+        upsert.run(key, typeof value === 'string' ? value : JSON.stringify(value));
+      }
+    });
+    tx();
+    logEvent({ type: 'info', category: 'settings', message: 'App settings updated', userId: req.user.id, meta: body });
+    await persistDurableDbNow();
+    res.json({ ok: true, updated: Object.keys(body).length });
+  });
+
+  // ── Audit log ─────────────────────────────────────────────────────────────
+  app.get('/api/audit', authRequired, requirePermission('audit:read'), async (req, res) => {
+    try {
+      const { limit = 50, offset = 0, action, entityType, actorRole, search, startDate, endDate } = req.query;
+      const { listAuditLogs } = await import('../services/auditLogger.js');
+      res.json(listAuditLogs({ limit: Number(limit), offset: Number(offset), action, entityType, actorRole, search, startDate, endDate }));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Compliance scorecard ───────────────────────────────────────────────────
+  app.get('/api/compliance', authRequired, requirePermission('compliance:read'), async (_req, res) => {
+    try {
+      const { getComplianceScorecard } = await import('../services/auditLogger.js');
+      res.json(getComplianceScorecard());
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Pipeline stages ────────────────────────────────────────────────────────
+  app.get('/api/pipeline-stages', authRequired, requirePermission('leads:read'), (_req, res) => {
+    res.json(db.prepare('SELECT * FROM pipeline_stages ORDER BY position').all());
+  });
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  app.get('/api/notifications', authRequired, requirePermission('dashboard:read'), (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 30, 100);
+    const rows = db.prepare('SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?').all(limit);
+    const unread = db.prepare('SELECT COUNT(*) as c FROM notifications WHERE is_read = 0').get().c;
+    res.json({ notifications: rows, unread });
+  });
+
+  app.post('/api/notifications/mark-read', authRequired, requirePermission('dashboard:read'), (req, res) => {
+    const { ids = [] } = req.body || {};
+    if (ids.length === 0) {
+      db.prepare('UPDATE notifications SET is_read = 1').run();
+    } else {
+      const stmt = db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?');
+      for (const id of ids) stmt.run(id);
+    }
+    res.json({ ok: true });
+  });
+
+  // ── Dashboard stats ────────────────────────────────────────────────────────
+  app.get('/api/dashboard/stats', authRequired, requirePermission('dashboard:read'), (_req, res) => {
+    const totalLeads = db.prepare('SELECT COUNT(*) as c FROM leads').get().c;
+    const leadsThisMonth = db.prepare("SELECT COUNT(*) as c FROM leads WHERE created_at >= date('now', 'start of month')").get().c;
+    const wonLeads = db.prepare("SELECT COUNT(*) as c FROM leads WHERE stage = 'won'").get().c;
+    const totalCalls = db.prepare('SELECT COUNT(*) as c FROM call_logs').get().c;
+    const totalMessages = db.prepare("SELECT COUNT(*) as c FROM outreach_messages WHERE channel = 'whatsapp'").get().c;
+    const byStage = db.prepare('SELECT stage, COUNT(*) as count FROM leads GROUP BY stage').all();
+
+    res.json({
+      leads: { total: totalLeads, thisMonth: leadsThisMonth, won: wonLeads, conversionRate: totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : '0.0' },
+      outreach: { calls: totalCalls, whatsapp: totalMessages },
+      pipeline: byStage,
+      updatedAt: new Date().toISOString(),
+    });
+  });
+}

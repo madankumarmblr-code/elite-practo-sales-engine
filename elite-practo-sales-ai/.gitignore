@@ -1,0 +1,29 @@
+# Node & build artifacts
+node_modules/
+dist/
+*.log
+npm-debug.log*
+
+# SQLite database files
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Environment secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+
+# OS & editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Vercel
+.vercel/
+
+# Docker
+docker-compose.override.yml

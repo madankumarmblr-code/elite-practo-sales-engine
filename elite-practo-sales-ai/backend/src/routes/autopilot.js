@@ -136,10 +136,20 @@ export function registerAutopilotRoutes(app) {
     }
   });
 
-  // ── Retry Call for RNR / Busy ─────────────────────────────────────────────
-  app.post('/api/autopilot/queue/:id/retry-call', authRequired, requirePermission('leads:write'), async (req, res) => {
+  // ── Retry / Trigger Call for Queue Item ────────────────────────────────────
+  app.post(['/api/autopilot/queue/:id/retry-call', '/api/autopilot/queue/:id/trigger-call'], authRequired, requirePermission('leads:write'), async (req, res) => {
     try {
       const result = await autopilotService.triggerVoiceCall(req.params.id);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Trigger WhatsApp Dispatch for Queue Item ──────────────────────────────
+  app.post('/api/autopilot/queue/:id/trigger-whatsapp', authRequired, requirePermission('leads:write'), async (req, res) => {
+    try {
+      const result = await autopilotService.triggerWhatsAppDispatch(req.params.id);
       res.json(result);
     } catch (err) {
       res.status(500).json({ error: err.message });

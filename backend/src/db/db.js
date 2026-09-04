@@ -375,4 +375,20 @@ ensureColumn('autopilot_queue', 'retry_count', "INTEGER DEFAULT 0");
 ensureColumn('autopilot_queue', 'next_retry_at', "TEXT DEFAULT ''");
 ensureColumn('autopilot_queue', 'call_disposition', "TEXT DEFAULT ''");
 
+// Voice Agent, Telephony & Dual Sentiment Analysis columns
+ensureColumn('call_logs', 'voice_engine', "TEXT DEFAULT 'native'");
+ensureColumn('call_logs', 'telephony_provider', "TEXT DEFAULT 'simulator'");
+ensureColumn('call_logs', 'agent_type', "TEXT DEFAULT 'ai'");
+ensureColumn('call_logs', 'transcription_json', "TEXT DEFAULT '[]'");
+ensureColumn('call_logs', 'doctor_sentiment', "TEXT DEFAULT 'neutral'");
+ensureColumn('call_logs', 'agent_sentiment', "TEXT DEFAULT 'professional'");
+ensureColumn('call_logs', 'sentiment_score', "REAL DEFAULT 0");
+ensureColumn('call_logs', 'interest_score', "INTEGER DEFAULT 0");
+ensureColumn('call_logs', 'objections_detected', "TEXT DEFAULT '[]'");
+ensureColumn('call_logs', 'talk_listen_ratio', "TEXT DEFAULT '50:50'");
+ensureColumn('call_logs', 'interruption_count', "INTEGER DEFAULT 0");
+ensureColumn('call_logs', 'qa_coaching_notes', "TEXT DEFAULT ''");
+ensureColumn('call_logs', 'doctor_intent', "TEXT DEFAULT ''");
+ensureColumn('call_logs', 'audio_url', "TEXT DEFAULT ''");
+
 export default db;

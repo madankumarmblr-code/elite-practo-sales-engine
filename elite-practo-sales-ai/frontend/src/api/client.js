@@ -150,6 +150,14 @@ export const api = {
   batchActionLeads: (data) => post('/leads/batch-action', data),
   exportLeadsUrl: (params) => `/api/leads/export${qs(params)}`,
 
+  // ── Proprietary Voice Agent, Telephony & Dual Sentiment ───────────────────
+  getVoiceAgentConfig: () => get('/voice-agent/config'),
+  saveVoiceAgentConfig: (data) => post('/voice-agent/config', data),
+  dialVoiceAgent: (data) => post('/voice-agent/dial', data),
+  getVoiceAgentCalls: (params) => get('/voice-agent/calls', params),
+  getVoiceAgentCallById: (id) => get(`/voice-agent/calls/${id}`),
+  analyzeCallSentiment: (data) => post('/voice-agent/analyze-sentiment', data),
+
   // ── System ─────────────────────────────────────────────────────────────────
   getSystemEvents: (params) => get('/system/events', params),
   getSystemHealth: () => get('/system/health'),

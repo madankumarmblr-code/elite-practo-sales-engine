@@ -11,6 +11,7 @@ import { registerProposalRoutes } from './routes/proposal.js';
 import { registerAutopilotRoutes } from './routes/autopilot.js';
 import { registerUsersRoutes } from './routes/users.js';
 import { registerStatusRoutes } from './routes/status.js';
+import { registerVoiceAgentRoutes } from './routes/voiceAgent.js';
 
 const corsOptions = {
   origin: config.corsOrigin === '*' ? true : config.corsOrigin.split(',').map((o) => o.trim()),
@@ -43,6 +44,7 @@ export function createApp() {
   registerAutopilotRoutes(app);
   registerUsersRoutes(app);
   registerStatusRoutes(app);
+  registerVoiceAgentRoutes(app);
 
   // ── 404 for unknown /api/* routes ─────────────────────────────────────────
   app.use('/api/*', (_req, res) => {

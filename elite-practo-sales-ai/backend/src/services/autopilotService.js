@@ -1,6 +1,8 @@
 import { nanoid } from 'nanoid';
 import db from '../db/db.js';
 import { sarvamVoiceService } from './sarvamVoice.js';
+import { voiceAgentService } from './voiceAgentService.js';
+import { telephonyProvider } from './telephonyProvider.js';
 import { metaWhatsAppService } from './metaWhatsApp.js';
 import { logEvent } from './logger.js';
 import { recordAuditLog } from './auditLogger.js';
@@ -88,6 +90,47 @@ class AutopilotService {
     db.prepare("UPDATE autopilot_queue SET current_stage='calling', call_status='initiating', updated_at=? WHERE id=?").run(ts, queueId);
 
     try {
+      const telConfig = telephonyProvider.getConfig();
+
+      // Use Native Voice Agent if configured (default), else fallback to Sarvam
+      if (telConfig.voiceEngine === 'native') {
+        const callResult = await voiceAgentService.placeVoiceCall({
+          toPhone: item.phone,
+          doctorName: item.owner_name,
+          clinicName: item.clinic_name,
+          locality: item.locality,
+          city: item.city,
+          speciality: item.speciality,
+          product: item.product,
+          leadId: item.lead_id,
+          telephonyProviderName: telConfig.activeProvider,
+        });
+
+        const transcriptSummary = callResult.transcript?.map((t) => `[${t.time}] ${t.speaker}: ${t.text}`).join('\n') || '';
+
+        db.prepare(`
+          UPDATE autopilot_queue SET
+            call_attempt_id=?,
+            call_status=?,
+            call_duration=?,
+            call_transcript=?,
+            call_recording_url=?,
+            updated_at=?
+          WHERE id=?
+        `).run(
+          callResult.callId,
+          callResult.status,
+          callResult.durationSec,
+          transcriptSummary,
+          callResult.audioUrl || '',
+          ts,
+          queueId
+        );
+
+        return { ok: true, attempt_id: callResult.callId, provider: callResult.provider };
+      }
+
+      // Legacy Sarvam AI Call
       const result = await sarvamVoiceService.triggerProductPitchCall({
         userPhoneNumber: item.phone,
         product: item.product,

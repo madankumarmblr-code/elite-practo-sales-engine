@@ -24,12 +24,12 @@ export default function LeadScraperPage() {
   const [assigning, setAssigning] = useState(false);
 
   // Reach Inventory & Auto-Launch Modal State
-  const [availableReachSlots, setAvailableReachSlots] = useState([]);
-  const [assignReachSlotId, setAssignReachSlotId] = useState('');
+  const [availableReachSlots, setAvailableReachSlots] = useState(DEFAULT_REACH_SLOTS);
+  const [assignReachSlotId, setAssignReachSlotId] = useState(DEFAULT_REACH_SLOTS[0].slotId);
 
   const [autoLaunchModal, setAutoLaunchModal] = useState(false);
   const [autoLaunchProduct, setAutoLaunchProduct] = useState('reach'); // 'reach' | 'prime' | 'all'
-  const [autoLaunchReachSlotId, setAutoLaunchReachSlotId] = useState('');
+  const [autoLaunchReachSlotId, setAutoLaunchReachSlotId] = useState(DEFAULT_REACH_SLOTS[0].slotId);
   const [autoLaunchLimit, setAutoLaunchLimit] = useState(25);
   const [autoLaunching, setAutoLaunching] = useState(false);
 

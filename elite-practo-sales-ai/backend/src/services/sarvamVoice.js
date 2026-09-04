@@ -15,14 +15,22 @@ export class SarvamVoiceService {
   }
 
   getConfig() {
-    const envApiKey = process.env.SARVAM_VOICE_API_KEY || '';
-    const envOrgId = process.env.SARVAM_ORG_ID || this.defaultOrgId;
-    const envWorkspaceId = process.env.SARVAM_WORKSPACE_ID || this.defaultWorkspaceId;
-    const envAppId = process.env.SARVAM_AGENT_APP_ID || '';
+    const defaultApiKey = 'sk_samvaad_0bipkd90_6bna8CJte1KQ3OsdkssedGXc';
+    const defaultOrgId = '01a050ff-9cdc-7d60-8c27-eaf6731df818';
+    const defaultWorkspaceId = '01a050ff-9ce4-74ef-980d-b167c2e3489c';
+    const defaultAppId = 'Conversatio-852345bd-c05f';
+    const defaultConnectionId = '9371c846-11-436db30b-3927';
+    const defaultAgentPhone = '+918071579481';
+    const defaultWebhookUrl = '/api/sarvam/webhook';
+
+    const envApiKey = process.env.SARVAM_VOICE_API_KEY || defaultApiKey;
+    const envOrgId = process.env.SARVAM_ORG_ID || defaultOrgId;
+    const envWorkspaceId = process.env.SARVAM_WORKSPACE_ID || defaultWorkspaceId;
+    const envAppId = process.env.SARVAM_AGENT_APP_ID || defaultAppId;
     const envAppVersion = Number(process.env.SARVAM_AGENT_APP_VERSION) || 1;
-    const envConnectionId = process.env.SARVAM_CONNECTION_ID || '';
-    const envAgentPhone = process.env.SARVAM_AGENT_PHONE_NUMBER || '';
-    const envWebhookUrl = process.env.SARVAM_WEBHOOK_URL || '';
+    const envConnectionId = process.env.SARVAM_CONNECTION_ID || defaultConnectionId;
+    const envAgentPhone = process.env.SARVAM_AGENT_PHONE_NUMBER || defaultAgentPhone;
+    const envWebhookUrl = process.env.SARVAM_WEBHOOK_URL || defaultWebhookUrl;
 
     let dbSecrets = {};
     let dbConfig = {};

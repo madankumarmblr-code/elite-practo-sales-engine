@@ -207,41 +207,6 @@ export default function LoginPage({ onLogin }) {
             </div>
           </div>
 
-          {/* Quick Demo Access Pills */}
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Quick Credentials (Click to fill)
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {[
-                { label: 'admin / admin123', u: 'admin', p: 'admin123' },
-                { label: 'karan / admin123', u: 'karan', p: 'admin123' },
-                { label: 'superadmin / SuperAdmin@123', u: 'superadmin', p: 'SuperAdmin@123' },
-              ].map((c) => (
-                <button
-                  key={c.u}
-                  type="button"
-                  onClick={() => setForm({ login: c.u, password: c.p })}
-                  style={{
-                    fontSize: 11,
-                    padding: '4px 10px',
-                    borderRadius: 8,
-                    border: '1px solid #CBD5E1',
-                    background: '#F8FAFC',
-                    color: '#0F172A',
-                    cursor: 'pointer',
-                    fontWeight: 500,
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3B82F6'; e.currentTarget.style.background = '#EFF6FF'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.background = '#F8FAFC'; }}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Submit Button (Google Antigravity Pill Aesthetic) */}
           <button
             id="login-submit"

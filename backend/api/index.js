@@ -11,8 +11,16 @@ async function init() {
   if (readyPromise) return readyPromise;
 
   readyPromise = (async () => {
-    await restoreFromBlobIfEmpty();
-    bootstrap();
+    try {
+      await restoreFromBlobIfEmpty();
+    } catch (e) {
+      console.warn('[Vercel Init] Blob restore warning:', e.message);
+    }
+    try {
+      bootstrap();
+    } catch (e) {
+      console.warn('[Vercel Init] Bootstrap warning:', e.message);
+    }
     app = createApp();
     ready = true;
     return app;
@@ -32,9 +40,25 @@ export default async function handler(req, res) {
 
   try {
     const expressApp = await init();
-    return expressApp(req, res);
+    return new Promise((resolve, reject) => {
+      res.on('finish', resolve);
+      res.on('error', reject);
+      expressApp(req, res, (err) => {
+        if (err) {
+          console.error('[Vercel Handler Express Error]', err);
+          if (!res.headersSent) {
+            res.status(500).json({ error: err.message || 'Internal server error' });
+          }
+          resolve();
+        } else {
+          resolve();
+        }
+      });
+    });
   } catch (err) {
     console.error('[Vercel Handler] Fatal:', err);
-    res.status(500).json({ error: 'Service initialization error', message: err.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Service initialization error', message: err.message });
+    }
   }
 }

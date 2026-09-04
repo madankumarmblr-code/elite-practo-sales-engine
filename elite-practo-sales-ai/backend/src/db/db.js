@@ -85,7 +85,12 @@ try {
 } catch (err) {
   console.warn('[DB Engine] Falling back to WebAssembly SQLite engine (serverless safe):', err.message);
   const { default: initSqlJs } = await import('sql.js');
-  const SQL = await initSqlJs();
+  const wasmFile = path.join(path.dirname(import.meta.url.replace('file://', '')), 'sql-wasm.wasm');
+  let wasmBinary = undefined;
+  if (fs.existsSync(wasmFile)) {
+    try { wasmBinary = fs.readFileSync(wasmFile); } catch {}
+  }
+  const SQL = await initSqlJs(wasmBinary ? { wasmBinary } : {});
   let rawDb;
   if (fs.existsSync(dbPath)) {
     try {

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { api, getToken, setToken } from './api/client.js';
 import PractoLogo from './components/PractoLogo.jsx';
 import NotificationBell from './components/NotificationBell.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import LeadScraperPage from './pages/LeadScraperPage.jsx';
@@ -310,7 +311,9 @@ export default function App() {
 
         {/* Main Content Area */}
         <main className="main-content" style={{ flex: 1, padding: 28, overflowY: 'auto' }}>
-          {PAGE_MAP[activePage] || <LeadScraperPage />}
+          <ErrorBoundary key={activePage}>
+            {PAGE_MAP[activePage] || <LeadScraperPage />}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

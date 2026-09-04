@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
+import { DEFAULT_REACH_SLOTS } from '../constants/reachSlots.js';
 
 export default function LeadScraperPage() {
   const [cities, setCities] = useState([]);

@@ -28,12 +28,16 @@ export function registerStatusRoutes(app) {
     // 2. Check Reach Inventory Engine
     const invStart = Date.now();
     let invStatus = 'operational';
-    let invLatency = 0;
+    let invLatency = 1;
     let invStats = { totalRecords: 0, totalSlots: 0, availableSlots: 0 };
     try {
       invStats = reachInventoryService.getStats();
-      invLatency = Date.now() - invStart;
-      if (!invStats || invStats.totalRecords === 0) invStatus = 'degraded_performance';
+      invLatency = Math.max(1, Date.now() - invStart);
+      if (!invStats || invStats.totalRecords === 0) {
+        invStatus = 'degraded_performance';
+      } else {
+        invStatus = 'operational';
+      }
     } catch {
       invStatus = 'major_outage';
     }

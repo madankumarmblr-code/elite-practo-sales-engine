@@ -57,6 +57,18 @@ export function registerProposalRoutes(app) {
     res.json(newlyOpened);
   });
 
+  // ── Sync Inventory from Live Google Sheet CSV ─────────────────────────────
+  app.post('/api/inventory/sync', authRequired, requirePermission('leads:read'), async (req, res) => {
+    const { url } = req.body || {};
+    const result = await reachInventoryService.syncFromGoogleSheet(url);
+    if (result.success) {
+      logEvent({ type: 'info', category: 'inventory', message: 'Reach Inventory synced from Google Sheets', detail: `${result.recordsLoaded} records across ${result.cities} cities` });
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  });
+
   // ── Commercial Proposals ──────────────────────────────────────────────────
   app.post('/api/proposals', authRequired, requirePermission('pitch:write'), async (req, res) => {
     const {

@@ -381,6 +381,11 @@ ensureColumn('autopilot_queue', 'objections_detected', "TEXT DEFAULT '[]'");
 ensureColumn('autopilot_queue', 'proposal_id', "TEXT DEFAULT ''");
 ensureColumn('autopilot_queue', 'proposal_amount', "REAL DEFAULT 0");
 ensureColumn('autopilot_queue', 'auto_pilot_mode', "TEXT DEFAULT 'full_auto'");
+ensureColumn('autopilot_queue', 'reach_slot_id', "TEXT DEFAULT ''");
+ensureColumn('autopilot_queue', 'reach_slot_position', "TEXT DEFAULT ''");
+ensureColumn('autopilot_queue', 'reach_slot_price', "REAL DEFAULT 0");
+ensureColumn('autopilot_queue', 'reach_monthly_searches', "INTEGER DEFAULT 0");
+ensureColumn('autopilot_queue', 'reach_slot_details', "TEXT DEFAULT '{}'");
 
 // Voice Agent, Telephony & Dual Sentiment Analysis columns
 ensureColumn('call_logs', 'voice_engine', "TEXT DEFAULT 'native'");

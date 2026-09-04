@@ -148,6 +148,7 @@ export const api = {
   runFullAutopilot: (data) => post('/autopilot/run-all', data),
   autoEnqueueScrapedToAutopilot: (data) => post('/autopilot/auto-enqueue-scraped', data),
   getAutomationStatus: () => get('/autopilot/automation-status'),
+  getAvailableReachSlots: (params) => get('/autopilot/available-reach-slots', params),
 
   // ── Leads Batch Actions & Export ──────────────────────────────────────────
   batchActionLeads: (data) => post('/leads/batch-action', data),

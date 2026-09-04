@@ -44,9 +44,58 @@ export default function ReachInventoryPage({ onSelectSlotForProposal }) {
   const [searchPosition, setSearchPosition] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
 
+  // Auto-Pitch Modal State
+  const [pitchModalSlot, setPitchModalSlot] = useState(null);
+  const [pitchForm, setPitchForm] = useState({
+    doctorName: '',
+    clinicName: '',
+    phone: '',
+    autoStart: true,
+  });
+  const [pitching, setPitching] = useState(false);
+
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+
+  function openPitchModal(slot) {
+    setPitchModalSlot(slot);
+    setPitchForm({
+      doctorName: `Dr. ${slot.speciality.split(' ')[0]} Specialist`,
+      clinicName: `${slot.zone} Premier ${slot.speciality.split(' ')[0]} Care`,
+      phone: '+919811002233',
+      autoStart: true,
+    });
+  }
+
+  async function handlePitchSubmit(e) {
+    if (e) e.preventDefault();
+    if (!pitchModalSlot) return;
+    setPitching(true);
+    try {
+      await api.enqueueAutopilot({
+        clinicName: pitchForm.clinicName || `${pitchModalSlot.zone} Specialist Clinic`,
+        city: pitchModalSlot.city,
+        locality: pitchModalSlot.zone,
+        speciality: pitchModalSlot.speciality,
+        phone: pitchForm.phone,
+        ownerName: pitchForm.doctorName,
+        product: 'reach',
+        reachSlotId: pitchModalSlot.slotId,
+        reachSlotDetails: pitchModalSlot,
+        autoStart: pitchForm.autoStart,
+      });
+      setMessage({
+        type: 'success',
+        text: `⚡ Autopilot outreach triggered for ${pitchForm.doctorName} in ${pitchModalSlot.zone}! Proprietary Voice AI call placed & Reach Position #${pitchModalSlot.position} pitched at ₹${pitchModalSlot.price3M?.toLocaleString('en-IN')}/3M.`,
+      });
+      setPitchModalSlot(null);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setPitching(false);
+    }
+  }
 
   // Load initial stats & cities
   useEffect(() => {
@@ -449,27 +498,7 @@ export default function ReachInventoryPage({ onSelectSlotForProposal }) {
                                 type="button"
                                 className="btn btn-secondary btn-sm"
                                 style={{ padding: '4px 8px', fontSize: 11, fontWeight: 700 }}
-                                onClick={async () => {
-                                  try {
-                                    setMessage({ type: 'info', text: `⚡ Enqueueing clinics in ${slot.zone} for Practo Reach Position ${slot.position}...` });
-                                    await api.enqueueAutopilot({
-                                      clinicName: `${slot.zone} Premier Specialist Clinic`,
-                                      city: slot.city,
-                                      locality: slot.zone,
-                                      speciality: slot.speciality,
-                                      phone: '+919811002233',
-                                      ownerName: `Dr. ${slot.speciality.split(' ')[0]} Specialist`,
-                                      product: 'reach',
-                                      autoStart: true,
-                                    });
-                                    setMessage({
-                                      type: 'success',
-                                      text: `⚡ Autopilot triggered for ${slot.zone}! Proprietary Voice AI call placed & Reach Position ${slot.position} pitched.`,
-                                    });
-                                  } catch (err) {
-                                    setMessage({ type: 'error', text: err.message });
-                                  }
-                                }}
+                                onClick={() => openPitchModal(slot)}
                               >
                                 ⚡ Auto-Pitch
                               </button>
@@ -635,6 +664,139 @@ export default function ReachInventoryPage({ onSelectSlotForProposal }) {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Auto-Pitch Reach Inventory Slot ───────────────────────────── */}
+      {pitchModalSlot && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setPitchModalSlot(null)}>
+          <div className="modal fade-in" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 24 }}>⚡</span>
+                <div>
+                  <h3 className="section-title">
+                    Auto-Pitch Reach Position #{pitchModalSlot.position} ({pitchModalSlot.zone})
+                  </h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Launch Proprietary Voice AI call to pitch exact Reach spotlight terms and exclusivity.
+                  </p>
+                </div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPitchModalSlot(null)}>✕</button>
+            </div>
+
+            <form onSubmit={handlePitchSubmit}>
+              {/* Slot Metrics Banner */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #F0FDFA 0%, #EFF6FF 100%)',
+                  border: '1px solid #99F6E4',
+                  borderRadius: 10,
+                  padding: 14,
+                  marginBottom: 16,
+                }}
+              >
+                <div className="flex justify-between items-center pb-2 mb-2" style={{ borderBottom: '1px solid #CCFBF1' }}>
+                  <div>
+                    <span className="badge badge-teal" style={{ fontWeight: 800 }}>
+                      ⚡ Position #{pitchModalSlot.position} Spotlight
+                    </span>
+                    <span className="ml-2 font-bold" style={{ fontSize: 13, color: '#0F172A' }}>
+                      {pitchModalSlot.zone}, {pitchModalSlot.city}
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: '#0F766E' }}>
+                      ₹{pitchModalSlot.price3M?.toLocaleString('en-IN')}
+                      <span style={{ fontSize: 11, fontWeight: 500, color: '#64748B' }}> / 3 Months</span>
+                    </div>
+                    <div className="text-xs text-muted">
+                      (~₹{Math.round(pitchModalSlot.price3M / 3).toLocaleString('en-IN')}/mo)
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid-2" style={{ gap: 8, fontSize: 12 }}>
+                  <div>🩺 <strong>Speciality:</strong> {pitchModalSlot.speciality}</div>
+                  <div>📈 <strong>Traffic:</strong> {pitchModalSlot.monthlySearchVolume?.toLocaleString()} searches/mo</div>
+                </div>
+              </div>
+
+              {/* Target Doctor Fields */}
+              <div style={{ marginBottom: 12 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Doctor Name</label>
+                <input
+                  className="input"
+                  value={pitchForm.doctorName}
+                  onChange={(e) => setPitchForm({ ...pitchForm, doctorName: e.target.value })}
+                  placeholder="Dr. Rajesh Kumar"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Clinic Name</label>
+                <input
+                  className="input"
+                  value={pitchForm.clinicName}
+                  onChange={(e) => setPitchForm({ ...pitchForm, clinicName: e.target.value })}
+                  placeholder="Care Clinic"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Phone Number</label>
+                <input
+                  className="input"
+                  value={pitchForm.phone}
+                  onChange={(e) => setPitchForm({ ...pitchForm, phone: e.target.value })}
+                  placeholder="+919876543210"
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
+                  <input
+                    type="checkbox"
+                    checked={pitchForm.autoStart}
+                    onChange={(e) => setPitchForm({ ...pitchForm, autoStart: e.target.checked })}
+                  />
+                  <span>Dial Outbound Voice AI Call Immediately with Reach Pricing Pitch</span>
+                </label>
+              </div>
+
+              {/* Pitch Script Preview */}
+              <div style={{ background: '#F8FAFC', borderRadius: 8, padding: 10, border: '1px solid #E2E8F0', marginBottom: 16 }}>
+                <div className="text-xs font-bold text-secondary uppercase mb-1">
+                  🎙️ AI Voice Script Preview:
+                </div>
+                <p className="text-xs" style={{ color: '#334155', fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>
+                  "Hello {pitchForm.doctorName || 'Doctor'}, Practo has unlocked an exclusive Position #{pitchModalSlot.position} Reach spotlight sponsorship in {pitchModalSlot.zone} for {pitchModalSlot.speciality}. With {pitchModalSlot.monthlySearchVolume?.toLocaleString()} high-intent patients searching in your locality monthly, pricing is ₹{pitchModalSlot.price3M?.toLocaleString('en-IN')} for 3 months with 100% exclusivity."
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPitchModalSlot(null)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={pitching}
+                  style={{
+                    background: 'linear-gradient(135deg, #1456FD 0%, #0D9488 100%)',
+                    fontWeight: 800,
+                  }}
+                >
+                  {pitching ? <span className="spinner" style={{ width: 14, height: 14 }} /> : '⚡'}
+                  <span>Dispatch Voice AI Call & Pitch</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

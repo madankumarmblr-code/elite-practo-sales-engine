@@ -180,8 +180,14 @@ export function registerAutopilotRoutes(app) {
   // ── ⚡ Master 100% Full End-to-End Autopilot Execution ──────────────────────
   app.post('/api/autopilot/run-all', authRequired, requirePermission('leads:write'), async (req, res) => {
     try {
-      const { count = 15, mode = 'full_auto', product = null } = req.body || {};
-      const report = await autopilotService.runFullEndToEndAutopilot({ count: Number(count) || 15, mode, product });
+      const { count = 15, mode = 'full_auto', product = null, reachSlotId = '', reachSlotDetails = null } = req.body || {};
+      const report = await autopilotService.runFullEndToEndAutopilot({
+        count: Number(count) || 15,
+        mode,
+        product,
+        reachSlotId,
+        reachSlotDetails,
+      });
       res.json({ ok: true, report });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
@@ -191,9 +197,31 @@ export function registerAutopilotRoutes(app) {
   // ── ⚡ Auto-Enqueue Scraped Clinics Directly into Autopilot ─────────────────
   app.post('/api/autopilot/auto-enqueue-scraped', authRequired, requirePermission('leads:write'), async (req, res) => {
     try {
-      const { limit = 30, product = 'prime', autoStart = true } = req.body || {};
-      const result = await autopilotService.autoEnqueueScrapedClinics({ limit: Number(limit) || 30, product, autoStart });
+      const { limit = 30, product = 'prime', reachSlotId = '', reachSlotDetails = null, autoStart = true } = req.body || {};
+      const result = await autopilotService.autoEnqueueScrapedClinics({
+        limit: Number(limit) || 30,
+        product,
+        reachSlotId,
+        reachSlotDetails,
+        autoStart,
+      });
       res.json({ ok: true, ...result });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // ── ⚡ Get Available Reach Inventory Slots for Autopilot Dropdown ─────────
+  app.get('/api/autopilot/available-reach-slots', authRequired, requirePermission('leads:read'), (req, res) => {
+    try {
+      const { city = '', zone = '', speciality = '', limit = 50 } = req.query;
+      const slots = autopilotService.getAvailableReachSlots({
+        city,
+        zone,
+        speciality,
+        limit: Number(limit) || 50,
+      });
+      res.json({ ok: true, slots });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
     }

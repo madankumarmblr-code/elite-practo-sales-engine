@@ -47,6 +47,8 @@ export function registerVoiceAgentRoutes(app) {
     const telephonyProviderName = body.telephonyProviderName || body.telephonyProvider || null;
     const leadId = body.leadId || null;
     const customNotes = body.customNotes || '';
+    const reachSlotDetails = body.reachSlotDetails || (body.reach_slot_details ? (typeof body.reach_slot_details === 'string' ? JSON.parse(body.reach_slot_details) : body.reach_slot_details) : null);
+    const reachSlotId = body.reachSlotId || body.reach_slot_id || (reachSlotDetails?.slotId || null);
 
     if (!toPhone) {
       return res.status(400).json({ ok: false, error: 'toPhone or phone is required' });
@@ -65,6 +67,7 @@ export function registerVoiceAgentRoutes(app) {
         telephonyProviderName,
         leadId,
         customNotes,
+        reachSlotDetails,
       });
 
       res.json({ ok: true, call: result });

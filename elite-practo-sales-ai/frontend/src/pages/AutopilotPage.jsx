@@ -15,6 +15,24 @@ export default function AutopilotPage() {
   const [autoEnqueueing, setAutoEnqueueing] = useState(false);
   const [autoMode, setAutoMode] = useState('full_auto'); // 'full_auto' | 'human_review'
 
+  // Reach Inventory & Product Selection State for Autopilot
+  const [availableReachSlots, setAvailableReachSlots] = useState([]);
+  const [showRunFullAutoModal, setShowRunFullAutoModal] = useState(false);
+  const [runAutoForm, setRunAutoForm] = useState({
+    product: 'reach', // 'reach' | 'prime' | 'all'
+    reachSlotId: '',
+    count: 15,
+    mode: 'full_auto',
+  });
+
+  const [showAutoEnqueueModal, setShowAutoEnqueueModal] = useState(false);
+  const [autoEnqueueForm, setAutoEnqueueForm] = useState({
+    limit: 20,
+    product: 'reach',
+    reachSlotId: '',
+    autoStart: true,
+  });
+
   // Manual Call Modal State
   const [showCallModal, setShowCallModal] = useState(false);
   const [callForm, setCallForm] = useState({
@@ -24,7 +42,8 @@ export default function AutopilotPage() {
     locality: 'Indiranagar',
     city: 'Bangalore',
     speciality: 'General Physician',
-    product: 'prime',
+    product: 'reach',
+    reachSlotId: '',
   });
   const [callingNow, setCallingNow] = useState(false);
 
@@ -34,7 +53,7 @@ export default function AutopilotPage() {
     phone: '',
     doctorName: '',
     clinicName: '',
-    product: 'prime',
+    product: 'reach',
     customMessage: '',
   });
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
@@ -52,6 +71,21 @@ export default function AutopilotPage() {
   const [advanceItem, setAdvanceItem] = useState(null);
 
   const [message, setMessage] = useState(null);
+
+  // Load available Reach inventory slots on mount
+  useEffect(() => {
+    api.getAvailableReachSlots({ limit: 60 })
+      .then((res) => {
+        const slots = res?.slots || res || [];
+        setAvailableReachSlots(slots);
+        if (slots.length > 0) {
+          setRunAutoForm((prev) => ({ ...prev, reachSlotId: prev.reachSlotId || slots[0].slotId }));
+          setAutoEnqueueForm((prev) => ({ ...prev, reachSlotId: prev.reachSlotId || slots[0].slotId }));
+          setCallForm((prev) => ({ ...prev, reachSlotId: prev.reachSlotId || slots[0].slotId }));
+        }
+      })
+      .catch((err) => console.warn('[ReachSlots load error]', err.message));
+  }, []);
 
   async function loadData() {
     setLoading(true);
@@ -81,13 +115,29 @@ export default function AutopilotPage() {
     loadData();
   }, [tab, productFilter]); // eslint-disable-line
 
-  // ⚡ 100% Full Autonomous Mode Execution
-  async function handleRunFullAutopilot() {
+  const selectedRunReachSlot = availableReachSlots.find((s) => s.slotId === runAutoForm.reachSlotId) || availableReachSlots[0] || null;
+  const selectedEnqueueReachSlot = availableReachSlots.find((s) => s.slotId === autoEnqueueForm.reachSlotId) || availableReachSlots[0] || null;
+  const selectedCallReachSlot = availableReachSlots.find((s) => s.slotId === callForm.reachSlotId) || availableReachSlots[0] || null;
+
+  // ⚡ 100% Full Autonomous Mode Execution Submit
+  async function handleRunFullAutopilotSubmit(e) {
+    if (e) e.preventDefault();
     setRunningFullAuto(true);
     setFullAutoReport(null);
     setMessage(null);
+    setShowRunFullAutoModal(false);
     try {
-      const res = await api.runFullAutopilot({ count: 15, mode: autoMode });
+      const payload = {
+        count: Number(runAutoForm.count) || 15,
+        mode: runAutoForm.mode || autoMode,
+        product: runAutoForm.product,
+      };
+      if (runAutoForm.product === 'reach') {
+        payload.reachSlotId = runAutoForm.reachSlotId || selectedRunReachSlot?.slotId;
+        payload.reachSlotDetails = selectedRunReachSlot;
+      }
+
+      const res = await api.runFullAutopilot(payload);
       if (res && res.report) {
         setFullAutoReport(res.report);
         setMessage({
@@ -103,12 +153,24 @@ export default function AutopilotPage() {
     }
   }
 
-  // 📥 Auto-Enqueue Scraped Clinics Directly into Autopilot
-  async function handleAutoEnqueueScraped() {
+  // 📥 Auto-Enqueue Scraped Clinics Directly into Autopilot Submit
+  async function handleAutoEnqueueScrapedSubmit(e) {
+    if (e) e.preventDefault();
     setAutoEnqueueing(true);
     setMessage(null);
+    setShowAutoEnqueueModal(false);
     try {
-      const res = await api.autoEnqueueScrapedToAutopilot({ limit: 20, autoStart: true });
+      const payload = {
+        limit: Number(autoEnqueueForm.limit) || 20,
+        autoStart: autoEnqueueForm.autoStart,
+        product: autoEnqueueForm.product === 'all' ? undefined : autoEnqueueForm.product,
+      };
+      if (autoEnqueueForm.product === 'reach') {
+        payload.reachSlotId = autoEnqueueForm.reachSlotId || selectedEnqueueReachSlot?.slotId;
+        payload.reachSlotDetails = selectedEnqueueReachSlot;
+      }
+
+      const res = await api.autoEnqueueScrapedToAutopilot(payload);
       setMessage({
         type: 'success',
         text: `📥 Auto-Enqueued ${res.enqueuedCount || 0} scraped healthcare practices into Autopilot! Outbound AI voice pitching initiated.`,
@@ -185,11 +247,16 @@ export default function AutopilotPage() {
     e.preventDefault();
     setCallingNow(true);
     try {
-      const res = await api.dialVoiceAgent({
+      const payload = {
         ...callForm,
         voiceEngine: 'native',
         telephonyProvider: 'simulator',
-      });
+      };
+      if (callForm.product === 'reach') {
+        payload.reachSlotId = callForm.reachSlotId || selectedCallReachSlot?.slotId;
+        payload.reachSlotDetails = selectedCallReachSlot;
+      }
+      const res = await api.dialVoiceAgent(payload);
       setMessage({
         type: 'success',
         text: `Voice Call placed successfully to ${callForm.phone}! Call ID: ${res.call?.callId || res.call_id || 'COMPLETED'}`,
@@ -270,7 +337,7 @@ export default function AutopilotPage() {
           {/* Master Full Automation Action */}
           <button
             className="btn btn-primary btn-sm"
-            onClick={handleRunFullAutopilot}
+            onClick={() => setShowRunFullAutoModal(true)}
             disabled={runningFullAuto}
             style={{
               background: 'linear-gradient(135deg, #1456FD 0%, #0D9488 100%)',
@@ -287,7 +354,7 @@ export default function AutopilotPage() {
 
           <button
             className="btn btn-secondary btn-sm"
-            onClick={handleAutoEnqueueScraped}
+            onClick={() => setShowAutoEnqueueModal(true)}
             disabled={autoEnqueueing}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
@@ -497,7 +564,7 @@ export default function AutopilotPage() {
             <p className="text-sm text-muted mt-1" style={{ maxWidth: 450, margin: '6px auto 16px' }}>
               Click <strong>Auto-Enqueue Scraped Leads</strong> to automatically import clinics from Google Maps/Practo, or click <strong>Run 100% Full Autopilot</strong> to begin outreach.
             </p>
-            <button className="btn btn-primary btn-sm" onClick={handleAutoEnqueueScraped}>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAutoEnqueueModal(true)}>
               📥 Auto-Enqueue Scraped Clinics Now
             </button>
           </div>
@@ -508,7 +575,7 @@ export default function AutopilotPage() {
                 <tr>
                   <th>Clinic / Doctor</th>
                   <th>Location</th>
-                  <th>Product</th>
+                  <th>Product & Reach Slot</th>
                   <th>Stage Status</th>
                   <th>Doctor Sentiment & Intent</th>
                   <th>Auto Proposal</th>
@@ -545,6 +612,21 @@ export default function AutopilotPage() {
                         <span className={`badge ${isPrime ? 'badge-blue' : 'badge-teal'}`} style={{ fontSize: 10 }}>
                           {isPrime ? '⚡ Prime' : '🎯 Reach'}
                         </span>
+                        {!isPrime && item.reach_slot_position && (
+                          <div className="mt-1" style={{ fontSize: 11, fontWeight: 700, color: '#0D9488' }}>
+                            ⚡ Pos #{item.reach_slot_position} Spotlight
+                          </div>
+                        )}
+                        {!isPrime && item.reach_monthly_searches > 0 && (
+                          <div className="text-xs text-muted" style={{ fontSize: 10 }}>
+                            📈 {item.reach_monthly_searches.toLocaleString()} searches/mo
+                          </div>
+                        )}
+                        {!isPrime && item.reach_slot_price > 0 && (
+                          <div className="text-xs font-bold" style={{ fontSize: 10.5, color: '#047857' }}>
+                            ₹{item.reach_slot_price.toLocaleString('en-IN')} / 3M
+                          </div>
+                        )}
                       </td>
 
                       <td>
@@ -607,8 +689,13 @@ export default function AutopilotPage() {
                               📑 {item.proposal_id}
                             </span>
                             <div className="text-xs text-secondary font-bold mt-0.5" style={{ fontSize: 10.5 }}>
-                              ₹{(Number(item.proposal_amount) || 21240).toLocaleString('en-IN')}
+                              ₹{(Number(item.proposal_amount) || item.reach_slot_price || 21240).toLocaleString('en-IN')}
                             </div>
+                            {item.reach_slot_position && (
+                              <div className="text-xs" style={{ fontSize: 9.5, color: '#0D9488', fontWeight: 600 }}>
+                                Pos #{item.reach_slot_position} Spotlight
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-xs text-muted">—</span>
@@ -890,10 +977,385 @@ export default function AutopilotPage() {
         </div>
       )}
 
+      {/* ── Modal: Full Autopilot Configuration (Product & Reach Slot Picker) ─── */}
+      {showRunFullAutoModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowRunFullAutoModal(false)}>
+          <div className="modal fade-in" style={{ maxWidth: 660 }}>
+            <div className="modal-header">
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 24 }}>⚡</span>
+                <div>
+                  <h3 className="section-title">Launch 100% Full Autonomous AI Autopilot</h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Select campaign product & Reach inventory slot to empower Voice AI to pitch precise locality pricing and slot details.
+                  </p>
+                </div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowRunFullAutoModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleRunFullAutopilotSubmit}>
+              {/* Product Selection Radio Cards */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="text-xs font-bold text-secondary mb-2" style={{ display: 'block', textTransform: 'uppercase' }}>
+                  1. Select Pitch Campaign Product
+                </label>
+                <div className="grid-3" style={{ gap: 10 }}>
+                  <label
+                    style={{
+                      border: `2px solid ${runAutoForm.product === 'reach' ? '#0D9488' : '#E2E8F0'}`,
+                      background: runAutoForm.product === 'reach' ? '#F0FDFA' : '#FFFFFF',
+                      padding: 12,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="runAutoProduct"
+                      checked={runAutoForm.product === 'reach'}
+                      onChange={() => setRunAutoForm({ ...runAutoForm, product: 'reach' })}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong style={{ color: '#0F766E' }}>🎯 Practo Reach</strong>
+                    <p className="text-xs text-secondary mt-1">Exclusive spotlight sponsored slot (#1 or #6) with locality exclusivity.</p>
+                  </label>
+
+                  <label
+                    style={{
+                      border: `2px solid ${runAutoForm.product === 'prime' ? '#1456FD' : '#E2E8F0'}`,
+                      background: runAutoForm.product === 'prime' ? '#EFF6FF' : '#FFFFFF',
+                      padding: 12,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="runAutoProduct"
+                      checked={runAutoForm.product === 'prime'}
+                      onChange={() => setRunAutoForm({ ...runAutoForm, product: 'prime' })}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong style={{ color: '#1D4ED8' }}>🌟 Practo Prime</strong>
+                    <p className="text-xs text-secondary mt-1">Instant 24/7 appointment booking guarantee & Prime verified badge.</p>
+                  </label>
+
+                  <label
+                    style={{
+                      border: `2px solid ${runAutoForm.product === 'all' ? '#7C3AED' : '#E2E8F0'}`,
+                      background: runAutoForm.product === 'all' ? '#F5F3FF' : '#FFFFFF',
+                      padding: 12,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="runAutoProduct"
+                      checked={runAutoForm.product === 'all'}
+                      onChange={() => setRunAutoForm({ ...runAutoForm, product: 'all' })}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong style={{ color: '#6D28D9' }}>⚡ Smart Auto-Detect</strong>
+                    <p className="text-xs text-secondary mt-1">AI auto-assigns Reach or Prime based on clinic traffic and profile.</p>
+                  </label>
+                </div>
+              </div>
+
+              {/* Reach Inventory Slot Selector (when product is reach) */}
+              {runAutoForm.product === 'reach' && (
+                <div style={{ marginBottom: 16 }}>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-bold text-secondary uppercase">
+                      2. Select Practo Reach Inventory Slot
+                    </label>
+                    <span className="text-xs" style={{ color: '#0D9488', fontWeight: 600 }}>
+                      🔥 {availableReachSlots.length} Newly Opened Slots Live
+                    </span>
+                  </div>
+
+                  <select
+                    className="input"
+                    value={runAutoForm.reachSlotId}
+                    onChange={(e) => setRunAutoForm({ ...runAutoForm, reachSlotId: e.target.value })}
+                    style={{ fontWeight: 600, fontSize: 13 }}
+                  >
+                    {availableReachSlots.map((slot) => (
+                      <option key={slot.slotId} value={slot.slotId}>
+                        [Position #{slot.position}] {slot.zone}, {slot.city} — {slot.speciality} | {slot.monthlySearchVolume?.toLocaleString()} searches/mo | ₹{slot.price3M?.toLocaleString('en-IN')}/3M
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* AI Live Pitch & Pricing Terms Preview Card */}
+                  {selectedRunReachSlot && (
+                    <div
+                      className="mt-3"
+                      style={{
+                        background: 'linear-gradient(135deg, #F0FDFA 0%, #EFF6FF 100%)',
+                        border: '1px solid #99F6E4',
+                        borderRadius: 10,
+                        padding: 14,
+                      }}
+                    >
+                      <div className="flex justify-between items-center pb-2 mb-2" style={{ borderBottom: '1px solid #CCFBF1' }}>
+                        <div>
+                          <span className="badge badge-teal" style={{ fontWeight: 800, fontSize: 11 }}>
+                            ⚡ Position #{selectedRunReachSlot.position} Exclusive Spotlight
+                          </span>
+                          <span className="ml-2 font-bold" style={{ fontSize: 13, color: '#0F172A' }}>
+                            {selectedRunReachSlot.zone}, {selectedRunReachSlot.city}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 14, fontWeight: 900, color: '#0F766E' }}>
+                            ₹{selectedRunReachSlot.price3M?.toLocaleString('en-IN')}
+                            <span style={{ fontSize: 11, fontWeight: 500, color: '#64748B' }}> / 3 Months</span>
+                          </div>
+                          <div className="text-xs text-muted">
+                            (~₹{Math.round((selectedRunReachSlot.price3M || 18000) / 3).toLocaleString('en-IN')}/mo)
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid-2 mb-2" style={{ gap: 8, fontSize: 12 }}>
+                        <div>
+                          🩺 <strong>Speciality:</strong> {selectedRunReachSlot.speciality}
+                        </div>
+                        <div>
+                          📈 <strong>Patient Traffic:</strong> {selectedRunReachSlot.monthlySearchVolume?.toLocaleString()} searches/mo
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#FFFFFF', borderRadius: 8, padding: 10, border: '1px solid #E2E8F0', marginTop: 8 }}>
+                        <div className="text-xs font-bold text-secondary uppercase mb-1 flex items-center gap-1">
+                          <span>🎙️</span> AI Voice Pitch Script Delivered to Doctor:
+                        </div>
+                        <p className="text-xs" style={{ color: '#334155', fontStyle: 'italic', lineHeight: 1.5, margin: 0 }}>
+                          "Dr. [Name], Practo has just opened an exclusive Position #{selectedRunReachSlot.position} Reach spotlight sponsorship in {selectedRunReachSlot.zone} for {selectedRunReachSlot.speciality}. With {selectedRunReachSlot.monthlySearchVolume?.toLocaleString()} high-intent patients searching in your locality monthly, this guarantees top-of-page exclusivity. Pricing is ₹{selectedRunReachSlot.price3M?.toLocaleString('en-IN')} for 3 months with 100% exclusivity before competitors take it."
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Batch Lead Count & Mode */}
+              <div className="grid-2 mb-4" style={{ gap: 12 }}>
+                <div>
+                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                    Leads to Process in Batch
+                  </label>
+                  <select
+                    className="input"
+                    value={runAutoForm.count}
+                    onChange={(e) => setRunAutoForm({ ...runAutoForm, count: Number(e.target.value) })}
+                  >
+                    <option value={5}>5 Leads (Quick Pilot)</option>
+                    <option value={10}>10 Leads (Recommended)</option>
+                    <option value={15}>15 Leads (Standard Batch)</option>
+                    <option value={25}>25 Leads (High Volume)</option>
+                    <option value={50}>50 Leads (Enterprise Blitz)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                    Automation Mode
+                  </label>
+                  <select
+                    className="input"
+                    value={runAutoForm.mode}
+                    onChange={(e) => setRunAutoForm({ ...runAutoForm, mode: e.target.value })}
+                  >
+                    <option value="full_auto">⚡ 100% Full Auto (Zero-Touch)</option>
+                    <option value="human_review">🛡️ Human Review Before WhatsApp/Email</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowRunFullAutoModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={runningFullAuto}
+                  style={{
+                    background: 'linear-gradient(135deg, #1456FD 0%, #0D9488 100%)',
+                    fontWeight: 800,
+                    padding: '8px 18px',
+                  }}
+                >
+                  {runningFullAuto ? <span className="spinner" style={{ width: 14, height: 14 }} /> : '⚡'}
+                  <span>Launch Autonomous Campaign ({runAutoForm.count} Leads)</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Auto-Enqueue Scraped Leads Configuration ─────────────────── */}
+      {showAutoEnqueueModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowAutoEnqueueModal(false)}>
+          <div className="modal fade-in" style={{ maxWidth: 620 }}>
+            <div className="modal-header">
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 24 }}>📥</span>
+                <div>
+                  <h3 className="section-title">Auto-Enqueue Scraped Clinics into Autopilot</h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Import discovered healthcare practices and bind target Reach inventory slot pricing.
+                  </p>
+                </div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowAutoEnqueueModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleAutoEnqueueScrapedSubmit}>
+              <div style={{ marginBottom: 14 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                  Target Product Campaign
+                </label>
+                <div className="grid-3" style={{ gap: 8 }}>
+                  <label
+                    style={{
+                      border: `2px solid ${autoEnqueueForm.product === 'reach' ? '#0D9488' : '#E2E8F0'}`,
+                      background: autoEnqueueForm.product === 'reach' ? '#F0FDFA' : '#FFFFFF',
+                      padding: 10,
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: 12,
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="enqueueProduct"
+                      checked={autoEnqueueForm.product === 'reach'}
+                      onChange={() => setAutoEnqueueForm({ ...autoEnqueueForm, product: 'reach' })}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong>🎯 Practo Reach</strong>
+                  </label>
+
+                  <label
+                    style={{
+                      border: `2px solid ${autoEnqueueForm.product === 'prime' ? '#1456FD' : '#E2E8F0'}`,
+                      background: autoEnqueueForm.product === 'prime' ? '#EFF6FF' : '#FFFFFF',
+                      padding: 10,
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: 12,
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="enqueueProduct"
+                      checked={autoEnqueueForm.product === 'prime'}
+                      onChange={() => setAutoEnqueueForm({ ...autoEnqueueForm, product: 'prime' })}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong>🌟 Practo Prime</strong>
+                  </label>
+
+                  <label
+                    style={{
+                      border: `2px solid ${autoEnqueueForm.product === 'all' ? '#7C3AED' : '#E2E8F0'}`,
+                      background: autoEnqueueForm.product === 'all' ? '#F5F3FF' : '#FFFFFF',
+                      padding: 10,
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: 12,
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="enqueueProduct"
+                      checked={autoEnqueueForm.product === 'all'}
+                      onChange={() => setAutoEnqueueForm({ ...autoEnqueueForm, product: 'all' })}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong>⚡ Smart Auto</strong>
+                  </label>
+                </div>
+              </div>
+
+              {/* Reach Inventory Slot Selection */}
+              {autoEnqueueForm.product === 'reach' && (
+                <div style={{ marginBottom: 14 }}>
+                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                    Select Reach Inventory Slot to Pitch
+                  </label>
+                  <select
+                    className="input"
+                    value={autoEnqueueForm.reachSlotId}
+                    onChange={(e) => setAutoEnqueueForm({ ...autoEnqueueForm, reachSlotId: e.target.value })}
+                    style={{ fontSize: 12.5 }}
+                  >
+                    {availableReachSlots.map((slot) => (
+                      <option key={slot.slotId} value={slot.slotId}>
+                        [Pos #{slot.position}] {slot.zone}, {slot.city} — {slot.speciality} (₹{slot.price3M?.toLocaleString('en-IN')}/3M)
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedEnqueueReachSlot && (
+                    <div className="mt-2 text-xs" style={{ color: '#0F766E', background: '#F0FDFA', padding: '8px 12px', borderRadius: 6, border: '1px solid #CCFBF1' }}>
+                      📍 <strong>{selectedEnqueueReachSlot.zone}</strong> · Pos #{selectedEnqueueReachSlot.position} · 📈 {selectedEnqueueReachSlot.monthlySearchVolume?.toLocaleString()} searches · 💰 Rate: <strong>₹{selectedEnqueueReachSlot.price3M?.toLocaleString('en-IN')}/3M</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid-2 mb-4" style={{ gap: 12 }}>
+                <div>
+                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                    Number of Scraped Leads
+                  </label>
+                  <select
+                    className="input"
+                    value={autoEnqueueForm.limit}
+                    onChange={(e) => setAutoEnqueueForm({ ...autoEnqueueForm, limit: Number(e.target.value) })}
+                  >
+                    <option value={10}>10 Clinics</option>
+                    <option value={20}>20 Clinics (Default)</option>
+                    <option value={30}>30 Clinics</option>
+                    <option value={50}>50 Clinics</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center" style={{ paddingTop: 20 }}>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
+                    <input
+                      type="checkbox"
+                      checked={autoEnqueueForm.autoStart}
+                      onChange={(e) => setAutoEnqueueForm({ ...autoEnqueueForm, autoStart: e.target.checked })}
+                    />
+                    <span>Auto-Start Voice AI Calling Immediately</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAutoEnqueueModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={autoEnqueueing}>
+                  {autoEnqueueing ? 'Importing...' : `📥 Enqueue (${autoEnqueueForm.limit}) Leads`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── Modal: Manual Call ────────────────────────────────────────────────── */}
       {showCallModal && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowCallModal(false)}>
-          <div className="modal fade-in" style={{ maxWidth: 500 }}>
+          <div className="modal fade-in" style={{ maxWidth: 540 }}>
             <div className="modal-header">
               <h3 className="section-title">Manual Outbound Call (Proprietary Voice AI)</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowCallModal(false)}>✕</button>
@@ -933,17 +1395,69 @@ export default function AutopilotPage() {
                 />
               </div>
 
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 12 }}>
                 <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>Product</label>
                 <select
                   className="input"
                   value={callForm.product}
                   onChange={(e) => setCallForm({ ...callForm, product: e.target.value })}
                 >
-                  <option value="prime">Practo Prime (Assured Bookings)</option>
-                  <option value="reach">Practo Reach (Spotlight Position 1)</option>
+                  <option value="reach">🎯 Practo Reach (Spotlight Position 1 / 6)</option>
+                  <option value="prime">🌟 Practo Prime (Assured Bookings)</option>
                 </select>
               </div>
+
+              {callForm.product === 'reach' && (
+                <div style={{ marginBottom: 14 }}>
+                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block' }}>
+                    Select Reach Inventory Slot to Pitch
+                  </label>
+                  <select
+                    className="input"
+                    value={callForm.reachSlotId}
+                    onChange={(e) => {
+                      const found = availableReachSlots.find((s) => s.slotId === e.target.value);
+                      setCallForm({
+                        ...callForm,
+                        reachSlotId: e.target.value,
+                        locality: found?.zone || callForm.locality,
+                        city: found?.city || callForm.city,
+                        speciality: found?.speciality || callForm.speciality,
+                      });
+                    }}
+                    style={{ fontSize: 12.5 }}
+                  >
+                    {availableReachSlots.map((slot) => (
+                      <option key={slot.slotId} value={slot.slotId}>
+                        [Pos #{slot.position}] {slot.zone}, {slot.city} — {slot.speciality} (₹{slot.price3M?.toLocaleString('en-IN')}/3M)
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedCallReachSlot && (
+                    <div
+                      className="mt-2 text-xs"
+                      style={{
+                        background: '#F0FDFA',
+                        padding: 10,
+                        borderRadius: 6,
+                        border: '1px solid #CCFBF1',
+                        color: '#0F766E',
+                      }}
+                    >
+                      <div>
+                        ⚡ <strong>Pos #{selectedCallReachSlot.position} Spotlight</strong> in <strong>{selectedCallReachSlot.zone}</strong>
+                      </div>
+                      <div className="mt-0.5">
+                        📈 {selectedCallReachSlot.monthlySearchVolume?.toLocaleString()} patient searches/mo · Rate: <strong>₹{selectedCallReachSlot.price3M?.toLocaleString('en-IN')} / 3 Months</strong>
+                      </div>
+                      <div className="text-xs text-secondary italic mt-1 pt-1" style={{ borderTop: '1px dashed #99F6E4' }}>
+                        AI will automatically pitch this exact locality placement and ₹{selectedCallReachSlot.price3M?.toLocaleString('en-IN')} pricing to {callForm.doctorName || 'Doctor'}.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowCallModal(false)}>Cancel</button>

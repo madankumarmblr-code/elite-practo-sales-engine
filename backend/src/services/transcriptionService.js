@@ -25,6 +25,7 @@ export class TranscriptionService {
     clinicName = 'Clinic',
     product = 'prime',
     rawTranscript = null,
+    reachSlotDetails = null,
   }) {
     logEvent({
       type: 'info',
@@ -39,7 +40,7 @@ export class TranscriptionService {
     }
 
     // Generate contextual, realistic doctor dialogue based on product and persona
-    return this.generateDiarizedTranscript({ agentType, doctorName, clinicName, product });
+    return this.generateDiarizedTranscript({ agentType, doctorName, clinicName, product, reachSlotDetails });
   }
 
   /**
@@ -86,60 +87,71 @@ export class TranscriptionService {
   /**
    * Generate realistic doctor conversational dialogue with natural objections and resolution
    */
-  generateDiarizedTranscript({ agentType = 'ai', doctorName = 'Doctor', clinicName = 'Clinic', product = 'prime' }) {
+  generateDiarizedTranscript({ agentType = 'ai', doctorName = 'Doctor', clinicName = 'Clinic', product = 'prime', reachSlotDetails = null }) {
     const isReach = String(product).toLowerCase() === 'reach';
     const agentLabel = agentType === 'human' ? 'Sales Rep (Human)' : 'Practo AI Voice Agent';
 
     let dialog = [];
 
     if (isReach) {
+      const slot = reachSlotDetails || {};
+      const pos = slot.position || slot.reach_slot_position || '1';
+      const zone = slot.zone || slot.locality || 'Indiranagar';
+      const spec = slot.speciality || 'Specialist';
+      const searches = slot.monthlySearchVolume || slot.monthlySearches || slot.reach_monthly_searches || 3200;
+      const price3M = slot.price3M || slot.slotPrice || slot.reach_slot_price || 18000;
+      const monthlyPrice = Math.round(price3M / 3);
+      const formattedPrice = `₹${Number(price3M).toLocaleString('en-IN')}`;
+      const formattedMonthly = `₹${Number(monthlyPrice).toLocaleString('en-IN')}/month`;
+      const formattedSearches = Number(searches).toLocaleString('en-IN');
+
       dialog = [
         {
           speaker: agentLabel,
           time: '00:03',
-          text: `Good morning Dr. ${doctorName}. Calling from Practo's commercial desk regarding ${clinicName}. I'm reaching out because the Position 1 Spotlight slot for your locality just opened up this morning.`,
+          text: `Good morning Dr. ${doctorName}. Calling from Practo's commercial desk regarding ${clinicName}. I'm reaching out because the Position ${pos} Spotlight slot for ${spec} in ${zone} just opened up this morning.`,
           confidence: 0.98,
           sentiment: 'positive',
         },
         {
           speaker: `Dr. ${doctorName}`,
           time: '00:14',
-          text: `Yes, I am between consultations. What is this Position 1 Spotlight? We already get walk-ins.`,
+          text: `Yes, I am between consultations. What is this Position ${pos} Spotlight? We already get walk-ins.`,
           confidence: 0.94,
           sentiment: 'neutral',
         },
         {
           speaker: agentLabel,
           time: '00:23',
-          text: `Understood, Doctor. In your area, over 1,400 patients search for specialists every month on the Practo app. Right now, competitor clinics appear at the top. The Position 1 Spotlight guarantees ${clinicName} is seen first before patients scroll down, driving a 3.4x boost in verified appointments.`,
+          text: `Understood, Doctor. In ${zone}, over ${formattedSearches} patients search for ${spec} specialists on the Practo app every month. Currently, competitor clinics appear at the top. The Position ${pos} Spotlight guarantees ${clinicName} is seen first before patients scroll down, driving a 3.4x boost in verified appointments.`,
           confidence: 0.97,
           sentiment: 'positive',
         },
         {
           speaker: `Dr. ${doctorName}`,
           time: '00:41',
-          text: `I see. But is the slot pricing flexible? Last year someone quoted an annual package that was quite steep.`,
+          text: `I see. But what is the pricing for this ${zone} Position ${pos} slot? Is it an annual commitment?`,
           confidence: 0.95,
           sentiment: 'hesitant',
         },
         {
           speaker: agentLabel,
           time: '00:52',
-          text: `Great question, Doctor. We now offer modular quarterly commitments starting at ₹8,500/month with transparent impression and call tracking directly on your Practo Pro app. Plus, because you're a verified clinic, we can apply an instant 15% festival credit if activated this week.`,
+          text: `We offer a flexible quarterly commitment: the 3-month package for this ${zone} slot is ${formattedPrice} (approx ${formattedMonthly}), with zero setup fees, transparent click analytics on Practo Pro, and exclusivity—only 1 clinic can hold this spotlight slot in ${zone}.`,
           confidence: 0.99,
           sentiment: 'positive',
         },
         {
           speaker: `Dr. ${doctorName}`,
           time: '01:10',
-          text: `That sounds reasonable. Can you send over the formal quotation with the exact reach metrics on WhatsApp and email?`,
+          text: `That sounds reasonable for ${zone} exclusivity. Can you send over the formal quotation with the exact reach metrics and approval link on WhatsApp?`,
           confidence: 0.96,
           sentiment: 'positive',
         },
         {
           speaker: agentLabel,
           time: '01:21',
-          text: `Absolutely Dr. ${doctorName}. I am dispatching the official proposal summary to your WhatsApp right now, along with the PDF proposal. Thank you for your time and have a great clinic day!`,
+          text: `Absolutely Dr. ${doctorName}. I am generating your official Position ${pos} Spotlight proposal and dispatching it to your verified WhatsApp now. Thank you for your time, Doctor!`,
           confidence: 0.98,
           sentiment: 'positive',
         },

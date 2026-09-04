@@ -20,8 +20,35 @@ export default function LeadScraperPage() {
   // Modal for Autopilot assignment
   const [assignModal, setAssignModal] = useState(false);
   const [assignType, setAssignType] = useState('autopilot'); // 'autopilot' | 'manual'
-  const [assignProduct, setAssignProduct] = useState('prime'); // 'prime' | 'reach'
+  const [assignProduct, setAssignProduct] = useState('reach'); // 'prime' | 'reach'
   const [assigning, setAssigning] = useState(false);
+
+  // Reach Inventory & Auto-Launch Modal State
+  const [availableReachSlots, setAvailableReachSlots] = useState([]);
+  const [assignReachSlotId, setAssignReachSlotId] = useState('');
+
+  const [autoLaunchModal, setAutoLaunchModal] = useState(false);
+  const [autoLaunchProduct, setAutoLaunchProduct] = useState('reach'); // 'reach' | 'prime' | 'all'
+  const [autoLaunchReachSlotId, setAutoLaunchReachSlotId] = useState('');
+  const [autoLaunchLimit, setAutoLaunchLimit] = useState(25);
+  const [autoLaunching, setAutoLaunching] = useState(false);
+
+  // Load available Reach inventory slots on mount
+  useEffect(() => {
+    api.getAvailableReachSlots({ limit: 60 })
+      .then((res) => {
+        const slots = res?.slots || res || [];
+        setAvailableReachSlots(slots);
+        if (slots.length > 0) {
+          setAssignReachSlotId(slots[0].slotId);
+          setAutoLaunchReachSlotId(slots[0].slotId);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const selectedAssignReachSlot = availableReachSlots.find((s) => s.slotId === assignReachSlotId) || availableReachSlots[0] || null;
+  const selectedAutoLaunchReachSlot = availableReachSlots.find((s) => s.slotId === autoLaunchReachSlotId) || availableReachSlots[0] || null;
 
   // Load cities on mount
   useEffect(() => {
@@ -116,11 +143,16 @@ export default function LeadScraperPage() {
     if (selectedIds.length === 0) return;
     setAssigning(true);
     try {
-      const res = await api.assignScrapedToCrm({
+      const payload = {
         clinicIds: selectedIds,
         assignType,
         product: assignProduct,
-      });
+      };
+      if (assignType === 'autopilot' && assignProduct === 'reach') {
+        payload.reachSlotId = assignReachSlotId || selectedAssignReachSlot?.slotId;
+        payload.reachSlotDetails = selectedAssignReachSlot;
+      }
+      const res = await api.assignScrapedToCrm(payload);
       setMessage({
         type: 'success',
         text: `Successfully assigned ${res.assignedCount} clinic(s) to CRM as ${assignType === 'autopilot' ? `Auto Pilot [${assignProduct.toUpperCase()}]` : 'Manual Dialing Queue'}!`,
@@ -132,6 +164,33 @@ export default function LeadScraperPage() {
       setMessage({ type: 'error', text: err.message });
     } finally {
       setAssigning(false);
+    }
+  }
+
+  async function handleAutoLaunchSubmit(e) {
+    if (e) e.preventDefault();
+    setAutoLaunching(true);
+    setMessage(null);
+    try {
+      const payload = {
+        limit: Number(autoLaunchLimit) || 25,
+        product: autoLaunchProduct === 'all' ? undefined : autoLaunchProduct,
+        autoStart: true,
+      };
+      if (autoLaunchProduct === 'reach') {
+        payload.reachSlotId = autoLaunchReachSlotId || selectedAutoLaunchReachSlot?.slotId;
+        payload.reachSlotDetails = selectedAutoLaunchReachSlot;
+      }
+      const res = await api.autoEnqueueScrapedToAutopilot(payload);
+      setMessage({
+        type: 'success',
+        text: `⚡ Enqueued ${res.enqueuedCount || 0} scraped healthcare practices into 100% Full Autopilot! Voice AI calling and Reach pitch initiated.`,
+      });
+      setAutoLaunchModal(false);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setAutoLaunching(false);
     }
   }
 
@@ -169,18 +228,7 @@ export default function LeadScraperPage() {
           <button
             className="btn btn-secondary btn-sm"
             style={{ fontWeight: 700 }}
-            onClick={async () => {
-              try {
-                setMessage({ type: 'info', text: '⚡ Enqueueing scraped leads and initiating 100% full autonomous outreach...' });
-                const res = await api.autoEnqueueScrapedToAutopilot({ limit: 25, autoStart: true });
-                setMessage({
-                  type: 'success',
-                  text: `⚡ Enqueued ${res.enqueuedCount || 0} scraped healthcare practices into 100% Full Autopilot! Voice AI calling and sentiment analysis running.`,
-                });
-              } catch (err) {
-                setMessage({ type: 'error', text: err.message });
-              }
-            }}
+            onClick={() => setAutoLaunchModal(true)}
           >
             ⚡ Auto-Launch Autopilot (All Leads)
           </button>
@@ -479,27 +527,7 @@ export default function LeadScraperPage() {
                   <label className="text-xs font-bold text-secondary mb-2" style={{ display: 'block', textTransform: 'uppercase' }}>
                     Select Pitch Campaign Product
                   </label>
-                  <div className="grid-2" style={{ gap: 10 }}>
-                    <label
-                      style={{
-                        border: `2px solid ${assignProduct === 'prime' ? '#1456FD' : '#E2E8F0'}`,
-                        background: assignProduct === 'prime' ? '#EFF6FF' : '#FFFFFF',
-                        padding: 14,
-                        borderRadius: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="assignProduct"
-                        checked={assignProduct === 'prime'}
-                        onChange={() => setAssignProduct('prime')}
-                        style={{ marginRight: 8 }}
-                      />
-                      <strong>Practo Prime</strong>
-                      <p className="text-xs text-secondary mt-1">Assured patient booking guarantee + 24/7 instant online booking.</p>
-                    </label>
-
+                  <div className="grid-2 mb-3" style={{ gap: 10 }}>
                     <label
                       style={{
                         border: `2px solid ${assignProduct === 'reach' ? '#0D9488' : '#E2E8F0'}`,
@@ -516,10 +544,56 @@ export default function LeadScraperPage() {
                         onChange={() => setAssignProduct('reach')}
                         style={{ marginRight: 8 }}
                       />
-                      <strong>Practo Reach</strong>
+                      <strong style={{ color: '#0F766E' }}>🎯 Practo Reach</strong>
                       <p className="text-xs text-secondary mt-1">Top-ranked spotlight position (#1 or #6) for high-intent searchers.</p>
                     </label>
+
+                    <label
+                      style={{
+                        border: `2px solid ${assignProduct === 'prime' ? '#1456FD' : '#E2E8F0'}`,
+                        background: assignProduct === 'prime' ? '#EFF6FF' : '#FFFFFF',
+                        padding: 14,
+                        borderRadius: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="assignProduct"
+                        checked={assignProduct === 'prime'}
+                        onChange={() => setAssignProduct('prime')}
+                        style={{ marginRight: 8 }}
+                      />
+                      <strong style={{ color: '#1D4ED8' }}>🌟 Practo Prime</strong>
+                      <p className="text-xs text-secondary mt-1">Assured patient booking guarantee + 24/7 instant online booking.</p>
+                    </label>
                   </div>
+
+                  {assignProduct === 'reach' && (
+                    <div style={{ marginBottom: 14 }}>
+                      <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                        Select Reach Inventory Slot to Pitch
+                      </label>
+                      <select
+                        className="input"
+                        value={assignReachSlotId}
+                        onChange={(e) => setAssignReachSlotId(e.target.value)}
+                        style={{ fontSize: 12.5 }}
+                      >
+                        {availableReachSlots.map((slot) => (
+                          <option key={slot.slotId} value={slot.slotId}>
+                            [Pos #{slot.position}] {slot.zone}, {slot.city} — {slot.speciality} (₹{slot.price3M?.toLocaleString('en-IN')}/3M)
+                          </option>
+                        ))}
+                      </select>
+
+                      {selectedAssignReachSlot && (
+                        <div className="mt-2 text-xs" style={{ background: '#F0FDFA', border: '1px solid #99F6E4', padding: 8, borderRadius: 6, color: '#0F766E' }}>
+                          ⚡ <strong>Pos #{selectedAssignReachSlot.position} Spotlight</strong> in <strong>{selectedAssignReachSlot.zone}</strong> · 📈 {selectedAssignReachSlot.monthlySearchVolume?.toLocaleString()} searches/mo · 💰 <strong>₹{selectedAssignReachSlot.price3M?.toLocaleString('en-IN')}/3M</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -537,6 +611,182 @@ export default function LeadScraperPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Auto-Launch Autopilot with Product & Reach Slot Picker ─────── */}
+      {autoLaunchModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setAutoLaunchModal(false)}>
+          <div className="modal fade-in" style={{ maxWidth: 640 }}>
+            <div className="modal-header">
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 24 }}>⚡</span>
+                <div>
+                  <h3 className="section-title">Auto-Launch 100% Full Autopilot</h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Select target product and Reach inventory slot so Voice AI can pitch exact locality pricing and placement.
+                  </p>
+                </div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setAutoLaunchModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleAutoLaunchSubmit}>
+              <div style={{ marginBottom: 16 }}>
+                <label className="text-xs font-bold text-secondary mb-2" style={{ display: 'block', textTransform: 'uppercase' }}>
+                  1. Select Pitch Campaign Product
+                </label>
+                <div className="grid-3" style={{ gap: 10 }}>
+                  <label
+                    style={{
+                      border: `2px solid ${autoLaunchProduct === 'reach' ? '#0D9488' : '#E2E8F0'}`,
+                      background: autoLaunchProduct === 'reach' ? '#F0FDFA' : '#FFFFFF',
+                      padding: 12,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="launchProd"
+                      checked={autoLaunchProduct === 'reach'}
+                      onChange={() => setAutoLaunchProduct('reach')}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong style={{ color: '#0F766E' }}>🎯 Practo Reach</strong>
+                    <p className="text-xs text-secondary mt-1">Exclusive spotlight sponsored slot (#1 or #6).</p>
+                  </label>
+
+                  <label
+                    style={{
+                      border: `2px solid ${autoLaunchProduct === 'prime' ? '#1456FD' : '#E2E8F0'}`,
+                      background: autoLaunchProduct === 'prime' ? '#EFF6FF' : '#FFFFFF',
+                      padding: 12,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="launchProd"
+                      checked={autoLaunchProduct === 'prime'}
+                      onChange={() => setAutoLaunchProduct('prime')}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong style={{ color: '#1D4ED8' }}>🌟 Practo Prime</strong>
+                    <p className="text-xs text-secondary mt-1">24/7 instant online booking guarantee.</p>
+                  </label>
+
+                  <label
+                    style={{
+                      border: `2px solid ${autoLaunchProduct === 'all' ? '#7C3AED' : '#E2E8F0'}`,
+                      background: autoLaunchProduct === 'all' ? '#F5F3FF' : '#FFFFFF',
+                      padding: 12,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="launchProd"
+                      checked={autoLaunchProduct === 'all'}
+                      onChange={() => setAutoLaunchProduct('all')}
+                      style={{ marginRight: 6 }}
+                    />
+                    <strong style={{ color: '#6D28D9' }}>⚡ Smart Auto</strong>
+                    <p className="text-xs text-secondary mt-1">Auto-allocates product by clinic traffic.</p>
+                  </label>
+                </div>
+              </div>
+
+              {/* Reach Inventory Slot Selection */}
+              {autoLaunchProduct === 'reach' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                    2. Select Reach Inventory Slot to Pitch
+                  </label>
+                  <select
+                    className="input"
+                    value={autoLaunchReachSlotId}
+                    onChange={(e) => setAutoLaunchReachSlotId(e.target.value)}
+                    style={{ fontSize: 13, fontWeight: 600 }}
+                  >
+                    {availableReachSlots.map((slot) => (
+                      <option key={slot.slotId} value={slot.slotId}>
+                        [Position #{slot.position}] {slot.zone}, {slot.city} — {slot.speciality} | {slot.monthlySearchVolume?.toLocaleString()} searches/mo | ₹{slot.price3M?.toLocaleString('en-IN')}/3M
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedAutoLaunchReachSlot && (
+                    <div
+                      className="mt-3"
+                      style={{
+                        background: 'linear-gradient(135deg, #F0FDFA 0%, #EFF6FF 100%)',
+                        border: '1px solid #99F6E4',
+                        borderRadius: 10,
+                        padding: 12,
+                      }}
+                    >
+                      <div className="flex justify-between items-center pb-2 mb-2" style={{ borderBottom: '1px solid #CCFBF1' }}>
+                        <div>
+                          <span className="badge badge-teal" style={{ fontWeight: 800 }}>
+                            ⚡ Pos #{selectedAutoLaunchReachSlot.position} Spotlight
+                          </span>
+                          <span className="ml-2 font-bold" style={{ fontSize: 13, color: '#0F172A' }}>
+                            {selectedAutoLaunchReachSlot.zone}, {selectedAutoLaunchReachSlot.city}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: 14, fontWeight: 900, color: '#0F766E' }}>
+                            ₹{selectedAutoLaunchReachSlot.price3M?.toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-xs text-muted"> / 3M</span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs" style={{ color: '#334155', fontStyle: 'italic', background: '#FFFFFF', padding: 8, borderRadius: 6, border: '1px solid #E2E8F0' }}>
+                        🎙️ <strong>AI Script Preview:</strong> "Dr. [Name], Practo has opened an exclusive Position #{selectedAutoLaunchReachSlot.position} sponsorship in {selectedAutoLaunchReachSlot.zone} with {selectedAutoLaunchReachSlot.monthlySearchVolume?.toLocaleString()} monthly searches at ₹{selectedAutoLaunchReachSlot.price3M?.toLocaleString('en-IN')} for 3 months with 100% exclusivity."
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ marginBottom: 16 }}>
+                <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                  Batch Lead Count to Enqueue
+                </label>
+                <select
+                  className="input"
+                  value={autoLaunchLimit}
+                  onChange={(e) => setAutoLaunchLimit(Number(e.target.value))}
+                >
+                  <option value={10}>10 Scraped Clinics</option>
+                  <option value={25}>25 Scraped Clinics (Recommended)</option>
+                  <option value={50}>50 Scraped Clinics</option>
+                </select>
+              </div>
+
+              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAutoLaunchModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={autoLaunching}
+                  style={{
+                    background: 'linear-gradient(135deg, #1456FD 0%, #0D9488 100%)',
+                    fontWeight: 800,
+                  }}
+                >
+                  {autoLaunching ? <span className="spinner" style={{ width: 14, height: 14 }} /> : '⚡'}
+                  <span>Launch Autopilot Outreach ({autoLaunchLimit} Leads)</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

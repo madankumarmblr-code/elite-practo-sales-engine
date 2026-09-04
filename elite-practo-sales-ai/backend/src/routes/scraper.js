@@ -516,7 +516,7 @@ export function registerScraperRoutes(app) {
    * Deduplicates by phone or clinic name + locality so no duplicate leads are ever created
    */
   app.post('/api/scraper/assign-crm', authRequired, requirePermission('leads:write'), async (req, res) => {
-    const { clinicIds, assignType = 'manual', product = 'prime' } = req.body || {};
+    const { clinicIds, assignType = 'manual', product = 'prime', reachSlotId = '', reachSlotDetails = null } = req.body || {};
 
     if (!Array.isArray(clinicIds) || clinicIds.length === 0) {
       return res.status(400).json({ error: 'clinicIds must be a non-empty array' });
@@ -660,6 +660,8 @@ export function registerScraperRoutes(app) {
             ownerName: clinic.owner_name,
             marketingName: clinic.marketing_name,
             product,
+            reachSlotId,
+            reachSlotDetails,
             autoStart: true,
           });
         } catch (autoErr) {

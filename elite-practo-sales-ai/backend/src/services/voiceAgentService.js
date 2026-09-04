@@ -37,6 +37,7 @@ export class VoiceAgentService {
     telephonyProviderName = null,
     leadId = null,
     customNotes = '',
+    reachSlotDetails = null,
   }) {
     const callId = `call_${nanoid(12)}`;
     const ts = now();
@@ -46,7 +47,7 @@ export class VoiceAgentService {
       category: 'voice_agent',
       message: `Executing Native Voice Agent outbound call to ${toPhone}`,
       detail: `Doctor: ${doctorName}, Clinic: ${clinicName}, Product: ${product.toUpperCase()}`,
-      meta: { callId, leadId, agentType },
+      meta: { callId, leadId, agentType, reachSlotDetails },
     });
 
     // 1. Dispatch Telephony Call (Twilio / Exotel / Plivo / WebRTC / Simulator)
@@ -66,6 +67,7 @@ export class VoiceAgentService {
       doctorName,
       clinicName,
       product,
+      reachSlotDetails,
     });
 
     // 3. Run Deep Sentiment Analysis on the Conversation

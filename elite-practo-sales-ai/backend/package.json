@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "echo 'backend build placeholder'",
+    "dev": "node --watch --env-file=../.env src/index.js",
+    "start": "node src/index.js",
+    "seed": "node --env-file=../.env src/db/seed.js"
     "dev": "node --watch --env-file=../.env src/index.js",
     "start": "node src/index.js",
     "seed": "node --env-file=../.env src/db/seed.js"

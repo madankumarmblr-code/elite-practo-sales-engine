@@ -1,9 +1,16 @@
 import path from 'path';
 import fs from 'fs';
 import { getDataDir } from '../config.js';
+import { wasmBinary } from './sqlWasmBinary.js';
 
 const dataDir = getDataDir();
 const dbPath = path.join(dataDir, 'elite-sales.db');
+
+function normalizeArgs(params) {
+  if (!params || params.length === 0) return [];
+  const raw = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
+  return raw.map((v) => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v));
+}
 
 class SqliteShim {
   constructor(rawDb, savePath) {
@@ -16,8 +23,12 @@ class SqliteShim {
   }
 
   exec(sql) {
-    this.rawDb.run(sql);
-    this._persist();
+    try {
+      this.rawDb.run(sql);
+      this._persist();
+    } catch (err) {
+      console.warn('[DB Exec Warning]:', err.message);
+    }
   }
 
   prepare(sql) {
@@ -25,28 +36,58 @@ class SqliteShim {
     const self = this;
     return {
       get(...params) {
-        const args = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
-        const stmt = raw.prepare(sql);
-        stmt.bind(args);
-        let row = undefined;
-        if (stmt.step()) row = stmt.getAsObject();
-        stmt.free();
-        return row;
+        const args = normalizeArgs(params);
+        let stmt;
+        try {
+          stmt = raw.prepare(sql);
+          if (args.length > 0) stmt.bind(args);
+          let row = undefined;
+          if (stmt.step()) row = stmt.getAsObject();
+          return row;
+        } catch (err) {
+          console.error('[DB prepare.get error]', err.message, 'SQL:', sql);
+          throw err;
+        } finally {
+          if (stmt) {
+            try { stmt.free(); } catch {}
+          }
+        }
       },
       all(...params) {
-        const args = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
-        const stmt = raw.prepare(sql);
-        stmt.bind(args);
-        const rows = [];
-        while (stmt.step()) rows.push(stmt.getAsObject());
-        stmt.free();
-        return rows;
+        const args = normalizeArgs(params);
+        let stmt;
+        try {
+          stmt = raw.prepare(sql);
+          if (args.length > 0) stmt.bind(args);
+          const rows = [];
+          while (stmt.step()) rows.push(stmt.getAsObject());
+          return rows;
+        } catch (err) {
+          console.error('[DB prepare.all error]', err.message, 'SQL:', sql);
+          throw err;
+        } finally {
+          if (stmt) {
+            try { stmt.free(); } catch {}
+          }
+        }
       },
       run(...params) {
-        const args = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
-        raw.run(sql, args);
-        self._persist();
-        return { changes: raw.getRowsModified ? raw.getRowsModified() : 1, lastInsertRowid: 1 };
+        const args = normalizeArgs(params);
+        try {
+          if (args.length > 0) {
+            raw.run(sql, args);
+          } else {
+            raw.run(sql);
+          }
+          self._persist();
+          return {
+            changes: typeof raw.getRowsModified === 'function' ? raw.getRowsModified() : 1,
+            lastInsertRowid: 1,
+          };
+        } catch (err) {
+          console.error('[DB prepare.run error]', err.message, 'SQL:', sql);
+          throw err;
+        }
       }
     };
   }
@@ -59,7 +100,7 @@ class SqliteShim {
         this.exec('COMMIT;');
         return res;
       } catch (err) {
-        this.exec('ROLLBACK;');
+        try { this.exec('ROLLBACK;'); } catch {}
         throw err;
       }
     };
@@ -75,22 +116,24 @@ class SqliteShim {
   }
 }
 
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+
 let db;
-try {
-  const betterSqlite = await import('better-sqlite3');
-  const Database = betterSqlite.default || betterSqlite;
-  db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-} catch (err) {
-  console.warn('[DB Engine] Falling back to WebAssembly SQLite engine (serverless safe):', err.message);
-  const { default: initSqlJs } = await import('sql.js');
-  const wasmFile = path.join(path.dirname(import.meta.url.replace('file://', '')), 'sql-wasm.wasm');
-  let wasmBinary = undefined;
-  if (fs.existsSync(wasmFile)) {
-    try { wasmBinary = fs.readFileSync(wasmFile); } catch {}
+if (!isServerless) {
+  try {
+    const betterSqlite = await import('better-sqlite3');
+    const Database = betterSqlite.default || betterSqlite;
+    db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+  } catch (err) {
+    console.warn('[DB Engine] Local native better-sqlite3 unavailable, using WebAssembly SQLite:', err.message);
   }
-  const SQL = await initSqlJs(wasmBinary ? { wasmBinary } : {});
+}
+
+if (!db) {
+  const { default: initSqlJs } = await import('sql.js');
+  const SQL = await initSqlJs({ wasmBinary });
   let rawDb;
   if (fs.existsSync(dbPath)) {
     try {

@@ -30,6 +30,11 @@ async function init() {
 }
 
 export default async function handler(req, res) {
+  // Ensure req.url starts with /api for Express route matching
+  if (req.url && !req.url.startsWith('/api')) {
+    req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
+  }
+
   // Handle preflight
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -58,7 +63,7 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('[Vercel Handler] Fatal:', err);
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Service initialization error', message: err.message });
+      res.status(500).json({ error: err.message || 'Service initialization error' });
     }
   }
 }

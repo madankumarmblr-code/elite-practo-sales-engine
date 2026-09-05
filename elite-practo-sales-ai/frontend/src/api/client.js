@@ -125,6 +125,10 @@ export const api = {
   // ── Scraper & Clinic Discovery ───────────────────────────────────────────
   searchClinics: (params) => get('/scraper/search', params),
   assignScrapedToCrm: (data) => post('/scraper/assign-crm', data),
+  getScraperCities: () => get('/scraper/hierarchy/cities'),
+  getScraperZones: (city) => get('/scraper/hierarchy/zones', { city }),
+  getScraperLocalities: (city, zone) => get('/scraper/hierarchy/localities', { city, zone }),
+  syncScraperHierarchy: (sheetUrl) => post('/scraper/hierarchy/sync', { sheetUrl }),
 
   // ── Reach Inventory & Master Catalog ──────────────────────────────────────
   getInventoryCities: () => get('/inventory/cities'),

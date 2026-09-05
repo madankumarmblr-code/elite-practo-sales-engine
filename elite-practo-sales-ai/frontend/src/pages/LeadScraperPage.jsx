@@ -6,10 +6,12 @@ import { EnterpriseIcon } from '../components/EnterpriseIcon.jsx';
 export default function LeadScraperPage() {
   const [cities, setCities] = useState([]);
   const [zones, setZones] = useState([]);
+  const [constituentLocalities, setConstituentLocalities] = useState([]);
   const [specialities, setSpecialities] = useState([]);
 
   const [selectedCity, setSelectedCity] = useState('Bangalore');
   const [selectedZone, setSelectedZone] = useState('Indiranagar');
+  const [selectedSubLocality, setSelectedSubLocality] = useState('');
   const [selectedSpec, setSelectedSpec] = useState('General Physician');
 
   const [clinics, setClinics] = useState([]);
@@ -52,30 +54,49 @@ export default function LeadScraperPage() {
   const selectedAssignReachSlot = availableReachSlots.find((s) => s.slotId === assignReachSlotId) || availableReachSlots[0] || null;
   const selectedAutoLaunchReachSlot = availableReachSlots.find((s) => s.slotId === autoLaunchReachSlotId) || availableReachSlots[0] || null;
 
-  // Load cities on mount
+  // Load cities on mount from Google Sheet hierarchy
   useEffect(() => {
-    api.getInventoryCities()
+    (api.getScraperCities ? api.getScraperCities() : api.getInventoryCities())
       .then((c) => {
-        setCities(c || []);
-        if (c && c.length && !c.includes('Bangalore')) setSelectedCity(c[0]);
+        const cityList = c || [];
+        setCities(cityList);
+        if (cityList.length && !cityList.includes(selectedCity)) {
+          setSelectedCity(cityList.includes('Bangalore') ? 'Bangalore' : cityList[0]);
+        }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {
+        api.getInventoryCities().then((c) => setCities(c || [])).catch(() => {});
+      });
+  }, []); // eslint-disable-line
 
-  // Cascading: when City changes, fetch Zones
+  // Cascading: when City changes, fetch Zones from Google Sheet
   useEffect(() => {
     if (!selectedCity) { setZones([]); return; }
-    api.getInventoryZones(selectedCity)
+    (api.getScraperZones ? api.getScraperZones(selectedCity) : api.getInventoryZones(selectedCity))
       .then((z) => {
-        setZones(z || []);
-        if (z && z.length > 0) {
-          if (!z.includes(selectedZone)) setSelectedZone(z[0]);
+        const zoneList = z || [];
+        setZones(zoneList);
+        if (zoneList.length > 0) {
+          if (!zoneList.includes(selectedZone)) setSelectedZone(zoneList.includes('Indiranagar') ? 'Indiranagar' : zoneList[0]);
         } else {
           setSelectedZone('');
         }
       })
       .catch(() => setZones([]));
   }, [selectedCity]); // eslint-disable-line
+
+  // Cascading: when Zone changes, fetch constituent Localities from Google Sheet
+  useEffect(() => {
+    if (!selectedCity || !selectedZone) { setConstituentLocalities([]); return; }
+    if (api.getScraperLocalities) {
+      api.getScraperLocalities(selectedCity, selectedZone)
+        .then((locs) => {
+          setConstituentLocalities(locs || []);
+          setSelectedSubLocality('');
+        })
+        .catch(() => setConstituentLocalities([]));
+    }
+  }, [selectedCity, selectedZone]); // eslint-disable-line
 
   // Cascading: when Zone changes, fetch Specialities
   useEffect(() => {
@@ -102,11 +123,16 @@ export default function LeadScraperPage() {
     try {
       const data = await api.searchClinics({
         city: selectedCity,
-        locality: selectedZone,
+        zone: selectedZone,
+        locality: selectedSubLocality || selectedZone,
+        searchAllZone: !selectedSubLocality ? 'true' : 'false',
         speciality: selectedSpec,
         refresh: forceRefresh ? 'true' : undefined,
       });
       setClinics(data.clinics || []);
+      if (data.constituentLocalities && data.constituentLocalities.length > 0) {
+        setConstituentLocalities(data.constituentLocalities);
+      }
       setStats({
         total: data.totalFound ?? data.total ?? (data.clinics || []).length,
         availableOnPracto: data.onPractoCount ?? data.availableOnPracto ?? (data.clinics || []).filter((c) => c.on_practo === 1).length,
@@ -115,7 +141,7 @@ export default function LeadScraperPage() {
       if (forceRefresh) {
         setMessage({
           type: 'success',
-          text: `⚡ Multi-source live discovery complete! Scraped Practo.com, Google Search & Clinic Websites for ${selectedZone || selectedCity}.`,
+          text: `⚡ Multi-source live discovery complete! Scraped Practo.com, Google Maps & Clinic Websites across ${selectedSubLocality || `all ${constituentLocalities.length || ''} areas in ${selectedZone}`}.`,
         });
       }
     } catch (err) {
@@ -260,7 +286,7 @@ export default function LeadScraperPage() {
       {/* Cascading Filter Controls */}
       <div className="card mb-6" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
         <form onSubmit={handleSearch}>
-          <div className="grid-3" style={{ gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
             <div>
               <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
                 1. Select City ({cities.length})
@@ -272,7 +298,7 @@ export default function LeadScraperPage() {
 
             <div>
               <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                2. Locality / Zone ({zones.length})
+                2. Select Zone ({zones.length})
               </label>
               <select className="input" value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} disabled={zones.length === 0}>
                 {zones.map((z) => <option key={z} value={z}>{z}</option>)}
@@ -281,7 +307,28 @@ export default function LeadScraperPage() {
 
             <div>
               <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
-                3. Speciality / Keyword ({specialities.length})
+                3. Sub-Locality / Area ({constituentLocalities.length})
+              </label>
+              <select
+                className="input"
+                value={selectedSubLocality}
+                onChange={(e) => setSelectedSubLocality(e.target.value)}
+                disabled={constituentLocalities.length === 0}
+              >
+                <option value="">
+                  {constituentLocalities.length > 0
+                    ? `⚡ All ${constituentLocalities.length} Areas in ${selectedZone}`
+                    : 'All Areas in Zone'}
+                </option>
+                {constituentLocalities.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-secondary mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>
+                4. Speciality / Keyword ({specialities.length})
               </label>
               <select className="input" value={selectedSpec} onChange={(e) => setSelectedSpec(e.target.value)} disabled={specialities.length === 0}>
                 {specialities.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -289,9 +336,68 @@ export default function LeadScraperPage() {
             </div>
           </div>
 
+          {/* Google Sheet Constituent Localities Territory Banner */}
+          {selectedZone && constituentLocalities.length > 0 && (
+            <div style={{ marginTop: 14, padding: '10px 14px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #E2E8F0', fontSize: 12 }}>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+                <span style={{ fontWeight: 700, color: '#1E2238' }}>
+                  📍 Google Sheet Territory: <strong>{selectedCity}</strong> → Zone <strong>{selectedZone}</strong>
+                </span>
+                <span className="badge" style={{ background: '#EFF6FF', color: '#1D4ED8', fontWeight: 600, fontSize: 11 }}>
+                  {constituentLocalities.length} Constituent Localities
+                </span>
+              </div>
+              <div className="text-muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}>
+                <span style={{ fontWeight: 600, color: '#475569', marginRight: 4 }}>Constituent Areas:</span>
+                <span
+                  onClick={() => setSelectedSubLocality('')}
+                  style={{
+                    display: 'inline-block',
+                    margin: '2px 4px',
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    background: !selectedSubLocality ? '#1456FD' : '#E2E8F0',
+                    color: !selectedSubLocality ? '#FFFFFF' : '#334155',
+                    fontWeight: !selectedSubLocality ? 700 : 500,
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Search across all areas in this zone"
+                >
+                  All Areas ({constituentLocalities.length})
+                </span>
+                {constituentLocalities.map((loc) => (
+                  <span
+                    key={loc}
+                    onClick={() => setSelectedSubLocality(selectedSubLocality === loc ? '' : loc)}
+                    style={{
+                      display: 'inline-block',
+                      margin: '2px 3px',
+                      padding: '2px 7px',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      background: selectedSubLocality === loc ? '#1456FD' : '#E2E8F0',
+                      color: selectedSubLocality === loc ? '#FFFFFF' : '#334155',
+                      fontWeight: selectedSubLocality === loc ? 700 : 500,
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={`Filter strictly for ${loc}`}
+                  >
+                    {loc}
+                  </span>
+                ))}
+              </div>
+              <div className="text-muted mt-1.5" style={{ fontSize: 11, fontStyle: 'italic', color: '#64748B' }}>
+                {!selectedSubLocality
+                  ? `⚡ Multi-Locality Zone Mode: Scraping will search across all ${constituentLocalities.length} constituent areas of ${selectedZone} (e.g., Indiranagar, Domlur, New Thippasandra, Old Airport Road, etc.) for clinics and hospitals.`
+                  : `🎯 Single Locality Mode: Filtered specifically for "${selectedSubLocality}".`}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between items-center mt-4 pt-3 flex-wrap gap-2" style={{ borderTop: '1px solid #F1F5F9' }}>
             <div className="text-xs text-muted">
-              Target Territory: <strong>{selectedCity}</strong> → <strong>{selectedZone || 'All'}</strong> → <strong>{selectedSpec || 'All'}</strong>
+              Target Territory: <strong>{selectedCity}</strong> → <strong>{selectedZone || 'All'}</strong> {selectedSubLocality ? `(${selectedSubLocality})` : `(All ${constituentLocalities.length || 0} Areas)`} → <strong>{selectedSpec || 'All'}</strong>
             </div>
             <div className="flex items-center gap-2">
               <button

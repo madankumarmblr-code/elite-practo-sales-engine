@@ -201,7 +201,10 @@ class ReachInventoryService {
     this.ensureLoaded();
     if (!city) return [];
     const zones = this.zonesByCity.get(String(city).trim());
-    return zones ? Array.from(zones).sort((a, b) => a.localeCompare(b)) : [];
+    if (!zones) return [];
+    return Array.from(zones)
+      .filter((z) => !z.toLowerCase().endsWith('-cityinventory'))
+      .sort((a, b) => a.localeCompare(b));
   }
 
   getSpecialities(city, zone) {

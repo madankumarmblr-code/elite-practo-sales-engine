@@ -152,6 +152,7 @@ export default function IntegrationsPage() {
   }
 
   const PROVIDER_LABELS = {
+    google_gemini: { icon: 'cpu', color: '#1a73e8' },
     nvidia_nemotron: { icon: 'zap', color: '#76b900' },
     sarvam_voice: { icon: 'phone-call', color: '#7c3aed' },
     meta_whatsapp: { icon: 'message', color: '#25d366' },
@@ -347,6 +348,35 @@ export default function IntegrationsPage() {
                   <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>WABA ID</label><input className="input" value={editForm.wabaId || ''} onChange={(e) => setEditForm((f) => ({ ...f, wabaId: e.target.value }))} /></div>
                   <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Access Token</label><input className="input" type="password" value={editForm.secret_accessToken || ''} onChange={(e) => setEditForm((f) => ({ ...f, secret_accessToken: e.target.value }))} /></div>
                   <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Verify Token</label><input className="input" value={editForm.verifyToken || ''} onChange={(e) => setEditForm((f) => ({ ...f, verifyToken: e.target.value }))} /></div>
+                </div>
+              )}
+
+              {selected.provider === 'google_gemini' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+                      Google Gemini API Key
+                    </label>
+                    <input
+                      className="input"
+                      type="password"
+                      value={editForm.secret_apiKey || ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, secret_apiKey: e.target.value }))}
+                      placeholder="Enter Gemini API Key..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+                      Gemini Model ID
+                    </label>
+                    <select
+                      className="input"
+                      value={editForm.model || 'gemini-3.6-flash'}
+                      onChange={(e) => setEditForm((f) => ({ ...f, model: e.target.value }))}
+                    >
+                      <option value="gemini-3.6-flash">gemini-3.6-flash (Gemini 3.6 Flash - Recommended for Lead Scraping & Sales Pitch)</option>
+                    </select>
+                  </div>
                 </div>
               )}
 

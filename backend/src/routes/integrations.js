@@ -105,6 +105,11 @@ export function registerIntegrationsRoutes(app) {
   app.post('/api/integrations/:provider/test', authRequired, requirePermission('api_integrations:read'), async (req, res) => {
     const { provider } = req.params;
     try {
+      if (provider === 'google_gemini') {
+        const { testGeminiConnection } = await import('../services/aiAssist.js');
+        const result = await testGeminiConnection();
+        return res.json(result);
+      }
       if (provider === 'nvidia_nemotron' || provider === 'meta_llama') {
         const { testAiConnection } = await import('../services/aiAssist.js');
         const result = await testAiConnection();

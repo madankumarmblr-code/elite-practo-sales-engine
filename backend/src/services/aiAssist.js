@@ -9,6 +9,101 @@ export const DEFAULT_NVIDIA_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b';
 
 const META_LLAMA_BASE = 'https://api.llama.com/v1';
 
+// ── Google Gemini AI (Multimodal Sales Copy & Intelligence) ─────────────────
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
+export const DEFAULT_GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+
+export function getGeminiCredentials() {
+  let apiKey = process.env.GEMINI_API_KEY || '';
+  let model = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+
+  try {
+    const row = db.prepare("SELECT secrets, config, enabled FROM api_integrations WHERE provider = 'google_gemini'").get();
+    if (row) {
+      const secrets = JSON.parse(row.secrets || '{}');
+      const config = JSON.parse(row.config || '{}');
+      if (secrets.apiKey && secrets.apiKey !== '••••••••') apiKey = secrets.apiKey;
+      if (config.model) model = config.model;
+    }
+  } catch { /* ignore */ }
+
+  if (!apiKey) {
+    apiKey = DEFAULT_GEMINI_API_KEY;
+  }
+
+  return { apiKey, model };
+}
+
+export async function geminiGenerate({ prompt, contents, model, temperature = 0.3, maxTokens = 1024, responseMimeType }) {
+  const creds = getGeminiCredentials();
+  const activeModel = model || creds.model || DEFAULT_GEMINI_MODEL;
+  const apiKey = creds.apiKey || DEFAULT_GEMINI_API_KEY;
+
+  if (!apiKey) throw new Error('Google Gemini API Key is not configured');
+
+  const generationConfig = { temperature, maxOutputTokens: maxTokens };
+  if (responseMimeType) {
+    generationConfig.responseMimeType = responseMimeType;
+  }
+
+  const payload = contents
+    ? { contents, generationConfig }
+    : { contents: [{ parts: [{ text: prompt }] }], generationConfig };
+
+  const url = `${GEMINI_API_BASE}/models/${activeModel}:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(25000),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error?.message || `Google Gemini API error (${res.status})`);
+  }
+
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+export async function testGeminiConnection() {
+  const startTime = Date.now();
+  const creds = getGeminiCredentials();
+
+  try {
+    const reply = await geminiGenerate({
+      prompt: 'System verification: confirm you are Google Gemini AI for Practo sales automation in one short sentence.',
+      model: creds.model,
+    });
+    const latencyMs = Date.now() - startTime;
+
+    try {
+      db.prepare(`
+        UPDATE api_integrations
+        SET status = 'connected', last_tested_at = datetime('now'), last_test_ok = 1
+        WHERE provider = 'google_gemini'
+      `).run();
+    } catch {}
+
+    return {
+      success: true,
+      provider: 'google_gemini',
+      model: creds.model,
+      latencyMs,
+      message: `Google Gemini AI (${creds.model}) connected (${latencyMs}ms): "${reply.trim()}"`,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      provider: 'google_gemini',
+      model: creds.model,
+      latencyMs: Date.now() - startTime,
+      message: `Google Gemini AI connection failed: ${err.message}`,
+    };
+  }
+}
+
 /**
  * Retrieve active NVIDIA Nemotron credentials from Database or Environment
  */
@@ -166,6 +261,32 @@ export async function generateSalesPitch({ lead, channel = 'whatsapp', product =
       productValueProp = 'Practo Prime (Guaranteed appointments, zero upfront fee, priority digital booking)';
     }
 
+    // ── Priority 1: Google Gemini 3.6 Flash ────────────────────────────────
+    try {
+      const geminiPrompt = `You are an elite healthcare sales copywriter for Practo.
+Product: ${productValueProp}
+Generate a concise, highly persuasive, ROI-focused ${channel} pitch for an Indian doctor.
+Doctor: Dr. ${docName}
+Clinic: ${lead.company || lead.clinicName || 'Clinic'}
+Specialty: ${lead.title || lead.speciality || 'General Medicine'}
+Location: ${lead.locality ? `${lead.locality}, ${lead.city || ''}` : lead.city || 'India'}
+Channel: ${channel}
+
+Key instructions:
+- Keep the message under 100 words.
+- Highlight patient search demand in their locality.
+- Offer an urgent, friendly, low-friction next step (e.g. quick 2-minute chat today).
+- Sound professional, courteous, and high-conversion. Do not use generic filler.`;
+
+      const geminiPitch = await geminiGenerate({ prompt: geminiPrompt, temperature: 0.3 });
+      if (geminiPitch && geminiPitch.trim().length > 20) {
+        return geminiPitch.trim();
+      }
+    } catch {
+      // fallback to Nemotron / Llama
+    }
+
+    // ── Priority 2: NVIDIA Nemotron 3 Ultra ──────────────────────────────────
     const messages = [
       {
         role: 'system',

@@ -41,57 +41,62 @@ export class SentimentAnalysisService {
     const doctorTurns = turns.filter((t) => !t.speaker.toLowerCase().includes('agent'));
     const allDoctorText = doctorTurns.map((t) => t.text.toLowerCase()).join(' ');
 
+    const hasTerm = (text, term) => {
+      if (term.includes(' ')) return text.includes(term);
+      return new RegExp(`\\b${term}\\b`, 'i').test(text);
+    };
+
     // Sentiment Scoring
     let positiveScore = 0;
     let hesitantScore = 0;
     let negativeScore = 0;
 
-    const positiveKeywords = ['yes', 'reasonable', 'send', 'sound', 'good', 'sure', 'interested', 'help', 'great', 'ok', 'okay', 'schedule'];
-    const hesitantKeywords = ['steep', 'expensive', 'walk-in', 'already', 'why', 'cost', 'think', 'busy', 'later', 'budget'];
+    const positiveKeywords = ['yes', 'reasonable', 'send', 'sound', 'good', 'sure', 'interested', 'help', 'great', 'ok', 'okay', 'schedule', 'sync', 'perfect', 'agree'];
+    const hesitantKeywords = ['steep', 'expensive', 'walk-in', 'already', 'why', 'cost', 'think', 'busy', 'later', 'budget', 'commission'];
     const negativeKeywords = ['not interested', 'stop calling', 'no', 'spam', 'dont call', 'never', 'hang up'];
 
-    positiveKeywords.forEach((k) => { if (allDoctorText.includes(k)) positiveScore += 18; });
-    hesitantKeywords.forEach((k) => { if (allDoctorText.includes(k)) hesitantScore += 16; });
-    negativeKeywords.forEach((k) => { if (allDoctorText.includes(k)) negativeScore += 35; });
+    positiveKeywords.forEach((k) => { if (hasTerm(allDoctorText, k)) positiveScore += 18; });
+    hesitantKeywords.forEach((k) => { if (hasTerm(allDoctorText, k)) hesitantScore += 16; });
+    negativeKeywords.forEach((k) => { if (hasTerm(allDoctorText, k)) negativeScore += 35; });
 
     let overallSentiment = 'positive';
     let sentimentScore = 78; // default healthy conversion score
 
-    if (negativeScore > 40) {
+    if (negativeScore > 40 && positiveScore === 0) {
       overallSentiment = 'negative';
       sentimentScore = Math.max(15, 35 - negativeScore);
-    } else if (hesitantScore > positiveScore) {
+    } else if (hesitantScore > positiveScore && negativeScore === 0) {
       overallSentiment = 'hesitant';
-      sentimentScore = Math.min(58, 40 + positiveScore - hesitantScore);
-    } else if (positiveScore > hesitantScore) {
+      sentimentScore = Math.min(68, 50 + positiveScore - Math.floor(hesitantScore / 2));
+    } else if (positiveScore >= hesitantScore) {
       overallSentiment = 'positive';
-      sentimentScore = Math.min(95, 65 + positiveScore);
+      sentimentScore = Math.min(96, 75 + Math.floor(positiveScore / 2));
     } else {
       overallSentiment = 'neutral';
-      sentimentScore = 52;
+      sentimentScore = 60;
     }
 
     // Objection Detection
     const detectedObjections = [];
-    if (allDoctorText.includes('expensive') || allDoctorText.includes('cost') || allDoctorText.includes('steep') || allDoctorText.includes('pricing') || allDoctorText.includes('package')) {
+    if (allDoctorText.includes('expensive') || allDoctorText.includes('cost') || allDoctorText.includes('steep') || allDoctorText.includes('pricing') || allDoctorText.includes('package') || allDoctorText.includes('commission')) {
       detectedObjections.push({
         type: 'Pricing & Budget',
-        snippet: 'Doctor inquired about slot package flexibility and prior steep quotes.',
+        snippet: 'Doctor inquired about slot package flexibility and commission fees.',
         resolved: true,
-        aiResolution: 'Offered modular quarterly commitment with 15% festival credit.',
+        aiResolution: 'Clarified zero commission on existing patients and flat quarterly subscription with guaranteed ROI.',
       });
     }
 
-    if (allDoctorText.includes('walk-in') || allDoctorText.includes('already have') || allDoctorText.includes('receptionist')) {
+    if (allDoctorText.includes('walk-in') || allDoctorText.includes('already have') || allDoctorText.includes('receptionist') || allDoctorText.includes('google')) {
       detectedObjections.push({
         type: 'Perceived Need / Redundancy',
-        snippet: 'Doctor mentioned existing receptionist/walk-ins.',
+        snippet: 'Doctor mentioned existing receptionist, Google profile, or walk-ins.',
         resolved: true,
-        aiResolution: 'Highlighted after-8-PM search volume and cutting no-shows from 28% to 6%.',
+        aiResolution: 'Highlighted after-8-PM search volume and cutting patient no-shows from 28% down to 6%.',
       });
     }
 
-    if (allDoctorText.includes('sync') || allDoctorText.includes('calendar') || allDoctorText.includes('ray')) {
+    if (allDoctorText.includes('sync') || allDoctorText.includes('calendar') || allDoctorText.includes('ray') || allDoctorText.includes('software')) {
       detectedObjections.push({
         type: 'Technical & Calendar Integration',
         snippet: 'Doctor questioned sync with existing clinic management software.',
@@ -102,11 +107,13 @@ export class SentimentAnalysisService {
 
     // Doctor Intent
     let doctorIntent = 'request_proposal';
-    if (allDoctorText.includes('send') && allDoctorText.includes('whatsapp')) {
+    if (allDoctorText.includes('send') && (allDoctorText.includes('whatsapp') || allDoctorText.includes('paperwork') || allDoctorText.includes('details') || allDoctorText.includes('pricing') || allDoctorText.includes('proposal'))) {
       doctorIntent = 'send_whatsapp_proposal';
-    } else if (allDoctorText.includes('speak') || allDoctorText.includes('transfer')) {
+    } else if (allDoctorText.includes('demo') || allDoctorText.includes('onboard') || allDoctorText.includes('activate') || allDoctorText.includes('setup')) {
+      doctorIntent = 'schedule_onboarding_demo';
+    } else if (allDoctorText.includes('speak') || allDoctorText.includes('transfer') || allDoctorText.includes('human')) {
       doctorIntent = 'transfer_to_human';
-    } else if (negativeScore > 30) {
+    } else if (negativeScore > 40 && positiveScore === 0) {
       doctorIntent = 'not_interested';
     }
 

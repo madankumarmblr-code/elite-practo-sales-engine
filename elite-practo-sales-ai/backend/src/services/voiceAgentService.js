@@ -91,9 +91,10 @@ export class VoiceAgentService {
             objections_detected = '[]',
             talk_listen_ratio = '50:50',
             interruption_count = 0,
-            doctor_intent = 'request_proposal'
+            doctor_intent = 'request_proposal',
+            meta = ?
           WHERE id = ? OR job_id = ?
-        `).run(agentType, JSON.stringify(turns), callId, sarvamResult.attempt_id);
+        `).run(agentType, JSON.stringify(turns), JSON.stringify({ doctorName, clinicName, product, attempt_id: sarvamResult.attempt_id }), callId, sarvamResult.attempt_id);
       } catch (err) {
         console.warn('[VoiceAgentService] DB update error for Sarvam call_log:', err.message);
       }
@@ -292,6 +293,9 @@ export class VoiceAgentService {
 
     return {
       ...row,
+      doctor_name: row.doctor_name || meta.doctorName || meta.doctor_name || 'Doctor',
+      clinic_name: row.clinic_name || meta.clinicName || meta.clinic_name || 'Clinic',
+      product: row.product || meta.product || 'prime',
       meta,
       transcriptionTurns,
       objections,

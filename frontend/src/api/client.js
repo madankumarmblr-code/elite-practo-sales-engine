@@ -85,6 +85,7 @@ export const api = {
   whatsappSendMessage: (params) => post('/whatsapp/send-message', params),
   whatsappSendTemplate: (params) => post('/whatsapp/send-template', params),
   whatsappMessages: (params) => get('/whatsapp/messages', params),
+  whatsappSimulateReply: (params) => post('/whatsapp/simulate-reply', params),
 
   // ── Integrations ───────────────────────────────────────────────────────────
   getIntegrations: () => get('/integrations'),

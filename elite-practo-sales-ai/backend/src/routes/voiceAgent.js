@@ -72,7 +72,7 @@ export function registerVoiceAgentRoutes(app) {
         reachSlotDetails,
       });
 
-      res.json({ ok: true, call: result });
+      res.json({ ok: true, call: result, ...result });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
     }

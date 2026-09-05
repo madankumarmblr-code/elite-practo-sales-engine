@@ -90,6 +90,8 @@ export class TranscriptionService {
   generateDiarizedTranscript({ agentType = 'ai', doctorName = 'Doctor', clinicName = 'Clinic', product = 'prime', reachSlotDetails = null }) {
     const isReach = String(product).toLowerCase() === 'reach';
     const agentLabel = agentType === 'human' ? 'Sales Rep (Human)' : 'Practo AI Voice Agent';
+    const cleanDoc = (doctorName || 'Doctor').replace(/^(Dr\.?|Doctor)\s*/i, '').trim() || 'Doctor';
+    const cleanClinic = clinicName || 'your clinic';
 
     let dialog = [];
 
@@ -109,12 +111,12 @@ export class TranscriptionService {
         {
           speaker: agentLabel,
           time: '00:03',
-          text: `Good morning Dr. ${doctorName}. Calling from Practo's commercial desk regarding ${clinicName}. I'm reaching out because the Position ${pos} Spotlight slot for ${spec} in ${zone} just opened up this morning.`,
+          text: `Good morning Dr. ${cleanDoc}. Calling from Practo's commercial desk regarding ${cleanClinic}. I'm reaching out because the Position ${pos} Spotlight slot for ${spec} in ${zone} just opened up this morning.`,
           confidence: 0.98,
           sentiment: 'positive',
         },
         {
-          speaker: `Dr. ${doctorName}`,
+          speaker: `Dr. ${cleanDoc}`,
           time: '00:14',
           text: `Yes, I am between consultations. What is this Position ${pos} Spotlight? We already get walk-ins.`,
           confidence: 0.94,
@@ -123,12 +125,12 @@ export class TranscriptionService {
         {
           speaker: agentLabel,
           time: '00:23',
-          text: `Understood, Doctor. In ${zone}, over ${formattedSearches} patients search for ${spec} specialists on the Practo app every month. Currently, competitor clinics appear at the top. The Position ${pos} Spotlight guarantees ${clinicName} is seen first before patients scroll down, driving a 3.4x boost in verified appointments.`,
+          text: `Understood, Doctor. In ${zone}, over ${formattedSearches} patients search for ${spec} specialists on the Practo app every month. Currently, competitor clinics appear at the top. The Position ${pos} Spotlight guarantees ${cleanClinic} is seen first before patients scroll down, driving a 3.4x boost in verified appointments.`,
           confidence: 0.97,
           sentiment: 'positive',
         },
         {
-          speaker: `Dr. ${doctorName}`,
+          speaker: `Dr. ${cleanDoc}`,
           time: '00:41',
           text: `I see. But what is the pricing for this ${zone} Position ${pos} slot? Is it an annual commitment?`,
           confidence: 0.95,
@@ -142,7 +144,7 @@ export class TranscriptionService {
           sentiment: 'positive',
         },
         {
-          speaker: `Dr. ${doctorName}`,
+          speaker: `Dr. ${cleanDoc}`,
           time: '01:10',
           text: `That sounds reasonable for ${zone} exclusivity. Can you send over the formal quotation with the exact reach metrics and approval link on WhatsApp?`,
           confidence: 0.96,
@@ -151,7 +153,7 @@ export class TranscriptionService {
         {
           speaker: agentLabel,
           time: '01:21',
-          text: `Absolutely Dr. ${doctorName}. I am generating your official Position ${pos} Spotlight proposal and dispatching it to your verified WhatsApp now. Thank you for your time, Doctor!`,
+          text: `Absolutely Dr. ${cleanDoc}. I am generating your official Position ${pos} Spotlight proposal and dispatching it to your verified WhatsApp now. Thank you for your time, Doctor!`,
           confidence: 0.98,
           sentiment: 'positive',
         },
@@ -162,12 +164,12 @@ export class TranscriptionService {
         {
           speaker: agentLabel,
           time: '00:02',
-          text: `Hello Dr. ${doctorName}, calling from Practo regarding ${clinicName}. We are selecting top-rated clinics in your area to activate Practo Prime with zero onboarding fees.`,
+          text: `Hello Dr. ${cleanDoc}, calling from Practo regarding ${cleanClinic}. We are selecting top-rated clinics in your area to activate Practo Prime with zero onboarding fees.`,
           confidence: 0.97,
           sentiment: 'positive',
         },
         {
-          speaker: `Dr. ${doctorName}`,
+          speaker: `Dr. ${cleanDoc}`,
           time: '00:12',
           text: `Hello. Look, we already have a receptionist handling appointments. Why do we need Practo Prime?`,
           confidence: 0.93,
@@ -181,7 +183,7 @@ export class TranscriptionService {
           sentiment: 'positive',
         },
         {
-          speaker: `Dr. ${doctorName}`,
+          speaker: `Dr. ${cleanDoc}`,
           time: '00:43',
           text: `That no-show reduction would actually help our evening OPD. Does it sync with our existing calendar or Practo Ray?`,
           confidence: 0.96,
@@ -195,7 +197,7 @@ export class TranscriptionService {
           sentiment: 'positive',
         },
         {
-          speaker: `Dr. ${doctorName}`,
+          speaker: `Dr. ${cleanDoc}`,
           time: '01:08',
           text: `Okay, send me the onboarding paperwork and pricing details. I'll review it between patients.`,
           confidence: 0.95,
@@ -204,7 +206,7 @@ export class TranscriptionService {
         {
           speaker: agentLabel,
           time: '01:17',
-          text: `Sending the Prime partner activation kit to your verified mobile number now, Doctor. Have a wonderful rest of your day!`,
+          text: `Sending the Prime partner activation kit to your verified mobile number now, Dr. ${cleanDoc}. Have a wonderful rest of your day!`,
           confidence: 0.97,
           sentiment: 'positive',
         },

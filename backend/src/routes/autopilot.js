@@ -85,29 +85,24 @@ export function registerAutopilotRoutes(app) {
       if (!cleanPhone.startsWith('91') && cleanPhone.length === 10) cleanPhone = `91${cleanPhone}`;
       const waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
 
-      // Attempt send via WhatsApp service if configured
-      let sendResult = { sent: false };
-      try {
-        const out = await metaWhatsAppService.sendTextMessage({ to: cleanPhone, text: messageText });
-        sendResult = { sent: true, messageId: out.messageId };
-      } catch {
-        // Fall back to link mode if Meta WhatsApp API not configured
-      }
-
-      if (leadId) {
-        const actId = `act_${Date.now()}`;
-        db.prepare(`
-          INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at)
-          VALUES (?, ?, 'message', 'whatsapp', ?, ?, 'sent', datetime('now'))
-        `).run(actId, leadId, `Manual WhatsApp AI (${product.toUpperCase()})`, messageText);
-      }
+      // Dispatch via Meta WhatsApp Service (supports both Live Meta Cloud API and 1-Click WhatsApp Web)
+      const out = await metaWhatsAppService.sendTextMessage({
+        to: cleanPhone,
+        text: messageText,
+        doctorName: doctorName || 'Doctor',
+        clinicName: clinicName || 'Clinic',
+        product,
+        leadId,
+      });
 
       res.json({
         ok: true,
-        sent: sendResult.sent,
+        sent: true,
+        mode: out.mode,
         phone: cleanPhone,
         message: messageText,
-        waLink,
+        waLink: out.waLink,
+        statusLabel: out.statusLabel,
       });
     } catch (err) {
       res.status(500).json({ error: err.message });

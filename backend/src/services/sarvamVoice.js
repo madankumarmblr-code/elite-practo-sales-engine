@@ -147,21 +147,100 @@ export class SarvamVoiceService {
 
     const formattedAgentPhone = sanitizeIndianPhone(finalAgentPhone);
 
+    // Fetch lead context from database if leadId provided, to ensure 100% accurate doctor and clinic details
+    let leadInfo = null;
+    if (leadId) {
+      try {
+        leadInfo = db.prepare('SELECT name, clinic_name, city, locality, speciality, product_interest FROM leads WHERE id = ?').get(leadId);
+      } catch { /* table or column may not exist */ }
+    }
+
+    const resolvedDocName = agentVariables?.userName || agentVariables?.doctorName || agentVariables?.doctor_name || agentVariables?.name || leadInfo?.name || 'Doctor';
+    const docClean = String(resolvedDocName).replace(/^(Dr\.?|Doctor)\s*/i, '').trim() || 'Doctor';
+    const resolvedClinicName = agentVariables?.companyName || agentVariables?.clinicName || agentVariables?.clinic_name || leadInfo?.clinic_name || 'Clinic';
+    const locClean = agentVariables?.locality || leadInfo?.locality || leadInfo?.city || 'Bangalore';
+    const specClean = agentVariables?.speciality || agentVariables?.specialty || leadInfo?.speciality || 'General Physician';
+    const isReach = String(agentVariables?.product || leadInfo?.product_interest || '').toLowerCase() === 'reach';
+
+    // Comprehensive Practo Voice AI Agent Variables (Indus Samvaad Template Bindings)
+    // NOTE: In Sarvam app prompt templates, opening greetings interpolate {{partnerName}} and {{userName}}.
+    // Omitting partnerName causes Sarvam to fall back to its internal prompt default ("Sarvam Ventures").
+    // We strictly enforce "Practo" across all brand and caller identity variables.
+    const defaultPractoVariables = {
+      partnerName: 'Practo',
+      partner_name: 'Practo',
+      brand: 'Practo',
+      organization: 'Practo',
+      callingFrom: 'Practo',
+      salesRepName: 'Practo Healthcare Growth Team',
+      sales_rep_name: 'Practo Healthcare Growth Team',
+      userName: `Dr. ${docClean}`,
+      user_name: `Dr. ${docClean}`,
+      doctorName: `Dr. ${docClean}`,
+      doctor_name: `Dr. ${docClean}`,
+      companyName: resolvedClinicName,
+      company_name: resolvedClinicName,
+      clinicName: resolvedClinicName,
+      clinic_name: resolvedClinicName,
+      locality: locClean,
+      city: agentVariables?.city || leadInfo?.city || locClean,
+      speciality: specClean,
+      specialty: specClean,
+      role: 'Doctor / Clinic Director',
+      industryVertical: 'Healthcare & Clinical Practice',
+      industry_vertical: 'Healthcare & Clinical Practice',
+      productCategory: isReach
+        ? `Practo Reach Position 1 Local Search Spotlight (${specClean} - ${locClean})`
+        : `Practo Prime Verified Clinic & Online Patient Booking (${specClean} - ${locClean})`,
+      product_category: isReach
+        ? `Practo Reach Position 1 Local Search Spotlight (${specClean} - ${locClean})`
+        : `Practo Prime Verified Clinic & Online Patient Booking (${specClean} - ${locClean})`,
+      campaignId: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
+      campaign_id: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
+      priorTouchpointSummary: isReach
+        ? `Exclusive Position 1 Practo Reach spotlight slot available for ${specClean} in ${locClean}`
+        : `Practo Prime clinic partnership to activate 24/7 instant booking for ${resolvedClinicName} in ${locClean} with zero onboarding fee`,
+      typicalCustomerPainPoints: isReach
+        ? `Low visibility on local patient search results compared to competing clinics in ${locClean}, losing high-intent patients looking for ${specClean}`
+        : `Patient no-shows, unfilled appointment slots during afternoon clinic hours, manual appointment management for ${resolvedClinicName}`,
+      proposedNextStepDefault: isReach
+        ? `Reserve the exclusive Position 1 Spotlight slot on Practo Reach for ${resolvedClinicName}`
+        : `Complete free Practo Prime clinic verification and activate online booking badge`,
+      customerCareNumber: '+918041100376',
+    };
+
+    const finalAgentVariables = {
+      ...defaultPractoVariables,
+      ...(agentVariables || {}),
+      // Crucial: Guarantee partnerName is ALWAYS Practo (overriding any accidental "Sarvam Ventures" default)
+      partnerName: (agentVariables?.partnerName && !agentVariables.partnerName.toLowerCase().includes('sarvam'))
+        ? agentVariables.partnerName
+        : 'Practo',
+      partner_name: 'Practo',
+      brand: 'Practo',
+      organization: 'Practo',
+      callingFrom: 'Practo',
+    };
+
+    const defaultInitialGreeting = isReach
+      ? `Hello Dr. ${docClean}, this is Ananya calling on behalf of Practo Reach for ${resolvedClinicName} in ${locClean}. Am I speaking with Dr. ${docClean}?`
+      : `Hello Dr. ${docClean}, this is Ananya calling from the Practo team regarding ${resolvedClinicName} in ${locClean}. Am I speaking with Dr. ${docClean}?`;
+
     const payload = {
       app_config: {
         app_id: finalAppId,
         app_version: Number(finalAppVersion) || 1,
         connection_config: { connection_id: finalConnectionId, agent_phone_number: formattedAgentPhone },
         app_type: 'agent',
-        app_overrides: appOverrides && Object.keys(appOverrides).length > 0 ? appOverrides : undefined,
+        agent_variables: finalAgentVariables,
+        app_overrides: {
+          initial_language_name: 'English',
+          initial_bot_message: defaultInitialGreeting,
+          ...(appOverrides || {}),
+        },
       },
       user_config: { user_phone_number: formattedUserPhone },
     };
-
-    // Only include agent_variables if supplied AND not empty
-    if (agentVariables && Object.keys(agentVariables).length > 0) {
-      payload.app_config.agent_variables = agentVariables;
-    }
 
     // Only attach webhook_config if a valid absolute URL (http:// or https://) is provided
     const rawWebhookUrl = webhookConfig?.url || config.webhookUrl;
@@ -313,27 +392,70 @@ export class SarvamVoiceService {
    * High-converting product-specific pitch trigger for Practo Prime vs Practo Reach
    */
   async triggerProductPitchCall({ userPhoneNumber, product = 'prime', clinicName = '', doctorName = '', locality = '', city = '', speciality = '', leadId = null }) {
-    const isReach = String(product).toLowerCase() === 'reach';
-    const docNameClean = doctorName ? doctorName.replace(/^(Dr\.?|Doctor)\s*/i, '').trim() : 'Doctor';
-    const locClean = locality || city || 'your area';
-    const specClean = speciality || 'Medical';
-    const clinicClean = clinicName || 'your clinic';
+    // If leadId is provided and fields are missing or generic, fetch from leads table
+    let leadRow = null;
+    if (leadId) {
+      try {
+        leadRow = db.prepare('SELECT name, clinic_name, city, locality, speciality, product_interest FROM leads WHERE id = ?').get(leadId);
+      } catch { /* ignore */ }
+    }
+
+    const isReach = String(product || leadRow?.product_interest || 'prime').toLowerCase() === 'reach';
+    const rawDocName = doctorName || leadRow?.name || 'Doctor';
+    const docNameClean = rawDocName ? rawDocName.replace(/^(Dr\.?|Doctor)\s*/i, '').trim() : 'Doctor';
+    const locClean = locality || leadRow?.locality || city || leadRow?.city || 'your area';
+    const specClean = speciality || leadRow?.speciality || 'General Physician';
+    const clinicClean = (clinicName && clinicName !== 'Clinic') ? clinicName : (leadRow?.clinic_name || 'your clinic');
 
     let initialMessage = '';
 
     if (isReach) {
-      initialMessage = `Hello Dr. ${docNameClean}, calling on behalf of Practo Reach for ${clinicClean} in ${locClean}. We currently have the exclusive Position 1 spotlight placement available for ${specClean} searches in ${locClean}. This allows ${clinicClean} to capture 100% of high-intent patients searching in your area before competitor clinics. Would you be open to a 2-minute chat about securing this spotlight position?`;
+      initialMessage = `Hello Dr. ${docNameClean}, this is Ananya calling from the Practo Reach team for ${clinicClean} in ${locClean}. We currently have the exclusive Position 1 spotlight placement available for ${specClean} searches in ${locClean}. This allows ${clinicClean} to capture 100% of high-intent patients searching in your area before competitor clinics. Would you be open to a 2-minute chat about securing this spotlight position?`;
     } else {
-      initialMessage = `Hello Dr. ${docNameClean}, calling from Practo regarding ${clinicClean} in ${locClean}. We are partnering with select ${specClean} clinics to activate Practo Prime, giving you 24/7 instant online booking on Practo, guaranteed patient appointments, and the official Prime Clinic badge with zero software fee. May I share how this boosts your verified patient visits by 35%?`;
+      initialMessage = `Hello Dr. ${docNameClean}, this is Ananya calling from the Practo team regarding ${clinicClean} in ${locClean}. We are partnering with select ${specClean} clinics to activate Practo Prime, giving you 24/7 instant online booking on Practo, guaranteed patient appointments, and the official Prime Clinic badge with zero software fee. May I share how this boosts your verified patient visits by 35%?`;
     }
 
     const agentVariables = {
+      partnerName: 'Practo',
+      partner_name: 'Practo',
+      brand: 'Practo',
+      organization: 'Practo',
+      callingFrom: 'Practo',
+      salesRepName: 'Practo Healthcare Growth Team',
+      sales_rep_name: 'Practo Healthcare Growth Team',
       userName: `Dr. ${docNameClean}`,
+      user_name: `Dr. ${docNameClean}`,
+      doctorName: `Dr. ${docNameClean}`,
+      doctor_name: `Dr. ${docNameClean}`,
       companyName: clinicClean,
-      role: 'Doctor / Clinic Owner',
-      productCategory: isReach ? `Practo Reach Spotlight (${specClean} - ${locClean})` : `Practo Prime (${specClean} - ${locClean})`,
+      company_name: clinicClean,
+      clinicName: clinicClean,
+      clinic_name: clinicClean,
+      locality: locClean,
+      city: city || leadRow?.city || locClean,
+      speciality: specClean,
+      specialty: specClean,
+      role: 'Doctor / Clinic Director',
+      industryVertical: 'Healthcare & Clinical Practice',
+      industry_vertical: 'Healthcare & Clinical Practice',
+      productCategory: isReach
+        ? `Practo Reach Position 1 Spotlight (${specClean} - ${locClean})`
+        : `Practo Prime Verified Clinic (${specClean} - ${locClean})`,
+      product_category: isReach
+        ? `Practo Reach Position 1 Spotlight (${specClean} - ${locClean})`
+        : `Practo Prime Verified Clinic (${specClean} - ${locClean})`,
       campaignId: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
-      salesRepName: 'Practo Growth Specialist',
+      campaign_id: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
+      priorTouchpointSummary: isReach
+        ? `Exclusive Position 1 Practo Reach spotlight slot available for ${specClean} in ${locClean}`
+        : `Practo Prime clinic partnership to activate 24/7 instant booking for ${clinicClean} in ${locClean} with zero onboarding fee`,
+      typicalCustomerPainPoints: isReach
+        ? `Low visibility on local patient search results compared to competing clinics in ${locClean}, losing high-intent patients looking for ${specClean}`
+        : `Patient no-shows, unfilled appointment slots during afternoon clinic hours, manual appointment management for ${clinicClean}`,
+      proposedNextStepDefault: isReach
+        ? `Reserve the exclusive Position 1 Spotlight slot on Practo Reach for ${clinicClean}`
+        : `Complete free Practo Prime clinic verification and activate online booking badge`,
+      customerCareNumber: '+918041100376',
     };
 
     return this.triggerInstantOutbound({

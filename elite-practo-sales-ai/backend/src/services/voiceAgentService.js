@@ -64,8 +64,8 @@ export class VoiceAgentService {
       const docClean = doctorName.replace(/^(Dr\.?|Doctor)\s*/i, '').trim() || 'Doctor';
       const clinicClean = clinicName || 'Clinic';
       const initialPitch = isReach
-        ? `Hello Dr. ${docClean}, calling on behalf of Practo Reach for ${clinicClean} in ${locality || city}. We have the exclusive Position 1 spotlight placement available for ${speciality}.`
-        : `Hello Dr. ${docClean}, calling from Practo regarding ${clinicClean} in ${locality || city}. We are partnering with select clinics to activate Practo Prime with zero software fees.`;
+        ? `Hello Dr. ${docClean}, calling from the Practo Reach team for ${clinicClean} in ${locality || city}. We have the exclusive Position 1 spotlight placement available for ${speciality}.`
+        : `Hello Dr. ${docClean}, calling from the Practo team regarding ${clinicClean} in ${locality || city}. We are partnering with select clinics to activate Practo Prime with zero software fees.`;
 
       const turns = [
         {

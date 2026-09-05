@@ -1,3 +1,4 @@
+import db from '../db/db.js';
 import { authRequired, requirePermission } from '../auth/middleware.js';
 import { voiceAgentService } from '../services/voiceAgentService.js';
 import { telephonyProvider } from '../services/telephonyProvider.js';
@@ -37,12 +38,12 @@ export function registerVoiceAgentRoutes(app) {
   app.post('/api/voice-agent/dial', authRequired, requirePermission('leads:write'), async (req, res) => {
     const body = req.body || {};
     const toPhone = body.toPhone || body.phone;
-    const doctorName = body.doctorName || 'Doctor';
-    const clinicName = body.clinicName || 'Clinic';
-    const locality = body.locality || 'Bangalore';
-    const city = body.city || 'Bangalore';
-    const speciality = body.speciality || 'General Physician';
-    const product = body.product || 'prime';
+    let doctorName = body.doctorName || body.doctor_name || body.name;
+    let clinicName = body.clinicName || body.clinic_name;
+    let locality = body.locality || body.area;
+    let city = body.city;
+    let speciality = body.speciality || body.specialty;
+    let product = body.product || 'prime';
     const agentType = (body.agentType === 'human_agent' || body.agentType === 'human') ? 'human' : 'ai';
     const voiceEngine = body.voiceEngine || 'sarvam';
     const telephonyProviderName = body.telephonyProviderName || body.telephonyProvider || (voiceEngine === 'sarvam' ? 'sarvam' : null);
@@ -55,14 +56,35 @@ export function registerVoiceAgentRoutes(app) {
       return res.status(400).json({ ok: false, error: 'toPhone or phone is required' });
     }
 
+    // If leadId is passed, enrich missing doctor/clinic attributes from database
+    if (leadId) {
+      try {
+        const leadRow = db.prepare('SELECT name, clinic_name, city, locality, speciality, product_interest FROM leads WHERE id = ?').get(leadId);
+        if (leadRow) {
+          if (!doctorName || doctorName === 'Doctor') doctorName = leadRow.name || 'Doctor';
+          if (!clinicName || clinicName === 'Clinic') clinicName = leadRow.clinic_name || 'Clinic';
+          if (!locality || locality === 'Bangalore') locality = leadRow.locality || leadRow.city || 'Bangalore';
+          if (!city || city === 'Bangalore') city = leadRow.city || 'Bangalore';
+          if (!speciality || speciality === 'General Physician') speciality = leadRow.speciality || 'General Physician';
+          if (!product || product === 'prime') product = leadRow.product_interest || product;
+        }
+      } catch { /* ignore */ }
+    }
+
+    doctorName = doctorName || 'Doctor';
+    clinicName = clinicName || 'Clinic';
+    locality = locality || 'Bangalore';
+    city = city || 'Bangalore';
+    speciality = speciality || 'General Physician';
+
     try {
       const result = await voiceAgentService.placeVoiceCall({
         toPhone,
-        doctorName: doctorName || 'Doctor',
-        clinicName: clinicName || 'Clinic',
-        locality: locality || 'Bangalore',
-        city: city || 'Bangalore',
-        speciality: speciality || 'General Physician',
+        doctorName,
+        clinicName,
+        locality,
+        city,
+        speciality,
         product,
         agentType,
         voiceEngine,

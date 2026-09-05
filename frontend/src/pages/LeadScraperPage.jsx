@@ -506,30 +506,33 @@ export default function LeadScraperPage() {
                       </td>
 
                       <td>
-                        <div style={{ fontWeight: 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ fontWeight: 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <span>{c.owner_name}</span>
+                          {c.owner_name === 'Medical Director / Practice Head' && (
+                            <span className="badge badge-gray" style={{ fontSize: 9, padding: '1px 5px' }}>Practice Leadership</span>
+                          )}
                           {c.apollo_enriched === 1 && (
                             <span className="badge badge-teal" style={{ fontSize: 9, padding: '1px 5px' }}>Apollo Verified</span>
                           )}
                         </div>
-                        <div className="text-xs font-bold flex items-center gap-1 mt-0.5" style={{ color: '#1456FD' }}>
-                          <EnterpriseIcon name="phone" size={12} color="#1456FD" />
+                        <div className="text-xs font-bold flex items-center gap-1 mt-0.5" style={{ color: c.owner_phone ? '#1456FD' : '#94A3B8' }}>
+                          <EnterpriseIcon name="phone" size={12} color={c.owner_phone ? '#1456FD' : '#94A3B8'} />
                           <span>{c.owner_phone || 'Unlisted'}</span>
                         </div>
-                        <div className="text-xs text-muted truncate flex items-center gap-1 mt-0.5" style={{ maxWidth: 180 }}>
-                          <EnterpriseIcon name="mail" size={12} color="#64748B" />
+                        <div className="text-xs text-muted truncate flex items-center gap-1 mt-0.5" style={{ maxWidth: 180, color: c.owner_email ? '#475569' : '#94A3B8' }}>
+                          <EnterpriseIcon name="mail" size={12} color={c.owner_email ? '#64748B' : '#94A3B8'} />
                           <span>{c.owner_email || 'Unlisted'}</span>
                         </div>
                       </td>
 
                       <td>
                         <div style={{ fontWeight: 600, color: '#0F172A' }}>{c.marketing_name}</div>
-                        <div className="text-xs text-secondary flex items-center gap-1 mt-0.5">
-                          <EnterpriseIcon name="phone" size={12} color="#475569" />
+                        <div className="text-xs text-secondary flex items-center gap-1 mt-0.5" style={{ color: c.marketing_phone ? '#475569' : '#94A3B8' }}>
+                          <EnterpriseIcon name="phone" size={12} color={c.marketing_phone ? '#475569' : '#94A3B8'} />
                           <span>{c.marketing_phone || 'Unlisted'}</span>
                         </div>
-                        <div className="text-xs text-muted truncate flex items-center gap-1 mt-0.5" style={{ maxWidth: 180 }}>
-                          <EnterpriseIcon name="mail" size={12} color="#64748B" />
+                        <div className="text-xs text-muted truncate flex items-center gap-1 mt-0.5" style={{ maxWidth: 180, color: c.marketing_email ? '#475569' : '#94A3B8' }}>
+                          <EnterpriseIcon name="mail" size={12} color={c.marketing_email ? '#64748B' : '#94A3B8'} />
                           <span>{c.marketing_email || 'Unlisted'}</span>
                         </div>
                       </td>

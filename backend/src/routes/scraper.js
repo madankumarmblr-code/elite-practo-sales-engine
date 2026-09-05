@@ -44,6 +44,57 @@ function cleanPhoneNumber(raw) {
 }
 
 /**
+ * Resolves authentic doctor and practice leadership names
+ * Prevents invalid placeholders like "Dr. Tooth", "Dr. Dental", "Dr. Government", "Dr. Dr", "Dr. Apollo"
+ */
+function resolveDoctorAndOwnerName(clinicName, rawDoctorName) {
+  const cName = String(clinicName || '').trim();
+  const rawDoc = String(rawDoctorName || '').trim();
+  const firstWord = cName.split(/[\s,.-]+/)[0].toLowerCase();
+
+  const isPlaceholderDoc =
+    !rawDoc ||
+    rawDoc.toLowerCase() === 'dr. dr' ||
+    rawDoc.toLowerCase() === 'dr.' ||
+    rawDoc.toLowerCase().startsWith('dr. government') ||
+    rawDoc.toLowerCase().startsWith('dr. dental') ||
+    rawDoc.toLowerCase().startsWith('dr. tooth') ||
+    rawDoc.toLowerCase().startsWith('dr. clinic') ||
+    rawDoc.toLowerCase().startsWith('dr. hospital') ||
+    rawDoc.toLowerCase().startsWith('dr. medical') ||
+    rawDoc.toLowerCase().startsWith('dr. health') ||
+    rawDoc.toLowerCase().startsWith('dr. multi') ||
+    rawDoc.toLowerCase().startsWith('dr. care') ||
+    rawDoc.toLowerCase().includes('(practice owner)') ||
+    (rawDoc.toLowerCase() === `dr. ${firstWord}`) ||
+    (rawDoc.toLowerCase() === `dr ${firstWord}`);
+
+  if (!isPlaceholderDoc && rawDoc.startsWith('Dr.') && rawDoc.length > 5) {
+    return rawDoc;
+  }
+
+  // Extract from clinic name if doctor's name is in title e.g. "Dr Ganesh Medical...", "Dr. Batra's Clinic"
+  const drMatch = cName.match(/Dr\.?\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)/i);
+  if (drMatch) {
+    const extracted = drMatch[1]
+      .replace(/['’]s/gi, '')
+      .split(/\s+(?:Clinic|Hospital|Medical|Centre|Center|Healthcare|Dental|Speciality|Specialities|Care|Skin|Eye)/i)[0]
+      .trim();
+    if (extracted && extracted.length > 2 && !['Clinic', 'Hospital', 'Dental', 'Medical'].includes(extracted)) {
+      return `Dr. ${extracted}`;
+    }
+  }
+
+  // Possessive name check e.g. "Vaidehi's Clinic", "Mohan's Dental"
+  const possessiveMatch = cName.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*['’]s\s+/i);
+  if (possessiveMatch && !['Apollo', 'Fortis', 'Manipal', 'Max', 'Care', 'Smile', 'City', 'Prime'].includes(possessiveMatch[1])) {
+    return `Dr. ${possessiveMatch[1]}`;
+  }
+
+  return 'Medical Director / Practice Head';
+}
+
+/**
  * Source 1: Live Practo.com Directory Scraper/**
  * Source 1: Live Practo.com Directory Scraper
  * Extracts real registered doctors, clinics, ratings, reviews, and Practo profile URLs
@@ -353,7 +404,7 @@ async function fetchGoogleAndWebClinics({ city, locality, speciality }) {
 
           clinics.push({
             clinic_name: place.name,
-            doctor_name: place.name.startsWith('Dr.') ? place.name : `Dr. ${place.name.split(' ')[0]} (Practice Owner)`,
+            doctor_name: resolveDoctorAndOwnerName(place.name, place.name.startsWith('Dr.') ? place.name : ''),
             address: place.formatted_address || `${locality}, ${city}`,
             locality,
             city,
@@ -406,7 +457,14 @@ async function fetchGoogleAndWebClinics({ city, locality, speciality }) {
           lower.includes('doctors in') ||
           lower.includes('near me') ||
           lower.includes('justdial') ||
-          lower.includes('practo')
+          lower.includes('practo') ||
+          lower.includes('government') ||
+          lower.includes('primary health') ||
+          lower.includes('public health') ||
+          lower.includes('phc') ||
+          lower.includes('bbmp') ||
+          lower.includes('esic') ||
+          lower.includes('dispensary')
         ) {
           continue;
         }
@@ -422,10 +480,17 @@ async function fetchGoogleAndWebClinics({ city, locality, speciality }) {
             targetWebsite = decodeURIComponent(parsed.searchParams.get('uddg') || '');
           } catch {}
         }
+        if (
+          targetWebsite.toLowerCase().endsWith('.pdf') ||
+          targetWebsite.includes('.gov.in') ||
+          targetWebsite.includes('.nic.in')
+        ) {
+          targetWebsite = '';
+        }
 
         clinics.push({
           clinic_name: title,
-          doctor_name: `Dr. ${title.split(' ')[0]} (Practice Owner)`,
+          doctor_name: resolveDoctorAndOwnerName(title, ''),
           address: `${locality}, ${city}`,
           locality,
           city,
@@ -602,18 +667,51 @@ async function fetchOsmHealthcareFacilities({ city, locality, speciality }) {
       const rawName = tags.name || tags['name:en'];
       if (!rawName) continue;
       const lower = rawName.trim().toLowerCase();
-      if (lower === 'clinic' || lower === 'hospital' || lower === 'dentist' || lower === 'doctor' || lower.includes('pharmacy') || lower.includes('store') || lower.includes('medical store')) continue;
+      if (
+        lower.includes('government') ||
+        lower.includes('primary health') ||
+        lower.includes('public health') ||
+        lower.includes('phc') ||
+        lower.includes('bbmp') ||
+        lower.includes('dispensary') ||
+        lower.includes('maternity home') ||
+        (tags.operator && typeof tags.operator === 'string' && (
+          tags.operator.toLowerCase().includes('government') ||
+          tags.operator.toLowerCase().includes('bbmp') ||
+          tags.operator.toLowerCase().includes('dept')
+        ))
+      ) continue;
 
       const clinicName = rawName.trim();
       const street = tags['addr:street'] || tags['addr:full'] || '';
-      const fullAddress = [street, locality, city].filter(Boolean).join(', ');
+      const suburb = tags['addr:suburb'] || tags['addr:neighbourhood'] || '';
+      const fullAddrText = `${street} ${suburb} ${clinicName}`.toLowerCase();
+
+      const otherKnownZones = [
+        'malleswaram', 'rajajinagar', 'jp nagar', 'jayanagar', 'kanakapura',
+        'whitefield', 'electronic city', 'koramangala', 'btm', 'yelahanka',
+        'marathahalli', 'hebbal', 'banashankari', 'basavanagudi', 'vijayanagar',
+        'yeshwanthpur', 'peenya', 'bellandur', 'sarjapur', 'hsr', 'sadashivanagar',
+        'andheri', 'bandra', 'borivali', 'dadar', 'juhu', 'powai', 'thane', 'colaba'
+      ].filter(l => l !== locality.toLowerCase());
+
+      if (otherKnownZones.some(other => fullAddrText.includes(other)) && !fullAddrText.includes(locality.toLowerCase())) {
+        continue;
+      }
+
+      let osmWeb = tags.website || tags['contact:website'] || '';
+      if (osmWeb.toLowerCase().endsWith('.pdf') || osmWeb.includes('.gov.in') || osmWeb.includes('.nic.in')) {
+        osmWeb = '';
+      }
+
+      const fullAddress = [street, suburb, locality, city].filter(Boolean).join(', ');
       const phoneTag = tags.phone || tags['contact:phone'];
 
       facilities.push({
         clinic_name: clinicName,
-        doctor_name: tags.operator ? (tags.operator.startsWith('Dr.') ? tags.operator : `Dr. ${tags.operator}`) : `Dr. ${clinicName.split(' ')[0]}`,
+        doctor_name: resolveDoctorAndOwnerName(clinicName, tags.operator || ''),
         phone: phoneTag ? cleanPhoneNumber(phoneTag) : '',
-        website: tags.website || tags['contact:website'] || '',
+        website: osmWeb,
         address: fullAddress,
         locality,
         city,
@@ -683,17 +781,41 @@ async function mergeAndDeduplicateClinics({ livePracto, liveGoogle, liveOsm, loc
     }
   }
 
-  const rawList = Array.from(mergedMap.values());
+  const rawList = Array.from(mergedMap.values()).filter((c) => {
+    const lower = (c.clinic_name || '').toLowerCase();
+    if (
+      lower.includes('government') ||
+      lower.includes('primary health centre') ||
+      lower.includes('public health') ||
+      lower.includes('phc') ||
+      lower.includes('bbmp') ||
+      lower.includes('dispensary') ||
+      lower.includes('esic') ||
+      lower.includes('maternity home')
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   // 4. Enrich each clinic across Apollo.io, Official Websites, and Web/GMB Contacts
   const enrichedList = await Promise.all(
     rawList.map(async (clinic) => {
-      let docName = clinic.doctor_name;
+      let docName = resolveDoctorAndOwnerName(clinic.clinic_name, clinic.doctor_name);
       let email = clinic.owner_email || '';
-      let phone = clinic.phone || '';
+      let phone = cleanPhoneNumber(clinic.phone || '');
       let website = clinic.website || '';
       let linkedinUrl = clinic.linkedin_url || '';
       let apolloEnriched = clinic.apollo_enriched || 0;
+
+      if (email) {
+        try {
+          email = decodeURIComponent(email).trim().replace(/^[\s,;:]+|[\s,;:]+$/g, '');
+        } catch {}
+      }
+      if (website && (website.toLowerCase().endsWith('.pdf') || website.includes('.gov.in') || website.includes('.nic.in'))) {
+        website = '';
+      }
 
       // A. Apollo.io B2B Intelligence (Doctor direct line, verified email, LinkedIn)
       try {
@@ -719,7 +841,7 @@ async function mergeAndDeduplicateClinics({ livePracto, liveGoogle, liveOsm, loc
         try {
           const webEnrich = await enrichClinicFromWebsite(website);
           if (webEnrich) {
-            if (!docName && webEnrich.doctorName) docName = webEnrich.doctorName;
+            if (!docName && webEnrich.doctorName) docName = resolveDoctorAndOwnerName(clinic.clinic_name, webEnrich.doctorName);
             if (!phone && webEnrich.phone) phone = webEnrich.phone;
             if (!email && webEnrich.email) email = webEnrich.email;
           }
@@ -745,9 +867,7 @@ async function mergeAndDeduplicateClinics({ livePracto, liveGoogle, liveOsm, loc
         } catch {}
       }
 
-      if (!docName) {
-        docName = `Dr. ${clinic.clinic_name.replace(/clinic|hospital|dental|care|center|centre/gi, '').trim()}`;
-      }
+      docName = resolveDoctorAndOwnerName(clinic.clinic_name, docName);
 
       const gmbUrl =
         clinic.gmb_url ||
@@ -767,7 +887,7 @@ async function mergeAndDeduplicateClinics({ livePracto, liveGoogle, liveOsm, loc
         owner_name: docName,
         owner_phone: phone || '',
         owner_email: email || '',
-        marketing_name: `Practice Admin (${clinic.clinic_name.split(' ')[0]})`,
+        marketing_name: docName.startsWith('Dr.') ? `Practice Manager (${docName.replace(/^Dr\.\s*/, '')})` : 'Practice Administrator',
         marketing_phone: phone || '',
         marketing_email: email || '',
         reception_phone: phone || '',

@@ -119,7 +119,12 @@ export default function LeadsPage() {
   }
 
   function handleExportCsv() {
-    const url = api.exportLeadsUrl({ stage, workflowStage: workflowTab !== 'all' ? workflowTab : undefined });
+    const url = api.exportLeadsUrl({ stage, workflowStage: workflowTab !== 'all' ? workflowTab : undefined, format: 'csv' });
+    window.open(url, '_blank');
+  }
+
+  function handleExportJson() {
+    const url = api.exportLeadsUrl({ stage, workflowStage: workflowTab !== 'all' ? workflowTab : undefined, format: 'json' });
     window.open(url, '_blank');
   }
 
@@ -216,6 +221,9 @@ export default function LeadsPage() {
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleExportCsv}>
             📤 Export CSV
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={handleExportJson}>
+            📤 Export JSON
           </button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
             + Add Lead

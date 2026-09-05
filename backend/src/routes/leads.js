@@ -41,9 +41,9 @@ export function registerLeadsRoutes(app) {
     res.json({ leads, total, limit: Number(limit), offset: Number(offset) });
   });
 
-  // ── CSV Export (Declared BEFORE :id to avoid route collision) ─────────────
+  // ── Leads Export (CSV & JSON) ─────────────────────────────────────────────
   app.get('/api/leads/export', authRequired, requirePermission('leads:read'), (req, res) => {
-    const { stage, workflowStage, productInterest } = req.query;
+    const { stage, workflowStage, productInterest, format = 'csv' } = req.query;
     let query = 'SELECT * FROM leads WHERE 1=1';
     const params = [];
     if (stage) { query += ' AND stage = ?'; params.push(stage); }
@@ -53,7 +53,21 @@ export function registerLeadsRoutes(app) {
 
     const rows = db.prepare(query).all(...params);
 
-    const headers = ['ID', 'Name', 'Company', 'Phone', 'Email', 'City', 'Locality', 'Speciality', 'Practo Status', 'Stage', 'Score', 'Product Interest', 'Workflow Stage', 'Created At'];
+    if (String(format).toLowerCase() === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="practo_leads_${Date.now()}.json"`);
+      return res.json({
+        total: rows.length,
+        exported_at: new Date().toISOString(),
+        leads: rows.map(publicLead),
+      });
+    }
+
+    const headers = [
+      'ID', 'Name', 'Company', 'Phone', 'Email', 'City', 'Locality', 'Speciality',
+      'Practo Status', 'Stage', 'Status', 'Temperature', 'Score', 'Product Interest',
+      'Workflow Stage', 'Next Action', 'Last Contacted At', 'Created At'
+    ];
     const csvLines = [headers.join(',')];
 
     for (const r of rows) {
@@ -67,10 +81,14 @@ export function registerLeadsRoutes(app) {
         `"${(r.locality || '').replace(/"/g, '""')}"`,
         `"${(r.speciality || '').replace(/"/g, '""')}"`,
         r.on_practo ? 'On Practo' : 'Not On Practo',
-        r.stage,
+        r.stage || 'new',
+        r.status || 'open',
+        r.temperature || '',
         r.score || 0,
         r.product_interest || 'prime',
         r.workflow_stage || 'manual',
+        `"${(r.next_action || '').replace(/"/g, '""')}"`,
+        r.last_contacted_at || '',
         r.created_at,
       ];
       csvLines.push(line.join(','));

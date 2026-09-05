@@ -45,6 +45,25 @@ export class VoiceAgentService {
     const effectiveEngine = voiceEngine || telConfig.voiceEngine || 'sarvam';
     const effectiveProvider = telephonyProviderName || (effectiveEngine === 'sarvam' ? 'sarvam' : (telConfig.activeProvider || 'sarvam'));
 
+    // Auto-match lead by phone if leadId is omitted
+    let effectiveLeadId = leadId || null;
+    const cleanDigits = String(toPhone || '').replace(/\D/g, '');
+    if (!effectiveLeadId && cleanDigits.length >= 10) {
+      try {
+        const last10 = cleanDigits.slice(-10);
+        const match = db.prepare('SELECT id, name, company, city, locality, speciality, product_interest FROM leads WHERE phone LIKE ? LIMIT 1').get(`%${last10}`);
+        if (match) {
+          effectiveLeadId = match.id;
+          if (!doctorName || doctorName === 'Doctor') doctorName = match.name || doctorName;
+          if (!clinicName || clinicName === 'Clinic') clinicName = match.company || clinicName;
+          if (!locality || locality === 'Bangalore') locality = match.locality || match.city || locality;
+          if (!city || city === 'Bangalore') city = match.city || city;
+          if (!speciality || speciality === 'General Physician') speciality = match.speciality || speciality;
+          if (!product || product === 'prime') product = match.product_interest || product;
+        }
+      } catch {}
+    }
+
     // ── PRIMARY & DEFAULT: Sarvam Voice AI (Indus Samvaad) ───────────────────
     if (effectiveEngine === 'sarvam' || effectiveProvider === 'sarvam' || effectiveProvider === 'sarvam_voice') {
       const { sarvamVoiceService } = await import('./sarvamVoice.js');
@@ -56,7 +75,7 @@ export class VoiceAgentService {
         locality,
         city,
         speciality,
-        leadId,
+        leadId: effectiveLeadId,
       });
 
       const callId = `call_${sarvamResult.attempt_id}`;
@@ -80,6 +99,7 @@ export class VoiceAgentService {
       try {
         db.prepare(`
           UPDATE call_logs SET
+            lead_id = COALESCE(lead_id, ?),
             voice_engine = 'sarvam',
             telephony_provider = 'sarvam',
             agent_type = ?,
@@ -94,9 +114,44 @@ export class VoiceAgentService {
             doctor_intent = 'request_proposal',
             meta = ?
           WHERE id = ? OR job_id = ?
-        `).run(agentType, JSON.stringify(turns), JSON.stringify({ doctorName, clinicName, product, attempt_id: sarvamResult.attempt_id }), callId, sarvamResult.attempt_id);
+        `).run(effectiveLeadId || null, agentType, JSON.stringify(turns), JSON.stringify({ doctorName, clinicName, product, attempt_id: sarvamResult.attempt_id }), callId, sarvamResult.attempt_id);
       } catch (err) {
         console.warn('[VoiceAgentService] DB update error for Sarvam call_log:', err.message);
+      }
+
+      // Update associated lead with active status and stage progression
+      if (effectiveLeadId) {
+        try {
+          const leadRow = db.prepare('SELECT stage, notes FROM leads WHERE id = ?').get(effectiveLeadId);
+          const newStage = (!leadRow?.stage || leadRow.stage === 'new' || leadRow.stage === 'open') ? 'contacted' : leadRow.stage;
+          const noteText = `\n[${ts.split('T')[0]}] Outbound Sarvam Voice AI call placed (${product.toUpperCase()} pitch - Attempt: ${sarvamResult.attempt_id})`;
+          const updatedNotes = ((leadRow?.notes || '') + noteText).trim();
+
+          db.prepare(`
+            UPDATE leads SET
+              stage = ?,
+              status = 'contacted',
+              last_contacted_at = ?,
+              temperature = COALESCE(NULLIF(temperature, ''), 'warm'),
+              next_action = 'Sarvam AI call initiated — awaiting call completion',
+              notes = ?,
+              updated_at = ?
+            WHERE id = ?
+          `).run(newStage, ts, updatedNotes, ts, effectiveLeadId);
+
+          db.prepare(`
+            INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at)
+            VALUES (?, ?, 'call', 'calls', ?, ?, 'pending', ?)
+          `).run(
+            nanoid(),
+            effectiveLeadId,
+            `Sarvam AI Call Placed: Dr. ${docClean}`,
+            `Practo ${product.toUpperCase()} pitch initiated. Attempt ID: ${sarvamResult.attempt_id}`,
+            ts
+          );
+        } catch (leadErr) {
+          console.warn('[VoiceAgentService] Lead status update error (Sarvam):', leadErr.message);
+        }
       }
 
       return {
@@ -219,21 +274,42 @@ export class VoiceAgentService {
       console.warn('[VoiceAgentService] DB write error for call_log:', err.message);
     }
 
-    // 5. Update lead activity & stage if leadId is associated
-    if (leadId) {
+    // 5. Update lead activity & stage if effectiveLeadId is associated
+    if (effectiveLeadId) {
       try {
-        db.prepare('UPDATE leads SET last_contacted_at=?, updated_at=? WHERE id=?').run(ts, ts, leadId);
+        const leadRow = db.prepare('SELECT stage, notes FROM leads WHERE id = ?').get(effectiveLeadId);
+        const newStage = (!leadRow?.stage || leadRow.stage === 'new' || leadRow.stage === 'open') ? 'contacted' : leadRow.stage;
+        const noteText = `\n[${ts.split('T')[0]}] Native AI Call: Sentiment: ${sentimentData.doctorSentiment || 'Positive'} (${sentimentData.sentimentScore || 80}%) · Intent: ${sentimentData.doctorIntent || 'request_proposal'}`;
+        const updatedNotes = ((leadRow?.notes || '') + noteText).trim();
+        const scoreVal = Number(sentimentData.interestScore || sentimentData.sentimentScore || 80);
+        const temp = scoreVal >= 75 ? 'hot' : scoreVal >= 50 ? 'warm' : 'cold';
+
+        db.prepare(`
+          UPDATE leads SET
+            stage = ?,
+            status = 'contacted',
+            temperature = ?,
+            score = MAX(score, ?),
+            last_contacted_at = ?,
+            next_action = 'Follow up with interactive WhatsApp commercial proposal',
+            notes = ?,
+            updated_at = ?
+          WHERE id = ?
+        `).run(newStage, temp, scoreVal, ts, updatedNotes, ts, effectiveLeadId);
+
         db.prepare(`
           INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at)
           VALUES (?, ?, 'call', 'calls', ?, ?, 'completed', ?)
         `).run(
           nanoid(),
-          leadId,
+          effectiveLeadId,
           `${agentType === 'human' ? 'Human Agent' : 'Native AI'} call to Dr. ${doctorName}`,
-          `Duration: ${duration}s · Sentiment: ${sentimentData.doctorSentiment} (${sentimentData.sentimentScore || 80}%) · Provider: ${telephonyResult.provider}`,
+          `Duration: ${duration}s · Sentiment: ${sentimentData.doctorSentiment} (${scoreVal}%) · Provider: ${telephonyResult.provider}`,
           ts
         );
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.warn('[VoiceAgentService] Lead update error (Native):', err.message);
+      }
     }
 
     return {
@@ -252,26 +328,102 @@ export class VoiceAgentService {
   }
 
   /**
-   * Fetch all voice calls with rich transcription & sentiment data
+   * Fetch all voice calls with rich transcription, lead details & sentiment data
    */
   listCalls({ limit = 50, offset = 0, agentType = null, provider = null } = {}) {
-    let query = 'SELECT * FROM call_logs WHERE 1=1';
+    let query = `
+      SELECT c.*, l.name as lead_name, l.company as lead_clinic, l.stage as lead_stage, l.status as lead_status
+      FROM call_logs c
+      LEFT JOIN leads l ON c.lead_id = l.id
+      WHERE 1=1
+    `;
     const params = [];
 
     if (agentType) {
-      query += ' AND agent_type = ?';
+      query += ' AND c.agent_type = ?';
       params.push(agentType);
     }
     if (provider) {
-      query += ' AND telephony_provider = ?';
+      query += ' AND c.telephony_provider = ?';
       params.push(provider);
     }
 
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    query += ' ORDER BY c.created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     const rows = db.prepare(query).all(...params);
     return rows.map((r) => this._hydrateCall(r));
+  }
+
+  /**
+   * Synchronize call status, recording, and transcript from provider/Sarvam analytics
+   */
+  async syncCallStatus(callId) {
+    const logRow = db.prepare('SELECT * FROM call_logs WHERE id = ? OR job_id = ?').get(callId, callId);
+    if (!logRow) throw new Error(`Call record not found: ${callId}`);
+
+    if (logRow.telephony_provider === 'sarvam' || logRow.voice_engine === 'sarvam' || logRow.provider === 'sarvam_voice') {
+      const { sarvamVoiceService } = await import('./sarvamVoice.js');
+      const attemptId = logRow.job_id || logRow.id.replace('call_', '');
+      await sarvamVoiceService.syncAttemptStatus(attemptId);
+      const updatedRow = db.prepare('SELECT * FROM call_logs WHERE id = ?').get(logRow.id);
+      return this._hydrateCall(updatedRow || logRow);
+    }
+
+    // For native/simulator calls, transition to completed
+    const ts = now();
+    db.prepare(`UPDATE call_logs SET status = 'completed', updated_at = ? WHERE id = ?`).run(ts, logRow.id);
+    const updatedRow = db.prepare('SELECT * FROM call_logs WHERE id = ?').get(logRow.id);
+    return this._hydrateCall(updatedRow || logRow);
+  }
+
+  /**
+   * Export call recordings and sentiment data in CSV or JSON format
+   */
+  exportCalls({ format = 'csv', agentType = null, provider = null } = {}) {
+    const calls = this.listCalls({ limit: 1000, offset: 0, agentType, provider });
+
+    if (String(format).toLowerCase() === 'json') {
+      return {
+        total: calls.length,
+        exported_at: new Date().toISOString(),
+        calls,
+      };
+    }
+
+    const headers = [
+      'Call ID', 'Lead ID', 'Doctor Name', 'Clinic Name', 'Phone', 'Engine',
+      'Telephony Provider', 'Agent Type', 'Product', 'Duration (sec)', 'Status',
+      'Doctor Sentiment', 'Agent Sentiment', 'Interest Score', 'Objections',
+      'Doctor Intent', 'Audio URL', 'Created At'
+    ];
+
+    const csvLines = [headers.join(',')];
+    for (const c of calls) {
+      const row = [
+        c.id,
+        c.lead_id || '',
+        `"${(c.doctor_name || c.lead_name || '').replace(/"/g, '""')}"`,
+        `"${(c.clinic_name || c.lead_clinic || '').replace(/"/g, '""')}"`,
+        `"${c.phone || ''}"`,
+        c.voice_engine || 'native',
+        c.telephony_provider || 'sarvam',
+        c.agent_type || 'voice_agent',
+        c.product || 'prime',
+        c.duration_sec || 0,
+        c.status || 'completed',
+        `"${(c.doctor_sentiment || '').replace(/"/g, '""')}"`,
+        `"${(c.agent_sentiment || '').replace(/"/g, '""')}"`,
+        c.interest_score || 0,
+        `"${((c.objections || []).join('; ')).replace(/"/g, '""')}"`,
+        `"${(c.doctor_intent || '').replace(/"/g, '""')}"`,
+        `"${c.audio_url || c.recording_url || ''}"`,
+        c.created_at || '',
+      ];
+      csvLines.push(row.join(','));
+    }
+
+    return csvLines.join('\n');
   }
 
   getCallById(id) {

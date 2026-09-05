@@ -112,6 +112,7 @@ export default function VoiceCallsPage() {
           const first = list[0];
           setDialForm((prev) => ({
             ...prev,
+            leadId: first.id || '',
             doctorName: first.doctor_name || first.name || '',
             clinicName: first.clinic_name || '',
             phone: first.phone || '',
@@ -127,6 +128,7 @@ export default function VoiceCallsPage() {
 
   // Manual Dial Form State (Backed by Real Doctors)
   const [dialForm, setDialForm] = useState({
+    leadId: '',
     doctorName: '',
     clinicName: '',
     phone: '',
@@ -141,6 +143,21 @@ export default function VoiceCallsPage() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [dialing, setDialing] = useState(false);
   const [liveDialResult, setLiveDialResult] = useState(null);
+  const [syncingCallId, setSyncingCallId] = useState(null);
+
+  // Sync single call status & cascade to lead
+  const handleSyncCall = async (callId) => {
+    if (!callId) return;
+    setSyncingCallId(callId);
+    try {
+      await api.syncVoiceCall(callId);
+      await loadCallsData();
+    } catch (err) {
+      alert('Failed to sync call status: ' + err.message);
+    } finally {
+      setSyncingCallId(null);
+    }
+  };
 
   // Standalone Sentiment Analyzer tool state
   const [standaloneText, setStandaloneText] = useState(
@@ -157,6 +174,7 @@ export default function VoiceCallsPage() {
   const applyPersona = (persona) => {
     setDialForm((prev) => ({
       ...prev,
+      leadId: persona.leadId || persona.id || '',
       doctorName: persona.doctorName,
       clinicName: persona.clinicName,
       phone: persona.phone,
@@ -175,6 +193,7 @@ export default function VoiceCallsPage() {
 
     try {
       const payload = {
+        leadId: dialForm.leadId || undefined,
         doctorName: dialForm.doctorName,
         clinicName: dialForm.clinicName,
         phone: dialForm.phone,
@@ -468,8 +487,14 @@ export default function VoiceCallsPage() {
           <button className="btn btn-secondary btn-sm" onClick={() => setShowImportModal(true)}>
             📤 Import CSV
           </button>
-          <button className="btn btn-primary btn-sm" onClick={handleExportCalls}>
-            📥 Export Intelligence
+          <button className="btn btn-secondary btn-sm" onClick={handleExportCalls}>
+            📥 Export CSV
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => window.open(api.exportVoiceCallsUrl({ format: 'json' }), '_blank')}
+          >
+            📥 Export JSON
           </button>
         </div>
       </div>
@@ -899,7 +924,7 @@ export default function VoiceCallsPage() {
                       </td>
 
                       <td>
-                        <div className="flex gap-1.5">
+                        <div className="flex gap-1.5 flex-wrap">
                           <button
                             className="btn btn-secondary btn-sm"
                             style={{ fontSize: 11, padding: '4px 8px' }}
@@ -918,6 +943,15 @@ export default function VoiceCallsPage() {
                             title="Deep Sentiment Breakdown"
                           >
                             🧠 QA
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 11, padding: '4px 8px', color: '#1456FD' }}
+                            onClick={() => handleSyncCall(call.id || call.job_id)}
+                            disabled={syncingCallId === (call.id || call.job_id)}
+                            title="Sync live call status, transcript and lead stage"
+                          >
+                            {syncingCallId === (call.id || call.job_id) ? '⏳' : '🔄 Sync'}
                           </button>
                         </div>
                       </td>
@@ -1248,6 +1282,7 @@ export default function VoiceCallsPage() {
                       onClick={() => {
                         setDialForm((f) => ({
                           ...f,
+                          leadId: p.id,
                           doctorName: p.doctor_name || p.name || 'Doctor',
                           clinicName: p.clinic_name || '',
                           phone: p.phone || '',

@@ -168,7 +168,7 @@ export const api = {
 
   // ── Leads Batch Actions & Export ──────────────────────────────────────────
   batchActionLeads: (data) => post('/leads/batch-action', data),
-  exportLeadsUrl: (params) => `/api/leads/export${qs(params)}`,
+  exportLeadsUrl: (params) => `/api/leads/export${qs({ ...params, token: getToken() })}`,
 
   // ── Proprietary Voice Agent, Telephony & Dual Sentiment ───────────────────
   getVoiceAgentConfig: () => get('/voice-agent/config'),
@@ -177,6 +177,10 @@ export const api = {
   getVoiceAgentCalls: (params) => get('/voice-agent/calls', params),
   getVoiceAgentCallById: (id) => get(`/voice-agent/calls/${id}`),
   analyzeCallSentiment: (data) => post('/voice-agent/analyze-sentiment', data),
+  syncVoiceCall: (id) => post(`/voice-agent/calls/${id}/sync`),
+  syncSarvamCall: (attemptId) => post(`/sarvam/calls/${attemptId}/sync`),
+  exportVoiceCallsUrl: (params) => `/api/voice-agent/calls/export${qs({ ...params, token: getToken() })}`,
+  exportSnapshotUrl: () => `/api/storage/export-snapshot${qs({ token: getToken() })}`,
 
   // ── System ─────────────────────────────────────────────────────────────────
   getSystemEvents: (params) => get('/system/events', params),

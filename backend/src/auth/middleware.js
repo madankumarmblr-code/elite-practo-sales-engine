@@ -45,7 +45,9 @@ export function getUserFromToken(token) {
 
 export function authRequired(req, res, next) {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : req.headers['x-auth-token'];
+  const token = header.startsWith('Bearer ')
+    ? header.slice(7)
+    : (req.headers['x-auth-token'] || req.query?.token || req.query?.auth_token);
   const user = getUserFromToken(token);
   if (!user) {
     return res.status(401).json({ error: 'Authentication required' });

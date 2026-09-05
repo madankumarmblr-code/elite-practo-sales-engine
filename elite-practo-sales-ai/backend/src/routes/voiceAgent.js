@@ -115,6 +115,36 @@ export function registerVoiceAgentRoutes(app) {
     }
   });
 
+  // ── 3.1 Export Voice Calls (CSV / JSON) ─────────────────────────────────────
+  app.get('/api/voice-agent/calls/export', authRequired, requirePermission('leads:read'), (req, res) => {
+    try {
+      const { format = 'csv', agentType, provider } = req.query;
+      const data = voiceAgentService.exportCalls({ format, agentType, provider });
+
+      if (String(format).toLowerCase() === 'json') {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="practo_voice_calls_${Date.now()}.json"`);
+        return res.json(data);
+      }
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="practo_voice_calls_${Date.now()}.csv"`);
+      res.send(data);
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // ── 3.2 Sync Single Call Status & Intelligence ──────────────────────────────
+  app.post('/api/voice-agent/calls/:id/sync', authRequired, requirePermission('leads:read'), async (req, res) => {
+    try {
+      const updated = await voiceAgentService.syncCallStatus(req.params.id);
+      res.json({ ok: true, call: updated });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // ── 4. Get Single Call with Speaker Turns & Sentiment Breakdown ─────────────
   app.get('/api/voice-agent/calls/:id', authRequired, requirePermission('leads:read'), (req, res) => {
     try {

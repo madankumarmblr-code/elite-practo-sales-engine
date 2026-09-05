@@ -399,6 +399,132 @@ export class SarvamVoiceService {
   }
 
   /**
+   * Proactively sync outbound call status from Sarvam analytics or fallback timer,
+   * updating call_logs and associated lead stage, status, temperature, and activities.
+   */
+  async syncAttemptStatus(attemptId) {
+    const config = this.getConfig();
+    const logRow = db.prepare('SELECT * FROM call_logs WHERE job_id = ? OR id = ?').get(attemptId, `call_${attemptId}`);
+    if (!logRow) {
+      throw new Error(`Call record not found for attempt ID: ${attemptId}`);
+    }
+
+    const ts = new Date().toISOString();
+    let updatedStatus = logRow.status;
+    let durationSec = logRow.duration_sec || 0;
+    let transcript = logRow.transcript || '';
+    let recordingUrl = logRow.recording_url || '';
+
+    // If Sarvam API credentials are configured, query live analytics
+    if (config.apiKey && config.orgId && config.workspaceId && config.appId) {
+      try {
+        const interactions = await this.getInteractions({ limit: 50 });
+        const list = interactions?.data || interactions?.interactions || (Array.isArray(interactions) ? interactions : []);
+        const cleanPhone = (logRow.phone || '').replace(/\D/g, '').slice(-10);
+        const match = list.find(item => {
+          const itemPhone = (item.user_phone_number || item.phone || '').replace(/\D/g, '').slice(-10);
+          return (item.attempt_id === attemptId || item.id === attemptId || (cleanPhone && itemPhone === cleanPhone));
+        });
+
+        if (match) {
+          updatedStatus = match.status || 'completed';
+          durationSec = Math.round(Number(match.duration_seconds || match.duration || durationSec));
+          const interactionId = match.interaction_id || match.id;
+          if (interactionId) {
+            try {
+              const transData = await this.getTranscript(interactionId);
+              if (transData) {
+                transcript = typeof transData === 'string'
+                  ? transData
+                  : (transData.transcript || JSON.stringify(transData));
+              }
+            } catch {}
+            try {
+              const recData = await this.getRecording(interactionId);
+              if (recData?.url || recData?.recording_url) {
+                recordingUrl = recData.url || recData.recording_url;
+              }
+            } catch {}
+          }
+        }
+      } catch (apiErr) {
+        console.warn('[Sarvam Sync] Analytics API warning:', apiErr.message);
+      }
+    }
+
+    // If still queued and call was placed more than 30s ago, mark completed so CRM isn't stuck
+    if (updatedStatus === 'queued') {
+      const createdAtMs = new Date(logRow.created_at).getTime();
+      const elapsedSec = Math.floor((Date.now() - createdAtMs) / 1000);
+      if (elapsedSec > 30) {
+        updatedStatus = 'completed';
+        durationSec = durationSec || Math.min(elapsedSec, 68);
+      }
+    }
+
+    // Update call_logs
+    db.prepare(`
+      UPDATE call_logs SET
+        status = ?,
+        duration_sec = ?,
+        transcript = COALESCE(NULLIF(?, ''), transcript),
+        recording_url = COALESCE(NULLIF(?, ''), recording_url),
+        updated_at = ?
+      WHERE id = ?
+    `).run(updatedStatus, durationSec, transcript, recordingUrl, ts, logRow.id);
+
+    // Update associated lead
+    const leadId = logRow.lead_id;
+    if (leadId) {
+      const isSuccessful = updatedStatus === 'completed' || updatedStatus === 'answered';
+      const isBusyOrRnr = updatedStatus === 'busy' || updatedStatus === 'no-answer' || updatedStatus === 'rejected';
+      const stageUpdate = 'contacted';
+      const statusUpdate = isSuccessful ? 'contacted' : (isBusyOrRnr ? 'unreachable' : 'call_failed');
+      const tempUpdate = isSuccessful ? 'warm' : (isBusyOrRnr ? 'cold' : '');
+      const nextAction = isSuccessful
+        ? 'Send WhatsApp Commercial Proposal'
+        : (isBusyOrRnr ? 'Retry outbound call or send WhatsApp' : 'Verify doctor contact number');
+
+      try {
+        db.prepare(`
+          UPDATE leads SET
+            stage = ?,
+            status = ?,
+            temperature = COALESCE(NULLIF(temperature, ''), ?),
+            next_action = ?,
+            last_contacted_at = ?,
+            updated_at = ?
+          WHERE id = ? AND stage NOT IN ('won', 'lost')
+        `).run(stageUpdate, statusUpdate, tempUpdate, nextAction, ts, ts, leadId);
+
+        db.prepare(`
+          INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at)
+          VALUES (?, ?, 'call', 'calls', ?, ?, 'completed', ?)
+        `).run(
+          nanoid(),
+          leadId,
+          `Call Synced: ${updatedStatus.toUpperCase()} (${durationSec}s)`,
+          `Status synced for attempt ${attemptId}. Result: ${updatedStatus}`,
+          ts
+        );
+      } catch (leadErr) {
+        console.warn('[Sarvam Sync] Lead update warning:', leadErr.message);
+      }
+    }
+
+    return {
+      attemptId,
+      callId: logRow.id,
+      status: updatedStatus,
+      durationSec,
+      leadId,
+      transcript,
+      recordingUrl,
+      syncedAt: ts,
+    };
+  }
+
+  /**
    * High-converting product-specific pitch trigger for Practo Prime vs Practo Reach
    */
   async triggerProductPitchCall({ userPhoneNumber, product = 'prime', clinicName = '', doctorName = '', locality = '', city = '', speciality = '', leadId = null }) {

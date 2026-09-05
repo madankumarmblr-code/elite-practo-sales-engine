@@ -49,16 +49,42 @@ export function registerAutopilotRoutes(app) {
         leadId,
       });
 
-      // Record activity
-      if (leadId) {
-        const actId = `act_${Date.now()}`;
-        db.prepare(`
-          INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at)
-          VALUES (?, ?, 'call', 'voice_ai', ?, ?, 'initiated', datetime('now'))
-        `).run(actId, leadId, `Manual Sarvam Voice AI Call (${product.toUpperCase()})`, `Attempt ID: ${callResult.attempt_id} to ${phone}`);
+      // Auto-resolve leadId if missing
+      let targetLeadId = leadId;
+      if (!targetLeadId && phone) {
+        const cleanLast10 = String(phone).replace(/\D/g, '').slice(-10);
+        if (cleanLast10.length >= 10) {
+          const match = db.prepare('SELECT id FROM leads WHERE phone LIKE ? LIMIT 1').get(`%${cleanLast10}`);
+          if (match) targetLeadId = match.id;
+        }
       }
 
-      res.json({ ok: true, ...callResult });
+      // Record activity and advance lead status
+      if (targetLeadId) {
+        const actId = `act_${Date.now()}`;
+        const ts = new Date().toISOString();
+        try {
+          db.prepare(`
+            UPDATE leads SET
+              stage = CASE WHEN stage IN ('new', 'open') THEN 'contacted' ELSE stage END,
+              status = 'contacted',
+              last_contacted_at = ?,
+              temperature = COALESCE(NULLIF(temperature, ''), 'warm'),
+              next_action = 'Sarvam AI Call initiated — awaiting completion',
+              updated_at = ?
+            WHERE id = ?
+          `).run(ts, ts, targetLeadId);
+
+          db.prepare(`
+            INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at)
+            VALUES (?, ?, 'call', 'voice_ai', ?, ?, 'initiated', datetime('now'))
+          `).run(actId, targetLeadId, `Manual Sarvam Voice AI Call (${product.toUpperCase()})`, `Attempt ID: ${callResult.attempt_id} to ${phone}`);
+        } catch (leadErr) {
+          console.warn('[Autopilot manual-call] Lead update error:', leadErr.message);
+        }
+      }
+
+      res.json({ ok: true, ...callResult, leadId: targetLeadId });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

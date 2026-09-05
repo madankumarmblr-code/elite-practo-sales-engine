@@ -129,7 +129,7 @@ export default function IntegrationsPage() {
   }
 
   function handleExportSnapshot() {
-    window.open('/api/storage/export-snapshot', '_blank');
+    window.open(api.exportSnapshotUrl(), '_blank');
   }
 
   async function handleImportSnapshotFile(e) {

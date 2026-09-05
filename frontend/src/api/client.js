@@ -143,6 +143,8 @@ export const api = {
   // ── Commercial Proposals ──────────────────────────────────────────────────
   createProposal: (data) => post('/proposals', data),
   getProposals: () => get('/proposals'),
+  listCommercialProposals: () => get('/proposals'),
+  getProposalById: (id) => get(`/proposals/${id}`),
   generateWhatsAppSummary: (data) => post('/proposals/whatsapp-summary', data),
 
   // ── Autopilot AI Pipeline ─────────────────────────────────────────────────

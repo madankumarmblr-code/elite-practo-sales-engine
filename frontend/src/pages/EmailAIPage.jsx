@@ -10,7 +10,9 @@ export default function EmailAIPage() {
 
   useEffect(() => {
     setLoading(true);
-    api.listCommercialProposals()
+    const fetchFn = api.listCommercialProposals || api.getProposals;
+    const fetchPromise = typeof fetchFn === 'function' ? fetchFn() : Promise.resolve([]);
+    fetchPromise
       .then((res) => {
         const raw = Array.isArray(res) ? res : (res?.proposals || []);
         const formatted = raw.map((p) => ({

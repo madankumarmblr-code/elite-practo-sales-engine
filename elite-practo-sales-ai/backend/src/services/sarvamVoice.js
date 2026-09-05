@@ -17,6 +17,31 @@ export function sanitizeIndianPhone(raw) {
   return `+91${digits}`;
 }
 
+// The exact whitelist of agent variables permitted by Sarvam app schema ('Conversatio-852345bd-c05f').
+// Sarvam API strictly rejects any request containing unknown/extra keys.
+export const ALLOWED_SARVAM_VARIABLES = new Set([
+  'userName',
+  'companyName',
+  'role',
+  'companySize',
+  'industryVertical',
+  'productCategory',
+  'priorTouchpointSummary',
+  'salesRepName',
+  'salesRepPhone',
+  'smeAvailableForFollowup',
+  'typicalCustomerPainPoints',
+  'qualifyingSegments',
+  'disqualifyingSignals',
+  'proposedNextStepDefault',
+  'preferredCallbackWindow',
+  'customerCareNumber',
+  'dndRegistrationLine',
+  'campaignId',
+  'crmDealStage',
+  'partnerName',
+]);
+
 /**
  * Sarvam Voice Agents (Indus Samvaad) — Configuration & Client Service
  * Default Org: 01a050ff-9cdc-7d60-8c27-eaf6731df818
@@ -29,22 +54,14 @@ export class SarvamVoiceService {
   }
 
   getConfig() {
-    const defaultApiKey = 'sk_samvaad_0bipkd90_6bna8CJte1KQ3OsdkssedGXc';
-    const defaultOrgId = '01a050ff-9cdc-7d60-8c27-eaf6731df818';
-    const defaultWorkspaceId = '01a050ff-9ce4-74ef-980d-b167c2e3489c';
-    const defaultAppId = 'Conversatio-852345bd-c05f';
-    const defaultConnectionId = '9371c846-11-436db30b-3927';
-    const defaultAgentPhone = '+918071579481';
-    const defaultWebhookUrl = '/api/sarvam/webhook';
-
-    const envApiKey = process.env.SARVAM_VOICE_API_KEY || defaultApiKey;
-    const envOrgId = process.env.SARVAM_ORG_ID || defaultOrgId;
-    const envWorkspaceId = process.env.SARVAM_WORKSPACE_ID || defaultWorkspaceId;
-    const envAppId = process.env.SARVAM_AGENT_APP_ID || defaultAppId;
-    const envAppVersion = Number(process.env.SARVAM_AGENT_APP_VERSION) || 1;
-    const envConnectionId = process.env.SARVAM_CONNECTION_ID || defaultConnectionId;
-    const envAgentPhone = process.env.SARVAM_AGENT_PHONE_NUMBER || defaultAgentPhone;
-    const envWebhookUrl = process.env.SARVAM_WEBHOOK_URL || defaultWebhookUrl;
+    const envApiKey = process.env.SARVAM_VOICE_API_KEY || process.env.SARVAM_API_KEY || '';
+    const envOrgId = process.env.SARVAM_VOICE_ORG_ID || process.env.SARVAM_ORG_ID || '01a050ff-9cdc-7d60-8c27-eaf6731df818';
+    const envWorkspaceId = process.env.SARVAM_VOICE_WORKSPACE_ID || process.env.SARVAM_WORKSPACE_ID || '01a050ff-9ce4-74ef-980d-b167c2e3489c';
+    const envAppId = process.env.SARVAM_VOICE_APP_ID || process.env.SARVAM_APP_ID || 'Conversatio-852345bd-c05f';
+    const envAppVersion = Number(process.env.SARVAM_VOICE_APP_VERSION || 1);
+    const envConnectionId = process.env.SARVAM_VOICE_CONNECTION_ID || 'Telephon-780ccebc-c8ff';
+    const envAgentPhone = process.env.SARVAM_VOICE_AGENT_PHONE || '+918035317498';
+    const envWebhookUrl = process.env.SARVAM_VOICE_WEBHOOK_URL || '';
 
     let dbSecrets = {};
     let dbConfig = {};
@@ -157,74 +174,67 @@ export class SarvamVoiceService {
 
     const resolvedDocName = agentVariables?.userName || agentVariables?.doctorName || agentVariables?.doctor_name || agentVariables?.name || leadInfo?.name || 'Doctor';
     const docClean = String(resolvedDocName).replace(/^(Dr\.?|Doctor)\s*/i, '').trim() || 'Doctor';
-    const resolvedClinicName = agentVariables?.companyName || agentVariables?.clinicName || agentVariables?.clinic_name || leadInfo?.clinic_name || 'Clinic';
-    const locClean = agentVariables?.locality || leadInfo?.locality || leadInfo?.city || 'Bangalore';
+    const rawClinic = agentVariables?.companyName || agentVariables?.clinicName || agentVariables?.clinic_name || leadInfo?.clinic_name || 'Clinic';
+    const locClean = agentVariables?.locality || leadInfo?.locality || leadInfo?.city || '';
     const specClean = agentVariables?.speciality || agentVariables?.specialty || leadInfo?.speciality || 'General Physician';
     const isReach = String(agentVariables?.product || leadInfo?.product_interest || '').toLowerCase() === 'reach';
 
-    // Comprehensive Practo Voice AI Agent Variables (Indus Samvaad Template Bindings)
-    // NOTE: In Sarvam app prompt templates, opening greetings interpolate {{partnerName}} and {{userName}}.
-    // Omitting partnerName causes Sarvam to fall back to its internal prompt default ("Sarvam Ventures").
-    // We strictly enforce "Practo" across all brand and caller identity variables.
+    // Embed locality inside clinic name so agent naturally speaks the clinic and locality without needing extra unknown variables
+    const clinicWithLoc = locClean && !rawClinic.toLowerCase().includes(locClean.toLowerCase())
+      ? `${rawClinic}, ${locClean}`
+      : rawClinic;
+
+    // Comprehensive Practo Voice AI Agent Variables strictly matching Sarvam app schema ('Conversatio-852345bd-c05f')
+    // partnerName is strictly 'Practo' to eliminate 'Sarvam Ventures'
     const defaultPractoVariables = {
       partnerName: 'Practo',
-      partner_name: 'Practo',
-      brand: 'Practo',
-      organization: 'Practo',
-      callingFrom: 'Practo',
-      salesRepName: 'Practo Healthcare Growth Team',
-      sales_rep_name: 'Practo Healthcare Growth Team',
       userName: `Dr. ${docClean}`,
-      user_name: `Dr. ${docClean}`,
-      doctorName: `Dr. ${docClean}`,
-      doctor_name: `Dr. ${docClean}`,
-      companyName: resolvedClinicName,
-      company_name: resolvedClinicName,
-      clinicName: resolvedClinicName,
-      clinic_name: resolvedClinicName,
-      locality: locClean,
-      city: agentVariables?.city || leadInfo?.city || locClean,
-      speciality: specClean,
-      specialty: specClean,
+      companyName: clinicWithLoc,
       role: 'Doctor / Clinic Director',
-      industryVertical: 'Healthcare & Clinical Practice',
-      industry_vertical: 'Healthcare & Clinical Practice',
+      companySize: '10-50 healthcare staff',
+      industryVertical: 'Healthcare & Medical Practice',
       productCategory: isReach
-        ? `Practo Reach Position 1 Local Search Spotlight (${specClean} - ${locClean})`
-        : `Practo Prime Verified Clinic & Online Patient Booking (${specClean} - ${locClean})`,
-      product_category: isReach
-        ? `Practo Reach Position 1 Local Search Spotlight (${specClean} - ${locClean})`
-        : `Practo Prime Verified Clinic & Online Patient Booking (${specClean} - ${locClean})`,
+        ? `Practo Reach Position 1 Spotlight (${specClean})`
+        : `Practo Prime Online Booking (${specClean})`,
       campaignId: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
-      campaign_id: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
-      priorTouchpointSummary: isReach
-        ? `Exclusive Position 1 Practo Reach spotlight slot available for ${specClean} in ${locClean}`
-        : `Practo Prime clinic partnership to activate 24/7 instant booking for ${resolvedClinicName} in ${locClean} with zero onboarding fee`,
+      salesRepName: 'Practo Healthcare Growth Team',
+      salesRepPhone: '+918041100376',
+      smeAvailableForFollowup: 'Yes — Practo Senior Practice Consultant available Mon-Sat 9-7 IST',
       typicalCustomerPainPoints: isReach
-        ? `Low visibility on local patient search results compared to competing clinics in ${locClean}, losing high-intent patients looking for ${specClean}`
-        : `Patient no-shows, unfilled appointment slots during afternoon clinic hours, manual appointment management for ${resolvedClinicName}`,
+        ? `Low visibility on local patient search results compared to competing clinics in ${locClean || 'your area'}, losing high-intent patients looking for ${specClean}`
+        : `Patient no-shows, unfilled appointment slots during afternoon clinic hours, manual appointment management for ${rawClinic}`,
+      qualifyingSegments: 'Active medical clinic or hospital looking to increase verified patient footfall',
+      disqualifyingSignals: 'Closed clinic or non-medical practitioner',
       proposedNextStepDefault: isReach
-        ? `Reserve the exclusive Position 1 Spotlight slot on Practo Reach for ${resolvedClinicName}`
+        ? `Reserve the exclusive Position 1 Spotlight slot on Practo Reach for ${rawClinic}`
         : `Complete free Practo Prime clinic verification and activate online booking badge`,
+      preferredCallbackWindow: '10 AM to 7 PM weekdays',
       customerCareNumber: '+918041100376',
+      dndRegistrationLine: '1800-500-DND',
+      crmDealStage: 'Discovery scheduled',
     };
 
-    const finalAgentVariables = {
+    const mergedVariables = {
       ...defaultPractoVariables,
       ...(agentVariables || {}),
       // Crucial: Guarantee partnerName is ALWAYS Practo (overriding any accidental "Sarvam Ventures" default)
       partnerName: (agentVariables?.partnerName && !agentVariables.partnerName.toLowerCase().includes('sarvam'))
         ? agentVariables.partnerName
         : 'Practo',
-      partner_name: 'Practo',
-      brand: 'Practo',
-      organization: 'Practo',
-      callingFrom: 'Practo',
     };
 
+    // STRICT SCHEMA FILTER: Sarvam API strictly throws an error if any undeclared variable is passed.
+    // We only pass variables that are strictly declared in ALLOWED_SARVAM_VARIABLES.
+    const filteredAgentVariables = {};
+    for (const [key, val] of Object.entries(mergedVariables)) {
+      if (ALLOWED_SARVAM_VARIABLES.has(key) && val !== undefined && val !== null) {
+        filteredAgentVariables[key] = String(val);
+      }
+    }
+
     const defaultInitialGreeting = isReach
-      ? `Hello Dr. ${docClean}, this is Ananya calling on behalf of Practo Reach for ${resolvedClinicName} in ${locClean}. Am I speaking with Dr. ${docClean}?`
-      : `Hello Dr. ${docClean}, this is Ananya calling from the Practo team regarding ${resolvedClinicName} in ${locClean}. Am I speaking with Dr. ${docClean}?`;
+      ? `Hello Dr. ${docClean}, this is Ananya calling on behalf of Practo Reach for ${clinicWithLoc}. Am I speaking with Dr. ${docClean}?`
+      : `Hello Dr. ${docClean}, this is Ananya calling from the Practo team regarding ${clinicWithLoc}. Am I speaking with Dr. ${docClean}?`;
 
     const payload = {
       app_config: {
@@ -232,7 +242,7 @@ export class SarvamVoiceService {
         app_version: Number(finalAppVersion) || 1,
         connection_config: { connection_id: finalConnectionId, agent_phone_number: formattedAgentPhone },
         app_type: 'agent',
-        agent_variables: finalAgentVariables,
+        agent_variables: filteredAgentVariables,
         app_overrides: {
           initial_language_name: 'English',
           initial_bot_message: defaultInitialGreeting,
@@ -415,47 +425,39 @@ export class SarvamVoiceService {
       initialMessage = `Hello Dr. ${docNameClean}, this is Ananya calling from the Practo team regarding ${clinicClean} in ${locClean}. We are partnering with select ${specClean} clinics to activate Practo Prime, giving you 24/7 instant online booking on Practo, guaranteed patient appointments, and the official Prime Clinic badge with zero software fee. May I share how this boosts your verified patient visits by 35%?`;
     }
 
+    const clinicWithLoc = locClean && !clinicClean.toLowerCase().includes(locClean.toLowerCase())
+      ? `${clinicClean}, ${locClean}`
+      : clinicClean;
+
     const agentVariables = {
       partnerName: 'Practo',
-      partner_name: 'Practo',
-      brand: 'Practo',
-      organization: 'Practo',
-      callingFrom: 'Practo',
-      salesRepName: 'Practo Healthcare Growth Team',
-      sales_rep_name: 'Practo Healthcare Growth Team',
       userName: `Dr. ${docNameClean}`,
-      user_name: `Dr. ${docNameClean}`,
-      doctorName: `Dr. ${docNameClean}`,
-      doctor_name: `Dr. ${docNameClean}`,
-      companyName: clinicClean,
-      company_name: clinicClean,
-      clinicName: clinicClean,
-      clinic_name: clinicClean,
-      locality: locClean,
-      city: city || leadRow?.city || locClean,
-      speciality: specClean,
-      specialty: specClean,
+      companyName: clinicWithLoc,
       role: 'Doctor / Clinic Director',
-      industryVertical: 'Healthcare & Clinical Practice',
-      industry_vertical: 'Healthcare & Clinical Practice',
+      companySize: '10-50 healthcare staff',
+      industryVertical: 'Healthcare & Medical Practice',
       productCategory: isReach
-        ? `Practo Reach Position 1 Spotlight (${specClean} - ${locClean})`
-        : `Practo Prime Verified Clinic (${specClean} - ${locClean})`,
-      product_category: isReach
-        ? `Practo Reach Position 1 Spotlight (${specClean} - ${locClean})`
-        : `Practo Prime Verified Clinic (${specClean} - ${locClean})`,
+        ? `Practo Reach Position 1 Spotlight (${specClean})`
+        : `Practo Prime Online Booking (${specClean})`,
       campaignId: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
-      campaign_id: isReach ? 'PRACTO_REACH_2026' : 'PRACTO_PRIME_2026',
-      priorTouchpointSummary: isReach
-        ? `Exclusive Position 1 Practo Reach spotlight slot available for ${specClean} in ${locClean}`
-        : `Practo Prime clinic partnership to activate 24/7 instant booking for ${clinicClean} in ${locClean} with zero onboarding fee`,
+      salesRepName: 'Practo Healthcare Growth Team',
+      salesRepPhone: '+918041100376',
+      smeAvailableForFollowup: 'Yes — Practo Senior Practice Consultant available Mon-Sat 9-7 IST',
       typicalCustomerPainPoints: isReach
         ? `Low visibility on local patient search results compared to competing clinics in ${locClean}, losing high-intent patients looking for ${specClean}`
         : `Patient no-shows, unfilled appointment slots during afternoon clinic hours, manual appointment management for ${clinicClean}`,
+      qualifyingSegments: 'Active medical clinic or hospital looking to increase verified patient footfall',
+      disqualifyingSignals: 'Closed clinic or non-medical practitioner',
       proposedNextStepDefault: isReach
         ? `Reserve the exclusive Position 1 Spotlight slot on Practo Reach for ${clinicClean}`
         : `Complete free Practo Prime clinic verification and activate online booking badge`,
+      preferredCallbackWindow: '10 AM to 7 PM weekdays',
       customerCareNumber: '+918041100376',
+      dndRegistrationLine: '1800-500-DND',
+      crmDealStage: 'Discovery scheduled',
+      priorTouchpointSummary: isReach
+        ? `Exclusive Position 1 Practo Reach spotlight slot available for ${specClean} in ${locClean}`
+        : `Practo Prime clinic partnership to activate 24/7 instant booking for ${clinicClean} in ${locClean} with zero onboarding fee`,
     };
 
     return this.triggerInstantOutbound({

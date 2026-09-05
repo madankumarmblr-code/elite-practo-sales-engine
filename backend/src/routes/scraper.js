@@ -19,10 +19,24 @@ function toSlug(str) {
 function cleanPhoneNumber(raw) {
   if (!raw) return '';
   const digits = String(raw).replace(/\D/g, '');
-  if (digits.length === 10) return `+91${digits}`;
-  if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
-  if (digits.length > 10) return `+${digits.slice(-10)}`;
-  return raw;
+  if (!digits || digits.length < 8) return '';
+
+  // Reject repetitive / synthetic test numbers (e.g. 6666666667, 1234567890, 9999999999)
+  if (
+    /^(\d)\1{5,}/.test(digits) ||
+    digits === '6666666667' ||
+    digits === '7777777778' ||
+    digits === '1234567890' ||
+    digits.startsWith('00000')
+  ) {
+    return '';
+  }
+
+  if (digits.length === 10 && /^[6-9]/.test(digits)) return `+91${digits}`;
+  if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) return `+${digits}`;
+  if (digits.length === 11 && digits.startsWith('0')) return `+91${digits.slice(1)}`;
+  if (digits.length === 10 && digits.startsWith('80')) return `+91${digits}`;
+  return '';
 }
 
 /**
@@ -74,51 +88,39 @@ async function fetchLivePractoClinics({ city, locality, speciality }) {
             ALLOWED_TYPES.includes(data['@type']) ||
             (data.name && (data.name.includes('Dr.') || data.name.includes('Clinic') || data.name.includes('Hospital') || data.name.includes('Dental')));
 
-          if (isMedical && data.name && !data.name.toLowerCase().includes('best dentist') && !data.name.toLowerCase().includes('top doctors')) {
-            const doctorName = data.name.startsWith('Dr.') ? data.name : `Dr. ${data.name}`;
+          const lowerName = (data.name || '').toLowerCase();
+          const isListingTitle =
+            lowerName.includes('best ') ||
+            lowerName.includes('top ') ||
+            lowerName.includes('doctors in') ||
+            lowerName.includes('specialists in') ||
+            lowerName.includes('clinics in') ||
+            lowerName.includes('dentists in');
+
+          if (isMedical && data.name && !isListingTitle) {
+            const rawDocName = data.name.trim();
+            const doctorName = rawDocName.startsWith('Dr.') ? rawDocName : `Dr. ${rawDocName}`;
             const branch = data.branchOf || {};
-            let clinicName = branch.name || (data['@type'] === 'Dentist' ? `${doctorName}'s Dental Clinic` : `${doctorName}'s Practice`);
+            let clinicName =
+              branch.name ||
+              (rawDocName.includes('Clinic') || rawDocName.includes('Dental') || rawDocName.includes('Hospital')
+                ? rawDocName
+                : (data['@type'] === 'Dentist' ? `${doctorName}'s Dental Clinic` : `${doctorName}'s Clinic`));
 
             const addressObj = data.address || {};
             const street = addressObj.streetAddress || '';
-            const addressLocality = addressObj.addressLocality || locality;
+            const addressLocality = addressObj.addressLocality || '';
             const pincode = addressObj.postalCode || '';
-            const fullAddress = [street, addressLocality, city, pincode].filter(Boolean).join(', ');
+            const fullAddress = [street, addressLocality, locality, city, pincode].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i).join(', ');
 
             const practoUrl = data.url || `https://www.practo.com/${citySlug}/doctor/${toSlug(doctorName)}`;
-            const rawRating = data.aggregateRating?.ratingValue || 4.5;
-            const rawReviews = data.aggregateRating?.reviewCount || 20;
+            const rawRating = data.aggregateRating?.ratingValue || 4.7;
+            const rawReviews = data.aggregateRating?.reviewCount || 24;
 
-            let consultationFee = 500;
+            let consultationFee = data.priceRange ? parseInt(data.priceRange, 10) : 500;
             let expYears = 10;
             let isAd = hasPractoSponsored ? 1 : 0;
-            let phone = cleanPhoneNumber(data.telephone || '');
-
-            // Follow doctor profile link to enrich exact clinic name, fees, experience, and direct contact
-            if (practoUrl && practoUrl.includes('/doctor/')) {
-              try {
-                const docRes = await fetch(practoUrl, {
-                  headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
-                  signal: AbortSignal.timeout(3500),
-                });
-                if (docRes.ok) {
-                  const docHtml = await docRes.text();
-                  const clinicMatch = docHtml.match(/class="c-profile--clinic__name"[^>]*>([\s\S]*?)<\//i) || docHtml.match(/<h2[^>]*class="c-profile--clinic__name"[^>]*>([\s\S]*?)<\/h2>/i);
-                  if (clinicMatch && clinicMatch[1].trim()) {
-                    clinicName = clinicMatch[1].replace(/<[^>]+>/g, '').trim();
-                  }
-                  const feeMatch = docHtml.match(/class="c-profile--fee"[^>]*>[\s\S]*?₹\s*(\d+)/i) || docHtml.match(/₹\s*(\d+)\s*(?:at clinic|Consultation)/i);
-                  if (feeMatch) consultationFee = parseInt(feeMatch[1], 10);
-                  const expMatch = docHtml.match(/(\d+)\s+years?\s+experience/i);
-                  if (expMatch) expYears = parseInt(expMatch[1], 10);
-                  if (docHtml.includes('c-card--sponsored') || docHtml.includes('Sponsored')) isAd = 1;
-                  if (!phone) {
-                    const pMatch = docHtml.match(/(?:\+91|0)?\s*([6-9]\d{4}[\s-]?\d{5})/);
-                    if (pMatch) phone = cleanPhoneNumber(pMatch[0]);
-                  }
-                }
-              } catch { /* skip deep profile on timeout */ }
-            }
+            let phone = cleanPhoneNumber(data.telephone || branch.telephone || '');
 
             const slug = toSlug(clinicName + doctorName);
             if (!seenSlugs.has(slug)) {
@@ -127,7 +129,7 @@ async function fetchLivePractoClinics({ city, locality, speciality }) {
                 clinic_name: clinicName,
                 doctor_name: doctorName,
                 address: fullAddress,
-                locality: addressLocality || locality,
+                locality: locality || addressLocality,
                 city,
                 speciality,
                 on_practo: 1,
@@ -135,13 +137,13 @@ async function fetchLivePractoClinics({ city, locality, speciality }) {
                 practo_reviews: Number(rawReviews) || 20,
                 practo_url: practoUrl,
                 phone: phone || '',
-                website: data.sameAs || '',
+                website: branch.url || data.sameAs || '',
                 consultation_fee: consultationFee,
                 experience_years: expYears,
                 is_ad_advertiser: isAd,
                 ad_channel: isAd ? 'Practo Spotlight' : '',
-                gmb_rating: 4.5,
-                gmb_reviews: 15,
+                gmb_rating: 4.6,
+                gmb_reviews: 18,
                 gmb_url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinicName + ' ' + (addressLocality || locality) + ' ' + city)}`,
                 source: 'practo',
               });
@@ -163,7 +165,7 @@ async function fetchLivePractoClinics({ city, locality, speciality }) {
  * Source 2: Google Maps Places API & GMB Data
  * Fetches verified medical practices, ratings, and phone numbers from Google Maps
  */
-async function fetchGoogleAndGmbClinics({ city, locality, speciality }) {
+async function fetchGoogleAndWebClinics({ city, locality, speciality }) {
   let googleKey = process.env.GOOGLE_MAPS_API_KEY || '';
   try {
     const row = db.prepare("SELECT secrets FROM api_integrations WHERE provider = 'google_maps'").get();
@@ -182,7 +184,7 @@ async function fetchGoogleAndGmbClinics({ city, locality, speciality }) {
       const res = await fetch(searchUrl, { signal: AbortSignal.timeout(6000) });
       if (res.ok) {
         const data = await res.json();
-        const results = (data.results || []).slice(0, 8);
+        const results = (data.results || []).slice(0, 10);
         for (const place of results) {
           let phone = '';
           let website = '';
@@ -227,10 +229,10 @@ async function fetchGoogleAndGmbClinics({ city, locality, speciality }) {
     }
   }
 
-  // Supplement with OpenStreetMap authentic physical facilities
-  const osmClinics = await fetchOsmHealthcareFacilities({ city, locality, speciality });
-  return [...clinics, ...osmClinics];
+  return clinics;
 }
+
+const fetchGoogleAndGmbClinics = fetchGoogleAndWebClinics;
 
 /**
  * Source 3: Clinic Website Deep Contact Extractor
@@ -271,15 +273,18 @@ async function enrichClinicFromWebsite(websiteUrl) {
  */
 async function fetchOsmHealthcareFacilities({ city, locality, speciality }) {
   const overpassQuery = `
-    [out:json][timeout:6];
-    area["name"="${city}"]->.cityArea;
+    [out:json][timeout:8];
+    (
+      area["name"="${city}"];
+      area["name"="${city.toLowerCase() === 'bangalore' ? 'Bengaluru' : city}"];
+    )->.cityArea;
     (
       node["amenity"="clinic"](area.cityArea);
       node["amenity"="hospital"](area.cityArea);
       node["healthcare"="clinic"](area.cityArea);
       node["healthcare"="dentist"](area.cityArea);
     );
-    out 12;
+    out 15;
   `;
 
   try {
@@ -287,7 +292,7 @@ async function fetchOsmHealthcareFacilities({ city, locality, speciality }) {
       method: 'POST',
       body: overpassQuery,
       headers: { 'User-Agent': 'PractoEnterpriseSalesEngine/1.0' },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) return [];
@@ -300,7 +305,9 @@ async function fetchOsmHealthcareFacilities({ city, locality, speciality }) {
     for (const el of elements) {
       const tags = el.tags || {};
       const rawName = tags.name || tags['name:en'];
-      if (!rawName || rawName.toLowerCase().includes('pharmacy') || rawName.toLowerCase().includes('store')) continue;
+      if (!rawName) continue;
+      const lower = rawName.trim().toLowerCase();
+      if (lower === 'clinic' || lower === 'hospital' || lower === 'dentist' || lower === 'doctor' || lower.includes('pharmacy') || lower.includes('store') || lower.includes('medical store')) continue;
 
       const clinicName = rawName.trim();
       const street = tags['addr:street'] || tags['addr:full'] || '';
@@ -403,8 +410,7 @@ async function mergeAndDeduplicateClinics({ livePracto, liveGoogle, liveOsm, loc
         docName = `Dr. ${clinic.clinic_name.replace(/clinic|hospital|dental|care|center|centre/gi, '').trim()}`;
       }
 
-      const cleanDomain = toSlug(clinic.clinic_name).slice(0, 16).replace(/-+$/, '');
-      const finalEmail = email || `contact@${cleanDomain || 'clinic'}.in`;
+      const finalEmail = email || '';
 
       return {
         id: `scraped_${toSlug(clinic.clinic_name)}_${toSlug(clinic.locality)}`.slice(0, 48),
@@ -422,7 +428,7 @@ async function mergeAndDeduplicateClinics({ livePracto, liveGoogle, liveOsm, loc
         owner_email: finalEmail,
         marketing_name: `Practice Admin (${clinic.clinic_name.split(' ')[0]})`,
         marketing_phone: phone || '',
-        marketing_email: `admin@${cleanDomain || 'clinic'}.in`,
+        marketing_email: finalEmail,
         reception_phone: phone || '',
         is_ad_advertiser: clinic.is_ad_advertiser || 0,
         ad_channel: clinic.ad_channel || '',
@@ -459,9 +465,10 @@ export function registerScraperRoutes(app) {
     let query = 'SELECT * FROM scraped_clinics WHERE lower(city) = ?';
     const params = [String(city).trim().toLowerCase()];
 
+    let cleanLoc = '';
     if (targetLocality) {
       query += ' AND (lower(locality) = ? OR lower(locality) LIKE ? OR lower(address) LIKE ?)';
-      const cleanLoc = String(targetLocality).trim().toLowerCase();
+      cleanLoc = String(targetLocality).trim().toLowerCase();
       params.push(cleanLoc, `%${cleanLoc}%`, `%${cleanLoc}%`);
     }
     if (speciality) {
@@ -475,6 +482,17 @@ export function registerScraperRoutes(app) {
     // If no existing records or refresh requested, fetch live from Practo, Google & OSM
     if ((rows.length === 0 || refresh === 'true') && targetLocality && speciality) {
       try {
+        if (refresh === 'true') {
+          db.prepare(`
+            DELETE FROM scraped_clinics 
+            WHERE assigned_crm = 0 AND lower(city) = ? AND (lower(locality) = ? OR lower(locality) LIKE ?)
+          `).run(String(city).trim().toLowerCase(), cleanLoc, `%${cleanLoc}%`);
+          db.prepare(`
+            DELETE FROM scraped_clinics
+            WHERE lower(clinic_name) IN ('clinic', 'hospital', 'dentist', 'doctor')
+          `).run();
+        }
+
         logEvent({
           type: 'info',
           category: 'scraper',

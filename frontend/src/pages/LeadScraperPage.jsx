@@ -206,9 +206,14 @@ export default function LeadScraperPage() {
     }
   }
 
+  const apolloCount = clinics.filter((c) => c.apollo_enriched === 1 || !!c.linkedin_url).length;
+  const gmbCount = clinics.filter((c) => (c.gmb_rating > 0 || !!c.gmb_url)).length;
+
   const filteredClinics = clinics.filter((c) => {
     if (filterPracto === 'on_practo') return c.on_practo === 1;
     if (filterPracto === 'not_on_practo') return c.on_practo === 0;
+    if (filterPracto === 'apollo') return c.apollo_enriched === 1 || !!c.linkedin_url;
+    if (filterPracto === 'google_maps') return (c.gmb_rating > 0 || !!c.gmb_url);
     return true;
   });
 
@@ -304,7 +309,7 @@ export default function LeadScraperPage() {
                 disabled={loading}
               >
                 <EnterpriseIcon name="zap" size={13} color="#FFFFFF" />
-                <span>{loading ? 'Scraping Live Web...' : 'Live Multi-Source Scrape (Practo + Google + Websites)'}</span>
+                <span>{loading ? 'Scraping Live Web...' : 'Live Multi-Source Scrape (Practo + Google Maps + Apollo.io + Web)'}</span>
               </button>
             </div>
           </div>
@@ -313,7 +318,7 @@ export default function LeadScraperPage() {
 
       {/* Results Sub-header with Filter Pills */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-bold" style={{ color: '#1E2238' }}>Filter Presence:</span>
           <button
             className={`btn btn-sm ${filterPracto === 'all' ? 'btn-primary' : 'btn-ghost'}`}
@@ -333,6 +338,20 @@ export default function LeadScraperPage() {
             style={filterPracto === 'not_on_practo' ? {} : { borderColor: '#FED7AA', color: '#C2410C' }}
           >
             ⭐ Unlisted Target ({stats.notOnPracto})
+          </button>
+          <button
+            className={`btn btn-sm ${filterPracto === 'google_maps' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setFilterPracto('google_maps')}
+            style={filterPracto === 'google_maps' ? {} : { borderColor: '#BAE6FD', color: '#0284C7' }}
+          >
+            🗺️ Google Maps ({gmbCount})
+          </button>
+          <button
+            className={`btn btn-sm ${filterPracto === 'apollo' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setFilterPracto('apollo')}
+            style={filterPracto === 'apollo' ? {} : { borderColor: '#E9D5FF', color: '#7E22CE' }}
+          >
+            ⚡ Apollo.io Enriched ({apolloCount})
           </button>
         </div>
 
@@ -372,7 +391,7 @@ export default function LeadScraperPage() {
                 <tr>
                   <th style={{ width: 40 }}></th>
                   <th>Clinic / Hospital</th>
-                  <th>Practo Status</th>
+                  <th>Practo & Discovery Status</th>
                   <th>Owner / Director Contact</th>
                   <th>Marketing Contact</th>
                   <th>Quick Actions</th>
@@ -405,6 +424,31 @@ export default function LeadScraperPage() {
                           )}
                           {c.experience_years > 0 && (
                             <span className="badge badge-teal" style={{ fontSize: 10 }}>{c.experience_years}+ Yrs Exp</span>
+                          )}
+                          {c.website && (
+                            <a
+                              href={c.website.startsWith('http') ? c.website : `https://${c.website}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs"
+                              style={{ color: '#0284C7', textDecoration: 'none', fontWeight: 600 }}
+                            >
+                              🌐 Website ↗
+                            </a>
+                          )}
+                          {c.apollo_enriched === 1 && (
+                            <span className="badge badge-purple" style={{ fontSize: 10 }}>⚡ Apollo.io Verified</span>
+                          )}
+                          {c.linkedin_url && (
+                            <a
+                              href={c.linkedin_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs"
+                              style={{ color: '#0A66C2', textDecoration: 'none', fontWeight: 600 }}
+                            >
+                              👔 LinkedIn ↗
+                            </a>
                           )}
                           <span className="text-xs text-muted">
                             Frontdesk: <strong>{c.reception_phone || 'Unlisted'}</strong>
@@ -462,7 +506,12 @@ export default function LeadScraperPage() {
                       </td>
 
                       <td>
-                        <div style={{ fontWeight: 600, color: '#0F172A' }}>{c.owner_name}</div>
+                        <div style={{ fontWeight: 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span>{c.owner_name}</span>
+                          {c.apollo_enriched === 1 && (
+                            <span className="badge badge-teal" style={{ fontSize: 9, padding: '1px 5px' }}>Apollo Verified</span>
+                          )}
+                        </div>
                         <div className="text-xs font-bold flex items-center gap-1 mt-0.5" style={{ color: '#1456FD' }}>
                           <EnterpriseIcon name="phone" size={12} color="#1456FD" />
                           <span>{c.owner_phone || 'Unlisted'}</span>

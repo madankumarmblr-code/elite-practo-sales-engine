@@ -156,6 +156,7 @@ export default function IntegrationsPage() {
     sarvam_voice: { icon: 'phone-call', color: '#7c3aed' },
     meta_whatsapp: { icon: 'message', color: '#25d366' },
     meta_llama: { icon: 'cpu', color: '#00d4ff' },
+    apollo_io: { icon: 'zap', color: '#f59e0b' },
     google_maps: { icon: 'map-pin', color: '#4285f4' },
     google_sheets: { icon: 'bar-chart', color: '#0f9d58' },
   };
@@ -385,8 +386,9 @@ export default function IntegrationsPage() {
                 <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Meta Llama API Key</label><input className="input" type="password" value={editForm.secret_apiKey || ''} onChange={(e) => setEditForm((f) => ({ ...f, secret_apiKey: e.target.value }))} placeholder="LLM_..." /></div>
               )}
 
-              {['google_maps', 'google_sheets'].includes(selected.provider) && (
+              {['google_maps', 'google_sheets', 'apollo_io'].includes(selected.provider) && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {selected.provider === 'apollo_io' && <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Apollo.io API Key</label><input className="input" type="password" value={editForm.secret_apiKey || ''} onChange={(e) => setEditForm((f) => ({ ...f, secret_apiKey: e.target.value }))} placeholder="api_key_..." /></div>}
                   {selected.provider === 'google_maps' && <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Google Maps API Key</label><input className="input" type="password" value={editForm.secret_apiKey || ''} onChange={(e) => setEditForm((f) => ({ ...f, secret_apiKey: e.target.value }))} /></div>}
                   {selected.provider === 'google_sheets' && <div><label className="text-xs text-muted" style={{ textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>CSV URL</label><input className="input" value={editForm.csvUrl || ''} onChange={(e) => setEditForm((f) => ({ ...f, csvUrl: e.target.value }))} /></div>}
                 </div>

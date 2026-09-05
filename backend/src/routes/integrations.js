@@ -120,6 +120,47 @@ export function registerIntegrationsRoutes(app) {
         const result = await metaWhatsAppService.testConnection();
         return res.json(result);
       }
+      if (provider === 'apollo_io') {
+        const row = db.prepare("SELECT secrets FROM api_integrations WHERE provider = 'apollo_io'").get();
+        let key = process.env.APOLLO_API_KEY || '';
+        try {
+          if (row) {
+            const s = JSON.parse(row.secrets || '{}');
+            if (s.apiKey) key = s.apiKey;
+          }
+        } catch {}
+        if (!key) return res.status(400).json({ success: false, message: 'Apollo.io API Key is not configured' });
+        const aRes = await fetch('https://api.apollo.io/v1/auth/health', {
+          headers: { 'Cache-Control': 'no-cache', 'X-Api-Key': key },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (aRes.ok) {
+          return res.json({ success: true, message: 'Apollo.io B2B Intelligence verified & connected' });
+        }
+        return res.status(400).json({ success: false, message: `Apollo.io returned HTTP ${aRes.status}` });
+      }
+      if (provider === 'google_maps') {
+        const row = db.prepare("SELECT secrets FROM api_integrations WHERE provider = 'google_maps'").get();
+        let key = process.env.GOOGLE_MAPS_API_KEY || '';
+        try {
+          if (row) {
+            const s = JSON.parse(row.secrets || '{}');
+            if (s.apiKey) key = s.apiKey;
+          }
+        } catch {}
+        if (!key) return res.status(400).json({ success: false, message: 'Google Maps API Key is not configured' });
+        const gRes = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=clinic&key=${key}`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (gRes.ok) {
+          const d = await gRes.json();
+          if (d.status === 'OK' || d.status === 'ZERO_RESULTS') {
+            return res.json({ success: true, message: 'Google Maps Places API verified & connected' });
+          }
+          return res.status(400).json({ success: false, message: `Google Places: ${d.error_message || d.status}` });
+        }
+        return res.status(400).json({ success: false, message: `Google Maps HTTP error ${gRes.status}` });
+      }
       res.json({ success: true, message: `${provider} verified ready` });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });

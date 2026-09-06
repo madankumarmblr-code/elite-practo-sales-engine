@@ -7,8 +7,28 @@ import { metaWhatsAppService } from './metaWhatsApp.js';
 import { reachInventoryService } from './reachInventoryService.js';
 import { logEvent } from './logger.js';
 import { recordAuditLog } from './auditLogger.js';
+import { persistDurableDbNow } from './dbSnapshot.js';
 
 const now = () => new Date().toISOString();
+
+function resolveLeadId(leadId, phone, clinicName) {
+  if (leadId) return leadId;
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length >= 10) {
+    try {
+      const last10 = digits.slice(-10);
+      const match = db.prepare('SELECT id FROM leads WHERE phone LIKE ? OR owner_phone LIKE ? LIMIT 1').get(`%${last10}`, `%${last10}`);
+      if (match) return match.id;
+    } catch {}
+  }
+  if (clinicName) {
+    try {
+      const match = db.prepare('SELECT id FROM leads WHERE company = ? OR clinic_name = ? LIMIT 1').get(clinicName, clinicName);
+      if (match) return match.id;
+    } catch {}
+  }
+  return null;
+}
 
 function createNotification({ title, message, type = 'info', link = '/autopilot' }) {
   try {
@@ -112,6 +132,8 @@ class AutopilotService {
       }
     }
 
+    const effectiveLeadId = resolveLeadId(leadId, cleanPhone, clinicName);
+
     db.prepare(`
       INSERT INTO autopilot_queue (
         id, lead_id, clinic_name, city, locality, speciality, phone, email, owner_name, marketing_name,
@@ -121,22 +143,26 @@ class AutopilotService {
         created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', 'pending', 'pending', 'pending_review', 0, '', 0, '', ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      id, leadId || null, clinicName, city, locality, speciality, cleanPhone, email, ownerName, marketingName,
+      id, effectiveLeadId || null, clinicName, city, locality, speciality, cleanPhone, email, ownerName, marketingName,
       product, autoPilotMode,
       slotId, slotPos, slotPrice, slotSearches, JSON.stringify(slotData || {}),
       ts, ts
     );
 
-    if (leadId) {
-      db.prepare("UPDATE leads SET workflow_stage='autopilot', product_interest=?, updated_at=? WHERE id=?")
-        .run(product, ts, leadId);
+    if (effectiveLeadId) {
+      try {
+        db.prepare("UPDATE leads SET workflow_stage='autopilot', product_interest=?, updated_at=? WHERE id=?")
+          .run(product, ts, effectiveLeadId);
+      } catch {}
     }
+
+    persistDurableDbNow().catch(() => {});
 
     logEvent({
       type: 'info',
       category: 'autopilot',
       message: `Enqueued ${clinicName} for Autopilot [${product.toUpperCase()}]`,
-      meta: { id, leadId, phone: cleanPhone, product, autoPilotMode, slotId, slotPos, slotPrice },
+      meta: { id, leadId: effectiveLeadId, phone: cleanPhone, product, autoPilotMode, slotId, slotPos, slotPrice },
     });
 
     if (autoStart) {
@@ -174,6 +200,8 @@ class AutopilotService {
     const ts = now();
     db.prepare("UPDATE autopilot_queue SET current_stage='calling', call_status='initiating', updated_at=? WHERE id=?").run(ts, queueId);
 
+    const effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
+
     try {
       const telConfig = telephonyProvider.getConfig();
       const useSimulatorMock = telConfig.voiceEngine === 'native' && telConfig.activeProvider === 'simulator';
@@ -201,7 +229,7 @@ class AutopilotService {
           product: item.product,
           voiceEngine: 'native',
           telephonyProviderName: 'simulator',
-          leadId: item.lead_id,
+          leadId: effectiveLeadId,
           reachSlotDetails: slotDetails,
         });
 
@@ -226,6 +254,24 @@ class AutopilotService {
           queueId
         );
 
+        if (effectiveLeadId) {
+          try {
+            db.prepare(`
+              UPDATE leads SET
+                stage = CASE WHEN stage = 'new' OR stage = 'open' THEN 'contacted' ELSE stage END,
+                status = CASE WHEN status = 'open' OR status = 'new' THEN 'contacted' ELSE status END,
+                temperature = COALESCE(NULLIF(temperature, ''), 'warm'),
+                last_contacted_at = ?,
+                next_action = 'Follow up via WhatsApp proposal',
+                notes = COALESCE(notes, '') || '\n' || ?,
+                updated_at = ?
+              WHERE id = ?
+            `).run(ts, `[${ts}] Autopilot AI Voice Call initiated (Practo ${item.product.toUpperCase()})`, ts, effectiveLeadId);
+          } catch {}
+        }
+
+        persistDurableDbNow().catch(() => {});
+
         // ⚡ Execute Autonomous Downstream Intelligence (Auto-Proposal + WhatsApp + Conversion)
         await this.autoProcessCallOutcome(queueId, callResult);
 
@@ -242,7 +288,7 @@ class AutopilotService {
         locality: item.locality,
         city: item.city,
         speciality: item.speciality,
-        leadId: item.lead_id,
+        leadId: effectiveLeadId,
       });
 
       const initialTranscript = `[${ts}] Sarvam AI Voice Outbound Call initiated to ${result.user_phone_number} for Practo ${item.product.toUpperCase()} pitch. Attempt ID: ${result.attempt_id}`;
@@ -257,10 +303,26 @@ class AutopilotService {
         WHERE id = ?
       `).run(result.attempt_id, initialTranscript, ts, queueId);
 
-      if (item.lead_id) {
-        db.prepare("INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, 'call', 'calls', ?, ?, 'initiated', ?)")
-          .run(nanoid(), item.lead_id, `Autopilot Sarvam AI Call: Practo ${item.product.toUpperCase()}`, `Attempt ID: ${result.attempt_id} to ${result.user_phone_number}`, ts);
+      if (effectiveLeadId) {
+        try {
+          db.prepare(`
+            UPDATE leads SET
+              stage = CASE WHEN stage = 'new' OR stage = 'open' THEN 'contacted' ELSE stage END,
+              status = CASE WHEN status = 'open' OR status = 'new' THEN 'contacted' ELSE status END,
+              temperature = COALESCE(NULLIF(temperature, ''), 'warm'),
+              last_contacted_at = ?,
+              next_action = 'Follow up via WhatsApp proposal',
+              notes = COALESCE(notes, '') || '\n' || ?,
+              updated_at = ?
+            WHERE id = ?
+          `).run(ts, `[${ts}] Autopilot Sarvam AI Call placed (Practo ${item.product.toUpperCase()})`, ts, effectiveLeadId);
+
+          db.prepare("INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, 'call', 'calls', ?, ?, 'initiated', ?)")
+            .run(nanoid(), effectiveLeadId, `Autopilot Sarvam AI Call: Practo ${item.product.toUpperCase()}`, `Attempt ID: ${result.attempt_id} to ${result.user_phone_number}`, ts);
+        } catch {}
       }
+
+      persistDurableDbNow().catch(() => {});
 
       // Automatically prepare commercial proposal draft & WhatsApp message
       const sarvamCallOutcome = {
@@ -292,6 +354,7 @@ class AutopilotService {
     const item = this.getQueueItem(queueId);
     if (!item) return;
 
+    const effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
     const sentiment = callResult.sentiment || {};
     const doctorSentiment = sentiment.doctor_sentiment || sentiment.doctorSentiment || 'Positive - High Interest';
     const interestScore = Number(sentiment.interest_score || sentiment.interestScore) || 82;
@@ -394,6 +457,22 @@ class AutopilotService {
             updated_at = ?
           WHERE id = ?
         `).run(proposalId, netAmount, ts, queueId);
+
+        if (effectiveLeadId) {
+          try {
+            db.prepare(`
+              UPDATE leads SET
+                stage = 'proposal_sent',
+                value = ?,
+                temperature = 'hot',
+                next_action = 'Review commercial proposal & confirm activation',
+                notes = COALESCE(notes, '') || '\n' || ?,
+                updated_at = ?
+              WHERE id = ?
+            `).run(netAmount, `[${ts}] Commercial proposal generated: ${proposalId} (₹${netAmount.toLocaleString('en-IN')})`, ts, effectiveLeadId);
+          } catch {}
+        }
+        persistDurableDbNow().catch(() => {});
       }
 
       // 2b. Automatically dispatch personalized WhatsApp proposal message
@@ -429,7 +508,7 @@ class AutopilotService {
       if (!cleanPhone.startsWith('91') && cleanPhone.length === 10) cleanPhone = `91${cleanPhone}`;
 
       try {
-        const waRes = await metaWhatsAppService.sendTextMessage({ to: cleanPhone, text: waText, leadId: item.lead_id });
+        const waRes = await metaWhatsAppService.sendTextMessage({ to: cleanPhone, text: waText, leadId: effectiveLeadId });
         db.prepare(`
           UPDATE autopilot_queue SET
             whatsapp_status = 'sent',
@@ -483,7 +562,7 @@ class AutopilotService {
       if (!cleanPhone.startsWith('91') && cleanPhone.length === 10) cleanPhone = `91${cleanPhone}`;
 
       try {
-        await metaWhatsAppService.sendTextMessage({ to: cleanPhone, text: objWaText, leadId: item.lead_id });
+        await metaWhatsAppService.sendTextMessage({ to: cleanPhone, text: objWaText, leadId: effectiveLeadId });
       } catch { /* ignore */ }
 
       db.prepare(`
@@ -494,6 +573,20 @@ class AutopilotService {
           updated_at = ?
         WHERE id = ?
       `).run(objWaText, ts, queueId);
+
+      if (effectiveLeadId) {
+        try {
+          db.prepare(`
+            UPDATE leads SET
+              status = 'objection_handled',
+              notes = COALESCE(notes, '') || '\n' || ?,
+              updated_at = ?
+            WHERE id = ?
+          `).run(`[${ts}] Autopilot objection handling: ${objectionNotes}`, ts, effectiveLeadId);
+        } catch {}
+      }
+
+      persistDurableDbNow().catch(() => {});
 
       return this.getQueueItem(queueId);
     }
@@ -509,6 +602,7 @@ class AutopilotService {
     const item = this.getQueueItem(queueId);
     if (!item) throw new Error('Queue item not found');
 
+    const effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
     const ts = now();
 
     if (outcome === 'talk_to_human') {
@@ -522,6 +616,22 @@ class AutopilotService {
           updated_at = ?
         WHERE id = ?
       `).run(ts, queueId);
+
+      if (effectiveLeadId) {
+        try {
+          db.prepare(`
+            UPDATE leads SET
+              status = 'requires_attention',
+              temperature = 'hot',
+              next_action = 'Direct consultation requested with doctor',
+              notes = COALESCE(notes, '') || '\n' || ?,
+              updated_at = ?
+            WHERE id = ?
+          `).run(`[${ts}] Doctor requested live conversation with sales representative`, ts, effectiveLeadId);
+        } catch {}
+      }
+
+      persistDurableDbNow().catch(() => {});
 
       createNotification({
         title: `🤝 Human Interference Required: ${item.owner_name || item.clinic_name}`,
@@ -545,6 +655,21 @@ class AutopilotService {
         WHERE id = ?
       `).run(retryCount, ts, queueId);
 
+      if (effectiveLeadId) {
+        try {
+          db.prepare(`
+            UPDATE leads SET
+              status = 'follow_up',
+              next_action = 'Retry call & follow up on WhatsApp',
+              notes = COALESCE(notes, '') || '\n' || ?,
+              updated_at = ?
+            WHERE id = ?
+          `).run(`[${ts}] Call RNR (Ring No Response). Retry scheduled.`, ts, effectiveLeadId);
+        } catch {}
+      }
+
+      persistDurableDbNow().catch(() => {});
+
       createNotification({
         title: `📞 Call RNR: ${item.clinic_name}`,
         message: `Doctor did not answer. Scheduled retry in 15 mins and sending automated WhatsApp follow-up.`,
@@ -567,6 +692,20 @@ class AutopilotService {
       WHERE id = ?
     `).run(ts, queueId);
 
+    if (effectiveLeadId) {
+      try {
+        db.prepare(`
+          UPDATE leads SET
+            stage = CASE WHEN stage = 'new' OR stage = 'open' THEN 'contacted' ELSE stage END,
+            temperature = 'warm',
+            updated_at = ?
+          WHERE id = ?
+        `).run(ts, effectiveLeadId);
+      } catch {}
+    }
+
+    persistDurableDbNow().catch(() => {});
+
     // Progress to Stage 2: WhatsApp AI
     await this.triggerWhatsAppFollowup(queueId, { isRnr: false });
     return this.getQueueItem(queueId);
@@ -577,8 +716,7 @@ class AutopilotService {
    */
   async transferToHuman(queueId, reason = 'Transferred by sales team for personalized consultation') {
     const item = this.getQueueItem(queueId);
-    if (!item) throw new Error('Queue item not found');
-
+    const effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
     const ts = now();
     db.prepare(`
       UPDATE autopilot_queue SET
@@ -588,6 +726,22 @@ class AutopilotService {
         updated_at = ?
       WHERE id = ?
     `).run(reason, ts, queueId);
+
+    if (effectiveLeadId) {
+      try {
+        db.prepare(`
+          UPDATE leads SET
+            status = 'requires_attention',
+            temperature = 'hot',
+            next_action = ?,
+            notes = COALESCE(notes, '') || '\n' || ?,
+            updated_at = ?
+          WHERE id = ?
+        `).run(reason, `[${ts}] Transferred to human: ${reason}`, ts, effectiveLeadId);
+      } catch {}
+    }
+
+    persistDurableDbNow().catch(() => {});
 
     createNotification({
       title: `🤝 Human Interference: ${item.owner_name || item.clinic_name}`,
@@ -690,11 +844,12 @@ class AutopilotService {
     }
 
     const ts = now();
+    const effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
     let cleanPhone = String(item.phone).replace(/\D/g, '');
     if (!cleanPhone.startsWith('91') && cleanPhone.length === 10) cleanPhone = `91${cleanPhone}`;
 
     try {
-      const res = await metaWhatsAppService.sendTextMessage({ to: cleanPhone, text: messageText, leadId: item.lead_id });
+      const res = await metaWhatsAppService.sendTextMessage({ to: cleanPhone, text: messageText, leadId: effectiveLeadId });
       db.prepare(`
         UPDATE autopilot_queue SET
           whatsapp_status = 'sent',
@@ -715,6 +870,15 @@ class AutopilotService {
         WHERE id = ?
       `).run(messageText, ts, queueId);
     }
+
+    if (effectiveLeadId) {
+      try {
+        db.prepare("INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, 'message', 'whatsapp', ?, ?, 'completed', ?)")
+          .run(nanoid(), effectiveLeadId, `Autopilot WhatsApp Pitch: Practo ${item.product.toUpperCase()}`, messageText.slice(0, 150), ts);
+      } catch {}
+    }
+
+    persistDurableDbNow().catch(() => {});
 
     // Pre-draft Stage 3: Email Proposal (Pushed to Human Review or Auto-Sent)
     this.prepareEmailProposalDraft(queueId);
@@ -804,11 +968,16 @@ Practo Technologies Pvt Ltd`;
       WHERE id = ?
     `).run(finalSubject, finalBody, approvedBy, ts, ts, queueId);
 
-    if (item.lead_id) {
-      db.prepare("UPDATE leads SET stage = 'closed_won', workflow_stage = 'converted', updated_at = ? WHERE id = ?").run(ts, item.lead_id);
-      db.prepare("INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, 'proposal', 'email', ?, ?, 'completed', ?)")
-        .run(nanoid(), item.lead_id, `Proposal Approved: ${finalSubject}`, finalBody.slice(0, 200), ts);
+    const effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
+    if (effectiveLeadId) {
+      try {
+        db.prepare("UPDATE leads SET stage = 'closed_won', workflow_stage = 'converted', status = 'won', updated_at = ? WHERE id = ?").run(ts, effectiveLeadId);
+        db.prepare("INSERT INTO activities (id, lead_id, type, channel, title, detail, status, created_at) VALUES (?, ?, 'proposal', 'email', ?, ?, 'completed', ?)")
+          .run(nanoid(), effectiveLeadId, `Proposal Approved: ${finalSubject}`, finalBody.slice(0, 200), ts);
+      } catch {}
     }
+
+    persistDurableDbNow({ force: true }).catch(() => {});
 
     if (req) {
       recordAuditLog({

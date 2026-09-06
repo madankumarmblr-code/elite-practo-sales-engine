@@ -3,6 +3,7 @@ import { logEvent } from './logger.js';
 import { telephonyProvider } from './telephonyProvider.js';
 import { transcriptionService } from './transcriptionService.js';
 import { sentimentAnalysisService } from './sentimentAnalysisService.js';
+import { persistDurableDbNow } from './dbSnapshot.js';
 import { nanoid } from 'nanoid';
 
 const now = () => new Date().toISOString();
@@ -179,6 +180,8 @@ export class VoiceAgentService {
         },
         message: `Sarvam Voice AI outbound call successfully placed to ${sarvamResult.user_phone_number}. Attempt ID: ${sarvamResult.attempt_id}`,
       };
+      persistDurableDbNow().catch(() => {});
+      return sarvamResponse;
     }
 
     const callId = `call_${nanoid(12)}`;
@@ -312,6 +315,8 @@ export class VoiceAgentService {
       }
     }
 
+    persistDurableDbNow().catch(() => {});
+
     return {
       callId,
       status: telephonyResult.status || 'completed',
@@ -374,6 +379,7 @@ export class VoiceAgentService {
     const ts = now();
     db.prepare(`UPDATE call_logs SET status = 'completed', updated_at = ? WHERE id = ?`).run(ts, logRow.id);
     const updatedRow = db.prepare('SELECT * FROM call_logs WHERE id = ?').get(logRow.id);
+    persistDurableDbNow().catch(() => {});
     return this._hydrateCall(updatedRow || logRow);
   }
 
@@ -511,6 +517,7 @@ export class VoiceAgentService {
       }
     }
 
+    persistDurableDbNow().catch(() => {});
     return sentiment;
   }
 }

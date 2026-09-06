@@ -1,5 +1,6 @@
 import { authRequired, requirePermission } from '../auth/middleware.js';
 import { autopilotService } from '../services/autopilotService.js';
+import { persistDurableDbNow } from '../services/dbSnapshot.js';
 import db from '../db/db.js';
 
 export function registerAutopilotRoutes(app) {
@@ -24,6 +25,7 @@ export function registerAutopilotRoutes(app) {
   app.post('/api/autopilot/enqueue', authRequired, requirePermission('leads:write'), async (req, res) => {
     try {
       const item = await autopilotService.enqueueLead(req.body);
+      persistDurableDbNow().catch(() => {});
       res.status(201).json(item);
     } catch (err) {
       res.status(400).json({ error: err.message });
@@ -84,6 +86,7 @@ export function registerAutopilotRoutes(app) {
         }
       }
 
+      persistDurableDbNow().catch(() => {});
       res.json({ ok: true, ...callResult, leadId: targetLeadId });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -121,6 +124,7 @@ export function registerAutopilotRoutes(app) {
         leadId,
       });
 
+      persistDurableDbNow().catch(() => {});
       res.json({
         ok: true,
         sent: true,

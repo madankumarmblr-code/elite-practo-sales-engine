@@ -1,5 +1,6 @@
 import db from '../db/db.js';
 import { logEvent } from './logger.js';
+import { persistDurableDbNow } from './dbSnapshot.js';
 import { nanoid } from 'nanoid';
 
 const SARVAM_API_BASE = 'https://apps.sarvam.ai/api';
@@ -318,6 +319,8 @@ export class SarvamVoiceService {
       } catch { /* ignore */ }
     }
 
+    persistDurableDbNow().catch(() => {});
+
     return {
       attempt_id: data.attempt_id,
       user_phone_number: formattedUserPhone,
@@ -358,6 +361,8 @@ export class SarvamVoiceService {
         console.warn('[Sarvam Webhook] DB update error:', err.message);
       }
     }
+
+    persistDurableDbNow().catch(() => {});
 
     return { processed: true, attempt_id, status, duration, interaction_id, leadId, transcriptCount: interaction_transcript?.length || 0, timestamp: new Date().toISOString() };
   }
@@ -511,6 +516,8 @@ export class SarvamVoiceService {
         console.warn('[Sarvam Sync] Lead update warning:', leadErr.message);
       }
     }
+
+    persistDurableDbNow().catch(() => {});
 
     return {
       attemptId,

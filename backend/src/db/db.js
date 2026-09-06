@@ -106,12 +106,59 @@ class SqliteShim {
     };
   }
 
+  flush() {
+    this._persist();
+  }
+
+  exportBuffer() {
+    try {
+      if (this.rawDb && typeof this.rawDb.export === 'function') {
+        return Buffer.from(this.rawDb.export());
+      }
+      if (this.savePath && fs.existsSync(this.savePath)) {
+        return fs.readFileSync(this.savePath);
+      }
+    } catch {}
+    return null;
+  }
+
+  reloadFromBuffer(buffer) {
+    if (!buffer || !this.SQL) return false;
+    try {
+      if (this.rawDb && typeof this.rawDb.close === 'function') {
+        try { this.rawDb.close(); } catch {}
+      }
+      this.rawDb = new this.SQL.Database(buffer);
+      this.pragma('foreign_keys = ON');
+      this._persist();
+      return true;
+    } catch (err) {
+      console.error('[DB reloadFromBuffer error]', err.message);
+      return false;
+    }
+  }
+
+  reloadFromFile() {
+    if (this.savePath && fs.existsSync(this.savePath)) {
+      try {
+        const fileBuffer = fs.readFileSync(this.savePath);
+        return this.reloadFromBuffer(fileBuffer);
+      } catch (err) {
+        console.error('[DB reloadFromFile error]', err.message);
+        return false;
+      }
+    }
+    return false;
+  }
+
   _persist() {
     if (this.savePath) {
       try {
         const data = this.rawDb.export();
         fs.writeFileSync(this.savePath, Buffer.from(data));
-      } catch {}
+      } catch (err) {
+        console.error('[DB Persist Error]:', err.message);
+      }
     }
   }
 }
@@ -126,6 +173,10 @@ if (!isServerless) {
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
+    db.flush = () => { try { db.pragma('wal_checkpoint(RESTART)'); } catch {} };
+    db.exportBuffer = () => { try { return fs.readFileSync(dbPath); } catch { return null; } };
+    db.reloadFromFile = () => true;
+    db.reloadFromBuffer = (buf) => { try { fs.writeFileSync(dbPath, buf); return true; } catch { return false; } };
   } catch (err) {
     console.warn('[DB Engine] Local native better-sqlite3 unavailable, using WebAssembly SQLite:', err.message);
   }
@@ -145,7 +196,7 @@ if (!db) {
   } else {
     rawDb = new SQL.Database();
   }
-  db = new SqliteShim(rawDb, dbPath);
+  db = new SqliteShim(rawDb, dbPath, SQL);
   db.pragma('foreign_keys = ON');
 }
 

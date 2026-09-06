@@ -34,13 +34,21 @@ export async function persistDurableDbNow({ force = false } = {}) {
     return { persisted: false, reason: 'cooldown', waitMs: persistCooldownUntil - now };
   }
 
+  // Ensure DB in-memory state is flushed to disk/buffer
+  if (typeof db.flush === 'function') {
+    try { db.flush(); } catch {}
+  }
+
   const hash = fileHash();
   if (!force && hash && hash === lastPersistHash) {
     return { persisted: false, reason: 'unchanged' };
   }
 
   try {
-    const buffer = fs.readFileSync(DB_FILE);
+    const buffer = typeof db.exportBuffer === 'function' ? db.exportBuffer() : fs.readFileSync(DB_FILE);
+    if (!buffer || buffer.length === 0) {
+      return { persisted: false, reason: 'empty_buffer' };
+    }
     const { put } = await import('@vercel/blob');
     const result = await put(BLOB_PATHNAME, buffer, {
       access: 'private',
@@ -76,6 +84,14 @@ export async function restoreFromBlobIfEmpty() {
     const res = await download(blobs[0].downloadUrl);
     const buf = Buffer.from(await res.arrayBuffer());
     fs.writeFileSync(DB_FILE, buf);
+
+    // CRITICAL: Reload in-memory database instance so active queries reflect restored state
+    if (typeof db.reloadFromBuffer === 'function') {
+      db.reloadFromBuffer(buf);
+    } else if (typeof db.reloadFromFile === 'function') {
+      db.reloadFromFile();
+    }
+
     logEvent({ type: 'info', category: 'db', message: 'DB restored from Vercel Blob', detail: blobs[0].downloadUrl });
     return true;
   } catch (err) {

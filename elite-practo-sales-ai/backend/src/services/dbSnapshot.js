@@ -11,7 +11,7 @@ const BLOB_PATHNAME = 'elite-sales.db';
 let lastPersisted = null;
 let lastPersistHash = null;
 let persistCooldownUntil = 0;
-const PERSIST_COOLDOWN_MS = 10_000;
+const PERSIST_COOLDOWN_MS = 1_000;
 
 export function durableStoreConfigured() {
   return Boolean(BLOB_TOKEN);
@@ -27,16 +27,16 @@ function fileHash() {
 }
 
 export async function persistDurableDbNow({ force = false } = {}) {
+  // Ensure DB in-memory state is flushed to disk/buffer ALWAYS, even without BLOB_TOKEN
+  if (typeof db.flush === 'function') {
+    try { db.flush(); } catch {}
+  }
+
   if (!BLOB_TOKEN) return { persisted: false, reason: 'blob_not_configured' };
 
   const now = Date.now();
   if (!force && now < persistCooldownUntil) {
     return { persisted: false, reason: 'cooldown', waitMs: persistCooldownUntil - now };
-  }
-
-  // Ensure DB in-memory state is flushed to disk/buffer
-  if (typeof db.flush === 'function') {
-    try { db.flush(); } catch {}
   }
 
   const hash = fileHash();

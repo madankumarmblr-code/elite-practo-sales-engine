@@ -48,9 +48,22 @@ function StatusBadge({ status, stage }) {
 }
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [leads, setLeads] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('elite_leads_cache') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [total, setTotal] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('elite_leads_cache') || '[]');
+      return cached.length;
+    } catch {
+      return 0;
+    }
+  });
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [stage, setStage] = useState('');
   const [workflowTab, setWorkflowTab] = useState('all'); // 'all' | 'autopilot' | 'manual'
@@ -135,9 +148,37 @@ export default function LeadsPage() {
       if (workflowTab === 'manual') filtered = filtered.filter((l) => l.workflow_stage === 'manual');
       if (productFilter) filtered = filtered.filter((l) => l.product_interest === productFilter);
 
+      // Persist full server list into browser cache if unfiltered
+      if (data.leads && data.leads.length > 0 && !search && !stage && workflowTab === 'all' && !productFilter) {
+        try {
+          localStorage.setItem('elite_leads_cache', JSON.stringify(data.leads));
+        } catch {}
+      }
+
+      // RESILIENCY: If server returned 0 leads (e.g. serverless cold start / container reset)
+      // but browser has cached leads, seamlessly recover and re-hydrate server!
+      if ((!data.leads || data.leads.length === 0) && !search && !stage && workflowTab === 'all' && !productFilter) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('elite_leads_cache') || '[]');
+          if (cached.length > 0) {
+            console.log(`[Resilient CRM] Restoring ${cached.length} leads from browser storage after server reset...`);
+            filtered = cached;
+            api.bulkImportLeads(cached, { target: 'crm' }).catch(() => {});
+          }
+        } catch {}
+      }
+
       setLeads(filtered);
       setTotal(data.total || filtered.length || 0);
     } catch (e) {
+      // Fallback to cache on network / server restart error
+      try {
+        const cached = JSON.parse(localStorage.getItem('elite_leads_cache') || '[]');
+        if (cached.length > 0) {
+          setLeads(cached);
+          setTotal(cached.length);
+        }
+      } catch {}
       setMessage({ type: 'error', text: e.message });
     } finally {
       setLoading(false);
@@ -192,6 +233,13 @@ export default function LeadsPage() {
     try {
       await api.batchActionLeads({ leadIds: selectedIds, action: 'delete' });
       setMessage({ type: 'success', text: `Deleted ${selectedIds.length} leads.` });
+      const delSet = new Set(selectedIds);
+      setLeads((prev) => {
+        const next = prev.filter((l) => !delSet.has(l.id));
+        try { localStorage.setItem('elite_leads_cache', JSON.stringify(next)); } catch {}
+        return next;
+      });
+      setTotal((prev) => Math.max(0, prev - selectedIds.length));
       setSelectedIds([]);
       fetchLeads();
     } catch (err) {
@@ -466,6 +514,15 @@ export default function LeadsPage() {
         pushToAutopilot: pushTarget === 'autopilot' || pushTarget === 'both',
         defaultProduct: pushProduct,
       });
+
+      // Immediately cache newly pushed leads so any instant browser refresh preserves them
+      setLeads((prev) => {
+        const next = [...leadsToPush.map((l, i) => ({ ...l, id: l.id || `lead_pushed_${Date.now()}_${i}` })), ...prev];
+        try { localStorage.setItem('elite_leads_cache', JSON.stringify(next)); } catch {}
+        return next;
+      });
+      setTotal((prev) => prev + leadsToPush.length);
+
       const msg = pushTarget === 'crm'
         ? `Successfully imported ${res.imported || leadsToPush.length} leads into CRM!`
         : `Successfully pushed ${res.imported || leadsToPush.length} leads into CRM and enqueued ${res.enqueued || res.imported || leadsToPush.length} into Autopilot queue!`;
@@ -489,7 +546,7 @@ export default function LeadsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.createLead(form);
+      const created = await api.createLead(form);
       setShowModal(false);
       setForm({
         name: '',
@@ -507,6 +564,14 @@ export default function LeadsPage() {
         workflow_stage: 'manual'
       });
       setMessage({ type: 'success', text: 'New lead added and persisted successfully!' });
+      if (created) {
+        setLeads((prev) => {
+          const next = [created, ...prev.filter((l) => l.id !== created.id)];
+          try { localStorage.setItem('elite_leads_cache', JSON.stringify(next)); } catch {}
+          return next;
+        });
+        setTotal((prev) => prev + 1);
+      }
       fetchLeads();
     } catch (err) { setMessage({ type: 'error', text: err.message }); }
     finally { setSaving(false); }
@@ -516,8 +581,14 @@ export default function LeadsPage() {
     if (!confirm('Delete this lead?')) return;
     try {
       await api.deleteLead(id);
-      fetchLeads();
+      setLeads((prev) => {
+        const next = prev.filter((l) => l.id !== id);
+        try { localStorage.setItem('elite_leads_cache', JSON.stringify(next)); } catch {}
+        return next;
+      });
+      setTotal((prev) => Math.max(0, prev - 1));
       if (detailLead && detailLead.id === id) setDetailLead(null);
+      fetchLeads();
     } catch (e) {
       setMessage({ type: 'error', text: e.message });
     }

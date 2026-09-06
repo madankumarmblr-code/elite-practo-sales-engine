@@ -173,7 +173,7 @@ export function registerLeadsRoutes(app) {
 
     recordAuditLog({ req, action: 'lead.create', entityType: 'lead', entityId: id, details: `Created lead: ${name}`, newState: { name, email, phone, clinicName, source, stage, productInterest, workflowStage } });
     logEvent({ type: 'info', category: 'leads', message: `Lead created: ${name}`, userId: req.user.id });
-    await persistDurableDbNow();
+    await persistDurableDbNow({ force: true });
     res.status(201).json(publicLead(db.prepare('SELECT * FROM leads WHERE id = ?').get(id)));
   });
 
@@ -231,7 +231,7 @@ export function registerLeadsRoutes(app) {
     }
 
     recordAuditLog({ req, action: 'lead.update', entityType: 'lead', entityId: existing.id, details: `Updated lead: ${existing.name}`, oldState: existing, newState: b });
-    await persistDurableDbNow();
+    await persistDurableDbNow({ force: true });
     res.json(publicLead(db.prepare('SELECT * FROM leads WHERE id = ?').get(existing.id)));
   });
 
@@ -241,7 +241,7 @@ export function registerLeadsRoutes(app) {
     if (!existing) return res.status(404).json({ error: 'Lead not found' });
     db.prepare('DELETE FROM leads WHERE id = ?').run(req.params.id);
     recordAuditLog({ req, action: 'lead.delete', entityType: 'lead', entityId: existing.id, details: `Deleted lead: ${existing.name}`, oldState: existing });
-    await persistDurableDbNow();
+    await persistDurableDbNow({ force: true });
     res.json({ ok: true });
   });
 
@@ -338,7 +338,7 @@ export function registerLeadsRoutes(app) {
     }
 
     logEvent({ type: 'info', category: 'leads', message: `Bulk imported ${imported} leads (enqueued ${enqueued} to autopilot)`, userId: req.user.id });
-    await persistDurableDbNow();
+    await persistDurableDbNow({ force: true });
     res.json({ ok: true, imported, enqueued, total: leads.length });
   });
 
@@ -354,7 +354,7 @@ export function registerLeadsRoutes(app) {
     if (req.body.nextAction) {
       db.prepare('UPDATE leads SET next_action=?, updated_at=? WHERE id=?').run(req.body.nextAction, ts, lead.id);
     }
-    await persistDurableDbNow();
+    await persistDurableDbNow({ force: true });
     res.status(201).json({ id, leadId: lead.id, type, title, detail, createdAt: ts });
   });
 
@@ -413,7 +413,7 @@ export function registerLeadsRoutes(app) {
       details: `Batch action "${action}" on ${processed} leads [Product: ${product}]`,
     });
 
-    await persistDurableDbNow();
+    await persistDurableDbNow({ force: true });
     res.json({ ok: true, action, processed, total: leadIds.length });
   });
 }

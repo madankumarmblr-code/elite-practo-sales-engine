@@ -2568,7 +2568,7 @@ export function registerScraperRoutes(app) {
       product,
     });
 
-    await persistDurableDbNow();
+    await persistDurableDbNow({ force: true });
 
     res.json({
       success: true,

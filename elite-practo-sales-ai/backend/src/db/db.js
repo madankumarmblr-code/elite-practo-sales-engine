@@ -13,9 +13,10 @@ function normalizeArgs(params) {
 }
 
 class SqliteShim {
-  constructor(rawDb, savePath) {
+  constructor(rawDb, savePath, SQL) {
     this.rawDb = rawDb;
     this.savePath = savePath;
+    this.SQL = SQL;
   }
 
   pragma(sql) {
@@ -155,7 +156,13 @@ class SqliteShim {
     if (this.savePath) {
       try {
         const data = this.rawDb.export();
-        fs.writeFileSync(this.savePath, Buffer.from(data));
+        const buf = Buffer.from(data);
+        fs.writeFileSync(this.savePath, buf);
+        // Also persist to repo data directory if writable and different
+        const localRepoPath = path.join(process.cwd(), 'data', 'elite-sales.db');
+        if (localRepoPath !== this.savePath && fs.existsSync(path.dirname(localRepoPath))) {
+          try { fs.writeFileSync(localRepoPath, buf); } catch {}
+        }
       } catch (err) {
         console.error('[DB Persist Error]:', err.message);
       }
@@ -185,6 +192,28 @@ if (!isServerless) {
 if (!db) {
   const { default: initSqlJs } = await import('sql.js');
   const SQL = await initSqlJs({ wasmBinary });
+
+  // On serverless cold starts, copy bundled database to /tmp if dbPath does not exist yet
+  if (isServerless && !fs.existsSync(dbPath)) {
+    const candidatePaths = [
+      path.join(process.cwd(), 'data', 'elite-sales.db'),
+      path.join(dataDir, '../data', 'elite-sales.db'),
+      path.join('/var/task/data', 'elite-sales.db'),
+    ];
+    for (const cand of candidatePaths) {
+      if (fs.existsSync(cand)) {
+        try {
+          fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+          fs.copyFileSync(cand, dbPath);
+          console.log(`[DB Init] Seeded /tmp database from bundled ${cand}`);
+          break;
+        } catch (copyErr) {
+          console.warn('[DB Init] Failed to copy bundled DB:', copyErr.message);
+        }
+      }
+    }
+  }
+
   let rawDb;
   if (fs.existsSync(dbPath)) {
     try {

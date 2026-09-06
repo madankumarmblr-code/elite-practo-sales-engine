@@ -127,8 +127,29 @@ function Sidebar({ user, activePage, setActivePage, onLogout, onShowLogin }) {
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [activePage, setActivePage] = useState('scraper');
+  const [activePage, setActivePageState] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const queryPage = params.get('page');
+      if (queryPage) return queryPage;
+      if (window.location.hash) {
+        const hashPage = window.location.hash.replace('#', '').trim();
+        if (hashPage) return hashPage;
+      }
+      return localStorage.getItem('elite_active_page') || 'leads';
+    } catch {
+      return 'leads';
+    }
+  });
+
+  const setActivePage = useCallback((page) => {
+    setActivePageState(page);
+    try {
+      localStorage.setItem('elite_active_page', page);
+      window.location.hash = page;
+    } catch {}
+  }, []);
+
   const [showLoginScreen, setShowLoginScreen] = useState(() => {
     return window.location.search.includes('login=true');
   });

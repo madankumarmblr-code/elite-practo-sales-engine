@@ -265,6 +265,33 @@ db.exec(`
     tags TEXT DEFAULT '[]',
     temperature TEXT DEFAULT '',
     preferred_channel TEXT DEFAULT '',
+    city TEXT DEFAULT '',
+    locality TEXT DEFAULT '',
+    speciality TEXT DEFAULT '',
+    on_practo INTEGER DEFAULT 0,
+    practo_rating REAL DEFAULT 0,
+    practo_reviews INTEGER DEFAULT 0,
+    practo_url TEXT DEFAULT '',
+    owner_name TEXT DEFAULT '',
+    owner_phone TEXT DEFAULT '',
+    owner_email TEXT DEFAULT '',
+    marketing_name TEXT DEFAULT '',
+    marketing_phone TEXT DEFAULT '',
+    marketing_email TEXT DEFAULT '',
+    reception_phone TEXT DEFAULT '',
+    product_interest TEXT DEFAULT 'prime',
+    workflow_stage TEXT DEFAULT 'manual',
+    website TEXT DEFAULT '',
+    apollo_enriched INTEGER DEFAULT 0,
+    linkedin_url TEXT DEFAULT '',
+    gmb_rating REAL DEFAULT 0,
+    gmb_reviews INTEGER DEFAULT 0,
+    gmb_url TEXT DEFAULT '',
+    clinic_name TEXT DEFAULT '',
+    doctor_name TEXT DEFAULT '',
+    address TEXT DEFAULT '',
+    is_ad_advertiser INTEGER DEFAULT 0,
+    ad_channel TEXT DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -567,6 +594,11 @@ ensureColumn('leads', 'linkedin_url', "TEXT DEFAULT ''");
 ensureColumn('leads', 'gmb_rating', 'REAL DEFAULT 0');
 ensureColumn('leads', 'gmb_reviews', 'INTEGER DEFAULT 0');
 ensureColumn('leads', 'gmb_url', "TEXT DEFAULT ''");
+ensureColumn('leads', 'clinic_name', "TEXT DEFAULT ''");
+ensureColumn('leads', 'doctor_name', "TEXT DEFAULT ''");
+ensureColumn('leads', 'address', "TEXT DEFAULT ''");
+ensureColumn('leads', 'is_ad_advertiser', 'INTEGER DEFAULT 0');
+ensureColumn('leads', 'ad_channel', "TEXT DEFAULT ''");
 
 // User-level & SuperAdmin extra settings columns
 ensureColumn('users', 'territory', "TEXT DEFAULT '[\"Bangalore\"]'");

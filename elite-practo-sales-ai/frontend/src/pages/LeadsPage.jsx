@@ -19,6 +19,34 @@ function StageDropdown({ lead, onUpdate }) {
   );
 }
 
+function StatusBadge({ status, stage }) {
+  const st = String(status || '').toLowerCase();
+  const sg = String(stage || '').toLowerCase();
+
+  if (st === 'requires_attention') {
+    return <span className="badge" style={{ background: '#FEE2E2', color: '#B91C1C', fontWeight: 600, border: '1px solid #FCA5A5' }}>🤝 Human Requested</span>;
+  }
+  if (st === 'contacted' || sg === 'contacted') {
+    return <span className="badge badge-purple" style={{ fontWeight: 600 }}>📞 AI Call Done</span>;
+  }
+  if (st === 'follow_up') {
+    return <span className="badge badge-yellow" style={{ fontWeight: 600 }}>🔄 Follow-Up / RNR</span>;
+  }
+  if (st === 'proposal_sent' || sg === 'proposal') {
+    return <span className="badge badge-teal" style={{ fontWeight: 600 }}>📄 Proposal Sent</span>;
+  }
+  if (st === 'objection_handled') {
+    return <span className="badge badge-blue" style={{ fontWeight: 600 }}>💬 Objection Handled</span>;
+  }
+  if (st === 'won' || sg === 'won') {
+    return <span className="badge badge-green" style={{ fontWeight: 600 }}>🏆 Closed Won</span>;
+  }
+  if (st === 'call_failed' || st === 'unreachable') {
+    return <span className="badge" style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}>⚠️ Call Failed</span>;
+  }
+  return <span className="badge badge-gray" style={{ color: '#64748B' }}>🌱 Open / New</span>;
+}
+
 export default function LeadsPage() {
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
@@ -30,9 +58,29 @@ export default function LeadsPage() {
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', title: '', city: 'Bangalore', locality: 'Indiranagar', source: 'manual', stage: 'new', notes: '', product_interest: 'prime' });
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    company: '',
+    title: 'General Physician',
+    city: 'Bangalore',
+    locality: 'Indiranagar',
+    source: 'manual',
+    stage: 'new',
+    status: 'open',
+    notes: '',
+    product_interest: 'prime',
+    workflow_stage: 'manual'
+  });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+
+  // Quick Action State
+  const [callingLeadId, setCallingLeadId] = useState(null);
+  const [detailLead, setDetailLead] = useState(null);
+  const [newActivityText, setNewActivityText] = useState('');
+  const [addingActivity, setAddingActivity] = useState(false);
 
   // Batch modal
   const [batchModal, setBatchModal] = useState(false);
@@ -47,6 +95,8 @@ export default function LeadsPage() {
       const data = await api.getLeads({
         search,
         stage: stage || undefined,
+        workflowStage: workflowTab !== 'all' ? workflowTab : undefined,
+        productInterest: productFilter || undefined,
         limit: 100,
       });
       let filtered = data.leads || [];
@@ -55,7 +105,7 @@ export default function LeadsPage() {
       if (productFilter) filtered = filtered.filter((l) => l.product_interest === productFilter);
 
       setLeads(filtered);
-      setTotal(data.total || 0);
+      setTotal(data.total || filtered.length || 0);
     } catch (e) {
       setMessage({ type: 'error', text: e.message });
     } finally {
@@ -118,6 +168,69 @@ export default function LeadsPage() {
     }
   }
 
+  async function handleDirectAiCall(lead) {
+    if (!lead.phone) {
+      setMessage({ type: 'error', text: 'Doctor phone number is required to trigger AI call' });
+      return;
+    }
+    setCallingLeadId(lead.id);
+    try {
+      const res = await api.dialVoiceAgent({
+        leadId: lead.id,
+        toPhone: lead.phone,
+        doctorName: lead.owner_name || lead.doctor_name || lead.name,
+        clinicName: lead.company || lead.clinic_name || 'Clinic',
+        city: lead.city || 'Bangalore',
+        locality: lead.locality || 'Indiranagar',
+        speciality: lead.speciality || lead.title || 'General Physician',
+        product: lead.product_interest || 'prime',
+        voiceEngine: 'sarvam',
+      });
+      setMessage({
+        type: 'success',
+        text: `📞 Outbound Voice AI Call placed to ${lead.owner_name || lead.name}! Attempt: ${res.call?.callId || res.callId || 'Initiated'}`
+      });
+      fetchLeads();
+      if (detailLead && detailLead.id === lead.id) {
+        handleOpenDetail(lead);
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: `Failed to place AI call: ${err.message}` });
+    } finally {
+      setCallingLeadId(null);
+    }
+  }
+
+  async function handleOpenDetail(lead) {
+    try {
+      const full = await api.getLead(lead.id);
+      setDetailLead(full);
+    } catch {
+      setDetailLead(lead);
+    }
+  }
+
+  async function handleAddActivity(e) {
+    e.preventDefault();
+    if (!newActivityText.trim() || !detailLead) return;
+    setAddingActivity(true);
+    try {
+      await api.addLeadActivity(detailLead.id, {
+        title: 'Manual Activity Note',
+        detail: newActivityText.trim(),
+        type: 'note',
+      });
+      setNewActivityText('');
+      const updated = await api.getLead(detailLead.id);
+      setDetailLead(updated);
+      fetchLeads();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setAddingActivity(false);
+    }
+  }
+
   function handleExportCsv() {
     const url = api.exportLeadsUrl({ stage, workflowStage: workflowTab !== 'all' ? workflowTab : undefined, format: 'csv' });
     window.open(url, '_blank');
@@ -155,8 +268,12 @@ export default function LeadsPage() {
             email: parts[3]?.replace(/"/g, '').trim() || '',
             city: parts[4]?.replace(/"/g, '').trim() || 'Bangalore',
             title: parts[5]?.replace(/"/g, '').trim() || 'General Physician',
+            speciality: parts[5]?.replace(/"/g, '').trim() || 'General Physician',
+            product_interest: parts[6]?.replace(/"/g, '').trim() || 'prime',
+            workflow_stage: parts[7]?.replace(/"/g, '').trim() || 'manual',
             source: 'csv_import',
             stage: 'new',
+            status: 'open',
             score: 70,
           });
         }
@@ -165,7 +282,7 @@ export default function LeadsPage() {
       if (importedLeads.length > 0) {
         try {
           await api.bulkImportLeads(importedLeads);
-          setMessage({ type: 'success', text: `Imported ${importedLeads.length} leads from CSV!` });
+          setMessage({ type: 'success', text: `Imported ${importedLeads.length} leads with full contact and product mapping from CSV!` });
           fetchLeads();
         } catch (err) {
           setMessage({ type: 'error', text: err.message });
@@ -182,8 +299,22 @@ export default function LeadsPage() {
     try {
       await api.createLead(form);
       setShowModal(false);
-      setForm({ name: '', phone: '', email: '', company: '', title: '', city: 'Bangalore', locality: 'Indiranagar', source: 'manual', stage: 'new', notes: '', product_interest: 'prime' });
-      setMessage({ type: 'success', text: 'New lead added successfully!' });
+      setForm({
+        name: '',
+        phone: '',
+        email: '',
+        company: '',
+        title: 'General Physician',
+        city: 'Bangalore',
+        locality: 'Indiranagar',
+        source: 'manual',
+        stage: 'new',
+        status: 'open',
+        notes: '',
+        product_interest: 'prime',
+        workflow_stage: 'manual'
+      });
+      setMessage({ type: 'success', text: 'New lead added and persisted successfully!' });
       fetchLeads();
     } catch (err) { setMessage({ type: 'error', text: err.message }); }
     finally { setSaving(false); }
@@ -191,7 +322,13 @@ export default function LeadsPage() {
 
   async function handleDelete(id) {
     if (!confirm('Delete this lead?')) return;
-    try { await api.deleteLead(id); fetchLeads(); } catch (e) { setMessage({ type: 'error', text: e.message }); }
+    try {
+      await api.deleteLead(id);
+      fetchLeads();
+      if (detailLead && detailLead.id === id) setDetailLead(null);
+    } catch (e) {
+      setMessage({ type: 'error', text: e.message });
+    }
   }
 
   return (
@@ -204,7 +341,7 @@ export default function LeadsPage() {
             <h1 className="page-title">Enterprise CRM Leads</h1>
           </div>
           <p className="text-sm text-secondary mt-1">
-            {leads.length} active leads · Multi-level import/export · Instant push to Autopilot AI
+            {leads.length} active leads · Multi-level import/export · Real-time AI Call & Outreach Tracking
           </p>
         </div>
 
@@ -309,7 +446,7 @@ export default function LeadsPage() {
             <option value="reach">Practo Reach</option>
           </select>
 
-          <button className="btn btn-ghost btn-sm" onClick={fetchLeads}>⟳</button>
+          <button className="btn btn-ghost btn-sm" onClick={fetchLeads} title="Refresh CRM Leads">⟳</button>
         </div>
       </div>
 
@@ -318,7 +455,7 @@ export default function LeadsPage() {
         {loading ? (
           <div style={{ padding: 60, textAlign: 'center' }}>
             <div className="spinner" style={{ width: 32, height: 32, margin: '0 auto 12px' }} />
-            <p className="text-sm text-secondary">Loading CRM leads...</p>
+            <p className="text-sm text-secondary">Loading CRM leads & live statuses...</p>
           </div>
         ) : leads.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
@@ -346,7 +483,8 @@ export default function LeadsPage() {
                   <th>Practo Status</th>
                   <th>Product</th>
                   <th>Workflow</th>
-                  <th>Stage</th>
+                  <th>Pipeline Stage</th>
+                  <th>Live Outreach / Call Status</th>
                   <th>Score</th>
                   <th>Actions</th>
                 </tr>
@@ -369,17 +507,17 @@ export default function LeadsPage() {
 
                       <td>
                         <div style={{ fontWeight: 700, color: '#0F172A', fontSize: 13.5 }}>
-                          {lead.company || lead.name}
+                          {lead.company || lead.clinic_name || lead.name}
                         </div>
                         <div className="text-xs text-secondary mt-1">
-                          👤 {lead.owner_name || lead.name} · 📞 <strong>{lead.phone || '—'}</strong>
+                          👤 {lead.owner_name || lead.doctor_name || lead.name} · 📞 <strong>{lead.phone || '—'}</strong>
                         </div>
                         {lead.email && <div className="text-xs text-muted truncate" style={{ maxWidth: 180 }}>✉️ {lead.email}</div>}
                       </td>
 
                       <td>
                         <div style={{ fontWeight: 500, fontSize: 13 }}>{lead.city || 'Bangalore'}</div>
-                        <div className="text-xs text-muted">{lead.locality || lead.title || 'General'}</div>
+                        <div className="text-xs text-muted">{lead.locality || lead.speciality || lead.title || 'General'}</div>
                       </td>
 
                       <td>
@@ -407,6 +545,25 @@ export default function LeadsPage() {
                       </td>
 
                       <td>
+                        <StatusBadge status={lead.status} stage={lead.stage} />
+                        {lead.next_action && (
+                          <div className="text-xs text-secondary mt-1 truncate" style={{ maxWidth: 200 }} title={lead.next_action}>
+                            🎯 {lead.next_action}
+                          </div>
+                        )}
+                        {lead.value > 0 && (
+                          <div className="text-xs font-bold text-success mt-0.5">
+                            ₹{Number(lead.value).toLocaleString('en-IN')}
+                          </div>
+                        )}
+                        {lead.last_contacted_at && (
+                          <div className="text-xs text-muted mt-0.5">
+                            🕒 {new Date(lead.last_contacted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
+                      </td>
+
+                      <td>
                         <div className="flex items-center gap-2">
                           <div style={{ width: 44, height: 6, background: '#E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
                             <div style={{ width: `${lead.score || 0}%`, height: '100%', background: lead.score >= 70 ? '#10B981' : lead.score >= 40 ? '#F59E0B' : '#94A3B8' }} />
@@ -416,21 +573,41 @@ export default function LeadsPage() {
                       </td>
 
                       <td>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ padding: '4px 8px', fontSize: 11 }}
+                            onClick={() => handleDirectAiCall(lead)}
+                            disabled={callingLeadId === lead.id}
+                            title="Directly trigger Sarvam Voice AI Call"
+                          >
+                            {callingLeadId === lead.id ? '📞 Dialing...' : '📞 Call AI'}
+                          </button>
+
                           <button
                             className="btn btn-ghost btn-sm"
-                            style={{ padding: '3px 8px', fontSize: 11 }}
+                            style={{ padding: '4px 8px', fontSize: 12 }}
+                            onClick={() => handleOpenDetail(lead)}
+                            title="View Full Lead Details & Timeline"
+                          >
+                            👁️
+                          </button>
+
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ padding: '4px 8px', fontSize: 12 }}
                             onClick={() => {
                               setSelectedIds([lead.id]);
                               setBatchModal(true);
                             }}
-                            title="Push to Autopilot AI"
+                            title="Push to Autopilot AI Pipeline"
                           >
                             🚀
                           </button>
+
                           <button
                             className="btn btn-danger btn-sm"
-                            style={{ padding: '3px 8px', fontSize: 11 }}
+                            style={{ padding: '4px 8px', fontSize: 11 }}
                             onClick={() => handleDelete(lead.id)}
                             title="Delete Lead"
                           >
@@ -529,7 +706,7 @@ export default function LeadsPage() {
       {/* Add Lead Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="modal fade-in">
+          <div className="modal fade-in" style={{ maxWidth: 650 }}>
             <div className="modal-header">
               <h2 className="section-title">Add Clinic Lead</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}>✕</button>
@@ -542,39 +719,181 @@ export default function LeadsPage() {
                 </div>
                 <div>
                   <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Phone *</label>
-                  <input className="input" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required placeholder="+91 98..." />
+                  <input className="input" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required placeholder="+91 98765 43210" />
                 </div>
                 <div>
                   <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Clinic / Hospital Name</label>
                   <input className="input" value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))} placeholder="Indiranagar Care Clinic" />
                 </div>
                 <div>
+                  <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Email</label>
+                  <input className="input" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="doctor@clinic.com" />
+                </div>
+                <div>
                   <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Speciality</label>
-                  <input className="input" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Cardiologist" />
+                  <input className="input" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="General Physician / Cardiologist" />
                 </div>
                 <div>
                   <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>City</label>
                   <input className="input" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} placeholder="Bangalore" />
                 </div>
                 <div>
+                  <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Locality / Area</label>
+                  <input className="input" value={form.locality} onChange={(e) => setForm((f) => ({ ...f, locality: e.target.value }))} placeholder="Indiranagar" />
+                </div>
+                <div>
                   <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Product Target</label>
                   <select className="input" value={form.product_interest} onChange={(e) => setForm((f) => ({ ...f, product_interest: e.target.value }))}>
-                    <option value="prime">Practo Prime</option>
-                    <option value="reach">Practo Reach</option>
+                    <option value="prime">⚡ Practo Prime</option>
+                    <option value="reach">🎯 Practo Reach</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Initial Workflow</label>
+                  <select className="input" value={form.workflow_stage} onChange={(e) => setForm((f) => ({ ...f, workflow_stage: e.target.value }))}>
+                    <option value="manual">📞 Manual Dialing</option>
+                    <option value="autopilot">🚀 Auto Pilot Queue</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Pipeline Stage</label>
+                  <select className="input" value={form.stage} onChange={(e) => setForm((f) => ({ ...f, stage: e.target.value }))}>
+                    {STAGES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                   </select>
                 </div>
               </div>
 
               <div style={{ marginBottom: 16 }}>
                 <label className="text-xs text-muted font-bold mb-1" style={{ display: 'block', textTransform: 'uppercase' }}>Notes & Context</label>
-                <textarea className="input" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Clinic highlights, patient volume..." style={{ resize: 'vertical' }} />
+                <textarea className="input" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Clinic highlights, patient volume, consultation fee..." style={{ resize: 'vertical' }} />
               </div>
 
               <div className="flex gap-3 justify-between items-center">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save Lead'}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving Lead...' : 'Save Lead to CRM'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lead Details & Activity History Drawer / Modal */}
+      {detailLead && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setDetailLead(null)}>
+          <div className="modal fade-in" style={{ maxWidth: 720, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <div>
+                <h2 className="section-title">{detailLead.company || detailLead.clinic_name || detailLead.name}</h2>
+                <p className="text-xs text-secondary mt-1">
+                  👤 {detailLead.owner_name || detailLead.doctor_name || detailLead.name} · 📞 {detailLead.phone || 'No phone'} · 📍 {detailLead.locality || detailLead.city || 'Bangalore'}
+                </p>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setDetailLead(null)}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Summary card */}
+              <div className="card" style={{ background: '#F8FAFC', padding: '14px 18px', borderLeft: '4px solid #1456FD' }}>
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <div>
+                    <span className="text-xs text-muted uppercase font-bold">Pipeline Stage:</span>
+                    <span className="badge badge-blue ml-2">{detailLead.stage?.toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted uppercase font-bold">Live Status:</span>
+                    <span className="ml-2"><StatusBadge status={detailLead.status} stage={detailLead.stage} /></span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted uppercase font-bold">Product:</span>
+                    <span className="badge badge-teal ml-2">Practo {detailLead.product_interest?.toUpperCase()}</span>
+                  </div>
+                  {detailLead.value > 0 && (
+                    <div>
+                      <span className="text-xs text-muted uppercase font-bold">Pipeline Value:</span>
+                      <strong className="text-success ml-2">₹{Number(detailLead.value).toLocaleString('en-IN')}</strong>
+                    </div>
+                  )}
+                </div>
+
+                {detailLead.next_action && (
+                  <div className="text-xs text-secondary mt-2 pt-2" style={{ borderTop: '1px dashed #E2E8F0' }}>
+                    <strong>🎯 Next Action:</strong> {detailLead.next_action}
+                  </div>
+                )}
+                {detailLead.last_contacted_at && (
+                  <div className="text-xs text-muted mt-1">
+                    <strong>🕒 Last Contact:</strong> {new Date(detailLead.last_contacted_at).toLocaleString()}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => handleDirectAiCall(detailLead)}
+                  disabled={callingLeadId === detailLead.id}
+                >
+                  {callingLeadId === detailLead.id ? '📞 Dialing AI...' : '📞 Place Outbound AI Call'}
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setSelectedIds([detailLead.id]);
+                    setBatchModal(true);
+                  }}
+                >
+                  🚀 Push to Auto Pilot
+                </button>
+              </div>
+
+              {/* Notes */}
+              {detailLead.notes && (
+                <div className="card" style={{ padding: 14 }}>
+                  <h4 className="text-xs font-bold text-secondary uppercase mb-2">Lead Notes & Call History</h4>
+                  <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: '#334155', fontFamily: 'inherit' }}>
+                    {detailLead.notes}
+                  </pre>
+                </div>
+              )}
+
+              {/* Add Activity Form */}
+              <form onSubmit={handleAddActivity} className="card" style={{ padding: 14 }}>
+                <h4 className="text-xs font-bold text-secondary uppercase mb-2">Log Activity / Note</h4>
+                <div className="flex gap-2">
+                  <input
+                    className="input"
+                    placeholder="Enter call notes, objection notes, or follow-up task..."
+                    value={newActivityText}
+                    onChange={(e) => setNewActivityText(e.target.value)}
+                    style={{ flex: 1, fontSize: 12.5 }}
+                  />
+                  <button type="submit" className="btn btn-secondary btn-sm" disabled={addingActivity || !newActivityText.trim()}>
+                    {addingActivity ? 'Adding...' : 'Add Note'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Activities Timeline */}
+              <div>
+                <h4 className="text-xs font-bold text-secondary uppercase mb-2">Activity & Outreach Timeline</h4>
+                {(!detailLead.activities || detailLead.activities.length === 0) ? (
+                  <p className="text-xs text-muted">No logged activities yet. Click "Place Outbound AI Call" above to initiate outreach.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {detailLead.activities.map((act) => (
+                      <div key={act.id} className="card" style={{ padding: '10px 14px', fontSize: 12 }}>
+                        <div className="flex justify-between items-center">
+                          <strong>{act.title}</strong>
+                          <span className="text-xs text-muted">{new Date(act.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        {act.detail && <p className="text-xs text-secondary mt-1">{act.detail}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

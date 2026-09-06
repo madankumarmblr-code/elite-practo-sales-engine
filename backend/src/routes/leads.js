@@ -18,17 +18,21 @@ function publicLead(row) {
 export function registerLeadsRoutes(app) {
   // ── List leads ─────────────────────────────────────────────────────────────
   app.get('/api/leads', authRequired, requirePermission('leads:read'), (req, res) => {
-    const { stage, status, search, limit = 100, offset = 0, assignedTo } = req.query;
+    const { stage, status, search, limit = 100, offset = 0, assignedTo, workflowStage, workflow_stage, productInterest, product_interest } = req.query;
     let query = 'SELECT * FROM leads WHERE 1=1';
     const params = [];
 
     if (stage) { query += ' AND stage = ?'; params.push(stage); }
     if (status) { query += ' AND status = ?'; params.push(status); }
+    const wf = workflowStage || workflow_stage;
+    if (wf && wf !== 'all') { query += ' AND workflow_stage = ?'; params.push(wf); }
+    const pi = productInterest || product_interest;
+    if (pi) { query += ' AND product_interest = ?'; params.push(pi); }
     if (assignedTo) { query += ' AND lower(assigned_to) = ?'; params.push(String(assignedTo).toLowerCase()); }
     if (search) {
-      query += ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR company LIKE ?)';
+      query += ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR company LIKE ? OR clinic_name LIKE ? OR doctor_name LIKE ? OR city LIKE ? OR locality LIKE ?)';
       const t = `%${search}%`;
-      params.push(t, t, t, t);
+      params.push(t, t, t, t, t, t, t, t);
     }
 
     const countQuery = query.replace('SELECT *', 'SELECT COUNT(*) as total');
@@ -109,17 +113,65 @@ export function registerLeadsRoutes(app) {
 
   // ── Create lead ────────────────────────────────────────────────────────────
   app.post('/api/leads', authRequired, requirePermission('leads:write'), async (req, res) => {
-    const { name, email, phone, company, title, source = 'manual', stage = 'new', score = 0, value = 0, notes = '', assignedTo, tags, temperature = '', preferredChannel = '' } = req.body || {};
-    if (!name) return res.status(400).json({ error: 'Lead name is required' });
+    const b = req.body || {};
+    const name = b.name || b.doctorName || b.doctor_name || b.ownerName || b.owner_name || ('Dr. ' + (b.company || b.clinicName || b.clinic_name || 'Doctor'));
+    if (!name && !b.phone) return res.status(400).json({ error: 'Lead name or phone is required' });
 
     const id = nanoid();
     const ts = now();
-    db.prepare(`
-      INSERT INTO leads (id, name, email, phone, company, title, source, stage, score, value, status, assigned_to, notes, tags, temperature, preferred_channel, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name, email || '', phone || '', company || '', title || '', source, stage, Number(score), Number(value), assignedTo || 'Unassigned', notes, JSON.stringify(Array.isArray(tags) ? tags : []), temperature, preferredChannel, ts, ts);
+    const clinicName = b.company || b.clinicName || b.clinic_name || '';
+    const docName = b.doctorName || b.doctor_name || name;
+    const phone = b.phone || b.ownerPhone || b.owner_phone || '';
+    const email = b.email || b.ownerEmail || b.owner_email || '';
+    const title = b.title || b.speciality || 'General Physician';
+    const city = b.city || 'Bangalore';
+    const locality = b.locality || 'Indiranagar';
+    const speciality = b.speciality || b.title || 'General Physician';
+    const source = b.source || 'manual';
+    const stage = b.stage || 'new';
+    const status = b.status || (stage === 'contacted' ? 'contacted' : 'open');
+    const score = Number(b.score || 0);
+    const value = Number(b.value || 0);
+    const assignedTo = b.assignedTo || b.assigned_to || 'Unassigned';
+    const notes = b.notes || '';
+    const tags = Array.isArray(b.tags) ? b.tags : [];
+    const temperature = b.temperature || '';
+    const preferredChannel = b.preferredChannel || b.preferred_channel || 'call';
+    const productInterest = b.product_interest || b.productInterest || 'prime';
+    const workflowStage = b.workflow_stage || b.workflowStage || 'manual';
+    const ownerName = b.owner_name || b.ownerName || docName;
+    const ownerPhone = b.owner_phone || b.ownerPhone || phone;
+    const ownerEmail = b.owner_email || b.ownerEmail || email;
+    const receptionPhone = b.reception_phone || b.receptionPhone || phone;
+    const address = b.address || '';
+    const nextAction = b.nextAction || b.next_action || '';
 
-    recordAuditLog({ req, action: 'lead.create', entityType: 'lead', entityId: id, details: `Created lead: ${name}`, newState: { name, email, phone, company, source, stage } });
+    db.prepare(`
+      INSERT INTO leads (
+        id, name, email, phone, company, title, source, stage, score, value,
+        status, assigned_to, notes, tags, temperature, preferred_channel,
+        city, locality, speciality, on_practo, practo_rating, practo_reviews, practo_url,
+        owner_name, owner_phone, owner_email, marketing_name, marketing_phone, marketing_email,
+        reception_phone, product_interest, workflow_stage, clinic_name, doctor_name, address,
+        next_action, created_at, updated_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, 0, 0, 0, '',
+        ?, ?, ?, '', '', '',
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?
+      )
+    `).run(
+      id, name, email, phone, clinicName, title, source, stage, score, value,
+      status, assignedTo, notes, JSON.stringify(tags), temperature, preferredChannel,
+      city, locality, speciality,
+      ownerName, ownerPhone, ownerEmail,
+      receptionPhone, productInterest, workflowStage, clinicName, docName, address,
+      nextAction, ts, ts
+    );
+
+    recordAuditLog({ req, action: 'lead.create', entityType: 'lead', entityId: id, details: `Created lead: ${name}`, newState: { name, email, phone, clinicName, source, stage, productInterest, workflowStage } });
     logEvent({ type: 'info', category: 'leads', message: `Lead created: ${name}`, userId: req.user.id });
     await persistDurableDbNow();
     res.status(201).json(publicLead(db.prepare('SELECT * FROM leads WHERE id = ?').get(id)));
@@ -133,18 +185,44 @@ export function registerLeadsRoutes(app) {
     const b = req.body || {};
     const ts = now();
     db.prepare(`
-      UPDATE leads SET name=?, email=?, phone=?, company=?, title=?, source=?, stage=?, score=?, value=?, status=?, assigned_to=?, notes=?, tags=?, temperature=?, preferred_channel=?, next_action=?, updated_at=? WHERE id=?
+      UPDATE leads SET
+        name=?, email=?, phone=?, company=?, title=?, source=?, stage=?, score=?, value=?, status=?,
+        assigned_to=?, notes=?, tags=?, temperature=?, preferred_channel=?, next_action=?,
+        city=?, locality=?, speciality=?, product_interest=?, workflow_stage=?,
+        owner_name=?, owner_phone=?, owner_email=?, reception_phone=?,
+        clinic_name=?, doctor_name=?, address=?, last_contacted_at=COALESCE(?, last_contacted_at),
+        updated_at=?
+      WHERE id=?
     `).run(
-      b.name ?? existing.name, b.email ?? existing.email, b.phone ?? existing.phone,
-      b.company ?? existing.company, b.title ?? existing.title, b.source ?? existing.source,
-      b.stage ?? existing.stage, b.score != null ? Number(b.score) : existing.score,
+      b.name ?? existing.name,
+      b.email ?? existing.email,
+      b.phone ?? existing.phone,
+      b.company ?? b.clinic_name ?? existing.company,
+      b.title ?? b.speciality ?? existing.title,
+      b.source ?? existing.source,
+      b.stage ?? existing.stage,
+      b.score != null ? Number(b.score) : existing.score,
       b.value != null ? Number(b.value) : existing.value,
-      b.status ?? existing.status, b.assignedTo ?? existing.assigned_to,
+      b.status ?? existing.status,
+      b.assignedTo ?? b.assigned_to ?? existing.assigned_to,
       b.notes ?? existing.notes,
       Array.isArray(b.tags) ? JSON.stringify(b.tags) : existing.tags,
       b.temperature ?? existing.temperature,
-      b.preferredChannel ?? existing.preferred_channel,
-      b.nextAction ?? existing.next_action,
+      b.preferredChannel ?? b.preferred_channel ?? existing.preferred_channel,
+      b.nextAction ?? b.next_action ?? existing.next_action,
+      b.city ?? existing.city,
+      b.locality ?? existing.locality,
+      b.speciality ?? existing.speciality,
+      b.product_interest ?? b.productInterest ?? existing.product_interest,
+      b.workflow_stage ?? b.workflowStage ?? existing.workflow_stage,
+      b.owner_name ?? b.ownerName ?? existing.owner_name,
+      b.owner_phone ?? b.ownerPhone ?? existing.owner_phone,
+      b.owner_email ?? b.ownerEmail ?? existing.owner_email,
+      b.reception_phone ?? b.receptionPhone ?? existing.reception_phone,
+      b.clinic_name ?? b.company ?? existing.clinic_name,
+      b.doctor_name ?? b.name ?? existing.doctor_name,
+      b.address ?? existing.address,
+      b.last_contacted_at ?? b.lastContactedAt ?? null,
       ts, existing.id
     );
 
@@ -174,15 +252,43 @@ export function registerLeadsRoutes(app) {
 
     const ts = now();
     const insertStmt = db.prepare(`
-      INSERT INTO leads (id, name, email, phone, company, title, source, stage, score, value, status, assigned_to, notes, tags, temperature, preferred_channel, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', 'Unassigned', ?, '[]', '', '', ?, ?)
+      INSERT INTO leads (
+        id, name, email, phone, company, title, source, stage, score, value,
+        status, assigned_to, notes, tags, temperature, preferred_channel,
+        city, locality, speciality, product_interest, workflow_stage,
+        clinic_name, doctor_name, owner_name, owner_phone, reception_phone,
+        created_at, updated_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        'open', 'Unassigned', ?, '[]', '', '',
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?
+      )
     `);
 
     let imported = 0;
     const tx = db.transaction(() => {
       for (const lead of leads) {
-        if (!lead.name) continue;
-        insertStmt.run(nanoid(), lead.name, lead.email || '', lead.phone || '', lead.company || '', lead.title || '', lead.source || 'import', lead.stage || 'new', Number(lead.score || 0), Number(lead.value || 0), lead.notes || '', ts, ts);
+        const leadName = lead.name || lead.doctorName || lead.doctor_name || ('Dr. ' + (lead.company || lead.clinicName || 'Doctor'));
+        if (!leadName && !lead.phone) continue;
+        const clinicName = lead.company || lead.clinicName || lead.clinic_name || '';
+        const docName = lead.doctorName || lead.doctor_name || leadName;
+        const phone = lead.phone || '';
+        const city = lead.city || 'Bangalore';
+        const locality = lead.locality || '';
+        const speciality = lead.speciality || lead.title || 'General Physician';
+        const productInterest = lead.product_interest || lead.productInterest || 'prime';
+        const workflowStage = lead.workflow_stage || lead.workflowStage || 'manual';
+
+        insertStmt.run(
+          nanoid(), leadName, lead.email || '', phone, clinicName, speciality,
+          lead.source || 'import', lead.stage || 'new', Number(lead.score || 0), Number(lead.value || 0),
+          lead.notes || '',
+          city, locality, speciality, productInterest, workflowStage,
+          clinicName, docName, docName, phone, phone,
+          ts, ts
+        );
         imported++;
       }
     });
@@ -205,6 +311,7 @@ export function registerLeadsRoutes(app) {
     if (req.body.nextAction) {
       db.prepare('UPDATE leads SET next_action=?, updated_at=? WHERE id=?').run(req.body.nextAction, ts, lead.id);
     }
+    await persistDurableDbNow();
     res.status(201).json({ id, leadId: lead.id, type, title, detail, createdAt: ts });
   });
 
@@ -226,13 +333,13 @@ export function registerLeadsRoutes(app) {
         try {
           await autopilotService.enqueueLead({
             leadId: lead.id,
-            clinicName: lead.company || lead.name,
+            clinicName: lead.company || lead.clinic_name || lead.name,
             city: lead.city || '',
             locality: lead.locality || '',
             speciality: lead.speciality || lead.title || '',
             phone: lead.phone,
             email: lead.email,
-            ownerName: lead.owner_name || lead.name,
+            ownerName: lead.owner_name || lead.doctor_name || lead.name,
             marketingName: lead.marketing_name || '',
             product,
             autoStart: true,
@@ -263,6 +370,7 @@ export function registerLeadsRoutes(app) {
       details: `Batch action "${action}" on ${processed} leads [Product: ${product}]`,
     });
 
+    await persistDurableDbNow();
     res.json({ ok: true, action, processed, total: leadIds.length });
   });
 }

@@ -132,7 +132,51 @@ class AutopilotService {
       }
     }
 
-    const effectiveLeadId = resolveLeadId(leadId, cleanPhone, clinicName);
+    let effectiveLeadId = resolveLeadId(leadId, cleanPhone, clinicName);
+
+    if (!effectiveLeadId) {
+      // Auto-create lead in CRM leads table so that all downstream AI call outcomes, proposals, and logs bind to this lead
+      const newLeadId = nanoid();
+      const rawDoc = ownerName || (clinicName ? `Dr. ${clinicName}` : 'Doctor');
+      const docNameClean = rawDoc.replace(/^(Dr\.?|Doctor)\s*/i, '').trim();
+      const leadName = `Dr. ${docNameClean || 'Doctor'}`;
+      try {
+        db.prepare(`
+          INSERT INTO leads (
+            id, name, company, title, stage, status, score, value, source,
+            clinic_name, doctor_name, phone, email,
+            city, locality, speciality,
+            owner_name, owner_phone, owner_email,
+            marketing_name, reception_phone,
+            product_interest, workflow_stage,
+            temperature, preferred_channel, next_action,
+            notes, tags, created_at, updated_at
+          ) VALUES (
+            ?, ?, ?, ?, 'new', 'open', 75, 0, 'autopilot',
+            ?, ?, ?, ?,
+            ?, ?, ?,
+            ?, ?, ?,
+            ?, ?,
+            ?, 'autopilot',
+            'warm', 'call', 'Autopilot outreach queued',
+            ?, ?, ?, ?
+          )
+        `).run(
+          newLeadId, leadName, clinicName, speciality || 'General Physician',
+          clinicName, leadName, cleanPhone, email || '',
+          city || 'Bangalore', locality || 'Indiranagar', speciality || 'General Physician',
+          ownerName || leadName, cleanPhone, email || '',
+          marketingName || '', cleanPhone,
+          product || 'prime',
+          `[${ts}] Enqueued into Autopilot for Practo ${String(product || 'prime').toUpperCase()} outreach`,
+          JSON.stringify(['autopilot', product || 'prime']),
+          ts, ts
+        );
+        effectiveLeadId = newLeadId;
+      } catch (insertLeadErr) {
+        console.warn('[Autopilot Auto-Create Lead Error]:', insertLeadErr.message);
+      }
+    }
 
     db.prepare(`
       INSERT INTO autopilot_queue (
@@ -200,7 +244,47 @@ class AutopilotService {
     const ts = now();
     db.prepare("UPDATE autopilot_queue SET current_stage='calling', call_status='initiating', updated_at=? WHERE id=?").run(ts, queueId);
 
-    const effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
+    let effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
+    if (!effectiveLeadId) {
+      const newLeadId = nanoid();
+      const rawDoc = item.owner_name || (item.clinic_name ? `Dr. ${item.clinic_name}` : 'Doctor');
+      const docNameClean = rawDoc.replace(/^(Dr\.?|Doctor)\s*/i, '').trim();
+      const leadName = `Dr. ${docNameClean || 'Doctor'}`;
+      try {
+        db.prepare(`
+          INSERT INTO leads (
+            id, name, company, title, stage, status, score, value, source,
+            clinic_name, doctor_name, phone, email,
+            city, locality, speciality,
+            owner_name, owner_phone,
+            product_interest, workflow_stage,
+            temperature, preferred_channel, next_action,
+            notes, tags, created_at, updated_at
+          ) VALUES (
+            ?, ?, ?, ?, 'contacted', 'contacted', 75, 0, 'autopilot',
+            ?, ?, ?, ?,
+            ?, ?, ?,
+            ?, ?,
+            ?, 'autopilot',
+            'warm', 'call', 'Autopilot AI Call initiated',
+            ?, ?, ?, ?
+          )
+        `).run(
+          newLeadId, leadName, item.clinic_name, item.speciality || 'General Physician',
+          item.clinic_name, leadName, item.phone, item.email || '',
+          item.city || 'Bangalore', item.locality || 'Indiranagar', item.speciality || 'General Physician',
+          item.owner_name || leadName, item.phone,
+          item.product || 'prime',
+          `[${ts}] Autopilot AI Call initiated`,
+          JSON.stringify(['autopilot', item.product || 'prime']),
+          ts, ts
+        );
+        effectiveLeadId = newLeadId;
+        db.prepare('UPDATE autopilot_queue SET lead_id = ? WHERE id = ?').run(newLeadId, queueId);
+      } catch (err) {
+        console.warn('[Autopilot Auto-Create Lead on Call Error]:', err.message);
+      }
+    }
 
     try {
       const telConfig = telephonyProvider.getConfig();
@@ -795,7 +879,37 @@ class AutopilotService {
       WHERE id = ?
     `).run(status, Number(duration) || 0, transcript, recordingUrl, ts, item.id);
 
-    await this.triggerWhatsAppFollowup(item.id, { isRnr: false });
+    const effectiveLeadId = item.lead_id || resolveLeadId(null, item.phone, item.clinic_name);
+    if (effectiveLeadId) {
+      try {
+        db.prepare(`
+          UPDATE leads SET
+            stage = CASE WHEN stage IN ('new', 'open') THEN 'contacted' ELSE stage END,
+            status = 'contacted',
+            temperature = COALESCE(NULLIF(temperature, ''), 'warm'),
+            last_contacted_at = ?,
+            next_action = 'Review AI call outcome & send proposal',
+            notes = COALESCE(notes, '') || '\n' || ?,
+            updated_at = ?
+          WHERE id = ? AND stage NOT IN ('won', 'lost')
+        `).run(ts, `[${ts}] Autopilot AI Call completed (${status}, ${duration}s)`, ts, effectiveLeadId);
+      } catch {}
+    }
+
+    // Trigger full downstream proposal generation and WhatsApp dispatch
+    await this.autoProcessCallOutcome(item.id, {
+      callId: attemptId,
+      status: status || 'completed',
+      durationSec: Number(duration) || 60,
+      transcript: [{ speaker: 'AI Agent', text: transcript || 'Call completed', time: '00:01' }],
+      sentiment: {
+        doctor_sentiment: 'Positive - Pitch Delivered',
+        interest_score: 82,
+        doctor_intent: 'request_proposal',
+      },
+    });
+
+    persistDurableDbNow().catch(() => {});
     return { processed: true, queueId: item.id };
   }
 

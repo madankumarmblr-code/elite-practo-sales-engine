@@ -65,6 +65,46 @@ export class VoiceAgentService {
       } catch {}
     }
 
+    if (!effectiveLeadId) {
+      const newLeadId = nanoid();
+      const rawDoc = doctorName || (clinicName ? `Dr. ${clinicName}` : 'Doctor');
+      const docNameClean = rawDoc.replace(/^(Dr\.?|Doctor)\s*/i, '').trim();
+      const leadName = `Dr. ${docNameClean || 'Doctor'}`;
+      try {
+        db.prepare(`
+          INSERT INTO leads (
+            id, name, company, title, stage, status, score, value, source,
+            clinic_name, doctor_name, phone,
+            city, locality, speciality,
+            owner_name, owner_phone, reception_phone,
+            product_interest, workflow_stage,
+            temperature, preferred_channel, next_action,
+            notes, tags, created_at, updated_at
+          ) VALUES (
+            ?, ?, ?, ?, 'contacted', 'contacted', 75, 0, 'voice_agent',
+            ?, ?, ?,
+            ?, ?, ?,
+            ?, ?, ?,
+            ?, 'manual',
+            'warm', 'call', 'Voice AI Call initiated',
+            ?, ?, ?, ?
+          )
+        `).run(
+          newLeadId, leadName, clinicName, speciality || 'General Physician',
+          clinicName, leadName, toPhone,
+          city || 'Bangalore', locality || 'Indiranagar', speciality || 'General Physician',
+          leadName, toPhone, toPhone,
+          product || 'prime',
+          `[${ts}] Outbound AI Call placed (${product.toUpperCase()})`,
+          JSON.stringify(['voice_agent', product || 'prime']),
+          ts, ts
+        );
+        effectiveLeadId = newLeadId;
+      } catch (err) {
+        console.warn('[VoiceAgentService Auto-Create Lead Error]:', err.message);
+      }
+    }
+
     // ── PRIMARY & DEFAULT: Sarvam Voice AI (Indus Samvaad) ───────────────────
     if (effectiveEngine === 'sarvam' || effectiveProvider === 'sarvam' || effectiveProvider === 'sarvam_voice') {
       const { sarvamVoiceService } = await import('./sarvamVoice.js');
@@ -246,7 +286,7 @@ export class VoiceAgentService {
         )
       `).run(
         callId,
-        leadId || null,
+        effectiveLeadId || null,
         telephonyResult.callId || callId,
         cleanPhone,
         telephonyResult.status || 'completed',
@@ -378,6 +418,20 @@ export class VoiceAgentService {
     // For native/simulator calls, transition to completed
     const ts = now();
     db.prepare(`UPDATE call_logs SET status = 'completed', updated_at = ? WHERE id = ?`).run(ts, logRow.id);
+    if (logRow.lead_id) {
+      try {
+        db.prepare(`
+          UPDATE leads SET
+            stage = CASE WHEN stage IN ('new', 'open') THEN 'contacted' ELSE stage END,
+            status = 'contacted',
+            temperature = COALESCE(NULLIF(temperature, ''), 'warm'),
+            last_contacted_at = ?,
+            next_action = 'Follow up with interactive WhatsApp commercial proposal',
+            updated_at = ?
+          WHERE id = ? AND stage NOT IN ('won', 'lost')
+        `).run(ts, ts, logRow.lead_id);
+      } catch {}
+    }
     const updatedRow = db.prepare('SELECT * FROM call_logs WHERE id = ?').get(logRow.id);
     persistDurableDbNow().catch(() => {});
     return this._hydrateCall(updatedRow || logRow);

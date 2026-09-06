@@ -5,6 +5,7 @@ import { reachInventoryService } from '../services/reachInventoryService.js';
 import { autopilotService } from '../services/autopilotService.js';
 import { logEvent } from '../services/logger.js';
 import { recordAuditLog } from '../services/auditLogger.js';
+import { persistDurableDbNow } from '../services/dbSnapshot.js';
 import { zoneHierarchyService } from '../services/zoneHierarchyService.js';
 import {
   geminiGenerate,
@@ -2484,9 +2485,10 @@ export function registerScraperRoutes(app) {
       const doctorName = clinic.owner_name || resolveDoctorAndOwnerName(cleanClinicName, '');
 
       try {
+        const leadName = doctorName || ('Dr. ' + (cleanClinicName || 'Doctor'));
         db.prepare(`
           INSERT INTO leads (
-            id, clinic_name, doctor_name, phone, email,
+            id, name, company, title, stage, clinic_name, doctor_name, phone, email,
             address, city, locality, speciality,
             on_practo, practo_rating, practo_reviews, practo_url,
             owner_name, owner_phone, owner_email,
@@ -2496,7 +2498,7 @@ export function registerScraperRoutes(app) {
             status, temperature, preferred_channel, next_action,
             product_interest, workflow_stage, tags, created_at, updated_at
           ) VALUES (
-            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?, ?, ?, ?,
             ?, ?, ?, ?,
             ?, ?, ?, ?,
             ?, ?, ?,
@@ -2507,7 +2509,8 @@ export function registerScraperRoutes(app) {
             ?, ?, ?, ?, ?
           )
         `).run(
-          leadId, cleanClinicName, doctorName, leadPhone, clinic.owner_email || clinic.marketing_email || '',
+          leadId, leadName, cleanClinicName, clinic.speciality || 'General Physician', leadStatus,
+          cleanClinicName, doctorName, leadPhone, clinic.owner_email || clinic.marketing_email || '',
           clinic.address || '', clinic.city || '', clinic.locality || '', clinic.speciality || '',
           clinic.on_practo || 0, clinic.practo_rating || 0, clinic.practo_reviews || 0, clinic.practo_url || '',
           clinic.owner_name || doctorName, clinic.owner_phone || leadPhone, clinic.owner_email || '',
@@ -2564,6 +2567,8 @@ export function registerScraperRoutes(app) {
       assignType,
       product,
     });
+
+    await persistDurableDbNow();
 
     res.json({
       success: true,

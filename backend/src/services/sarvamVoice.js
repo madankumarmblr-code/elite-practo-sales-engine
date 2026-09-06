@@ -478,8 +478,41 @@ export class SarvamVoiceService {
       WHERE id = ?
     `).run(updatedStatus, durationSec, transcript, recordingUrl, ts, logRow.id);
 
+    // Update associated autopilot queue item if present
+    try {
+      db.prepare(`
+        UPDATE autopilot_queue SET
+          call_status = ?,
+          call_duration = ?,
+          call_transcript = COALESCE(NULLIF(?, ''), call_transcript),
+          call_recording_url = COALESCE(NULLIF(?, ''), call_recording_url),
+          current_stage = CASE WHEN ? = 'completed' OR ? = 'answered' THEN 'call_completed' ELSE current_stage END,
+          updated_at = ?
+        WHERE call_attempt_id = ?
+      `).run(
+        updatedStatus === 'completed' ? 'completed' : updatedStatus,
+        durationSec,
+        transcript,
+        recordingUrl,
+        updatedStatus,
+        updatedStatus,
+        ts,
+        attemptId
+      );
+    } catch {}
+
     // Update associated lead
-    const leadId = logRow.lead_id;
+    let leadId = logRow.lead_id;
+    if (!leadId && logRow.phone) {
+      try {
+        const cleanDigits = String(logRow.phone).replace(/\D/g, '').slice(-10);
+        const match = db.prepare('SELECT id FROM leads WHERE phone LIKE ? OR owner_phone LIKE ? LIMIT 1').get(`%${cleanDigits}`, `%${cleanDigits}`);
+        if (match) {
+          leadId = match.id;
+          db.prepare('UPDATE call_logs SET lead_id = ? WHERE id = ?').run(leadId, logRow.id);
+        }
+      } catch {}
+    }
     if (leadId) {
       const isSuccessful = updatedStatus === 'completed' || updatedStatus === 'answered';
       const isBusyOrRnr = updatedStatus === 'busy' || updatedStatus === 'no-answer' || updatedStatus === 'rejected';

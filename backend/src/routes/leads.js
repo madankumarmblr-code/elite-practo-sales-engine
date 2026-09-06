@@ -247,9 +247,10 @@ export function registerLeadsRoutes(app) {
 
   // ── Bulk import leads ──────────────────────────────────────────────────────
   app.post('/api/leads/bulk-import', authRequired, requirePermission('leads:write'), async (req, res) => {
-    const { leads = [] } = req.body || {};
+    const { leads = [], target = 'crm', pushToAutopilot = false, defaultProduct = 'prime' } = req.body || {};
     if (!Array.isArray(leads) || !leads.length) return res.status(400).json({ error: 'leads array required' });
 
+    const shouldPushAutopilot = pushToAutopilot === true || target === 'autopilot' || target === 'both';
     const ts = now();
     const insertStmt = db.prepare(`
       INSERT INTO leads (
@@ -268,6 +269,7 @@ export function registerLeadsRoutes(app) {
     `);
 
     let imported = 0;
+    const insertedLeads = [];
     const tx = db.transaction(() => {
       for (const lead of leads) {
         const leadName = lead.name || lead.doctorName || lead.doctor_name || ('Dr. ' + (lead.company || lead.clinicName || 'Doctor'));
@@ -278,25 +280,66 @@ export function registerLeadsRoutes(app) {
         const city = lead.city || 'Bangalore';
         const locality = lead.locality || '';
         const speciality = lead.speciality || lead.title || 'General Physician';
-        const productInterest = lead.product_interest || lead.productInterest || 'prime';
-        const workflowStage = lead.workflow_stage || lead.workflowStage || 'manual';
+        const productInterest = lead.product_interest || lead.productInterest || defaultProduct || 'prime';
+        const workflowStage = shouldPushAutopilot ? 'autopilot' : (lead.workflow_stage || lead.workflowStage || 'manual');
+        const id = nanoid();
 
         insertStmt.run(
-          nanoid(), leadName, lead.email || '', phone, clinicName, speciality,
+          id, leadName, lead.email || '', phone, clinicName, speciality,
           lead.source || 'import', lead.stage || 'new', Number(lead.score || 0), Number(lead.value || 0),
           lead.notes || '',
           city, locality, speciality, productInterest, workflowStage,
           clinicName, docName, docName, phone, phone,
           ts, ts
         );
+        insertedLeads.push({
+          id,
+          name: leadName,
+          company: clinicName,
+          phone,
+          email: lead.email || '',
+          city,
+          locality,
+          speciality,
+          product: productInterest,
+        });
         imported++;
       }
     });
     tx();
 
-    logEvent({ type: 'info', category: 'leads', message: `Bulk imported ${imported} leads`, userId: req.user.id });
+    let enqueued = 0;
+    if (shouldPushAutopilot && insertedLeads.length > 0) {
+      try {
+        const { autopilotService } = await import('../services/autopilotService.js');
+        for (const item of insertedLeads) {
+          if (!item.phone) continue;
+          try {
+            await autopilotService.enqueueLead({
+              leadId: item.id,
+              clinicName: item.company || item.name,
+              city: item.city,
+              locality: item.locality,
+              speciality: item.speciality,
+              phone: item.phone,
+              email: item.email,
+              ownerName: item.name,
+              product: item.product,
+              autoStart: true,
+            });
+            enqueued++;
+          } catch (enqueueErr) {
+            console.warn(`[BulkImportAutopilot] Error enqueuing lead ${item.id}:`, enqueueErr.message);
+          }
+        }
+      } catch (svcErr) {
+        console.warn('[BulkImportAutopilot] Could not import autopilotService:', svcErr.message);
+      }
+    }
+
+    logEvent({ type: 'info', category: 'leads', message: `Bulk imported ${imported} leads (enqueued ${enqueued} to autopilot)`, userId: req.user.id });
     await persistDurableDbNow();
-    res.json({ ok: true, imported, total: leads.length });
+    res.json({ ok: true, imported, enqueued, total: leads.length });
   });
 
   // ── Lead activities ────────────────────────────────────────────────────────

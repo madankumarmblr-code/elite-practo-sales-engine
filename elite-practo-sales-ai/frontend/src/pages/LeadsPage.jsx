@@ -88,6 +88,37 @@ export default function LeadsPage() {
   const [batchProcessing, setBatchProcessing] = useState(false);
 
   const fileInputRef = useRef(null);
+  const csvModalFileInputRef = useRef(null);
+
+  // CSV Custom Upload & Push Modal State
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [rawHeaders, setRawHeaders] = useState([]);
+  const [rawRows, setRawRows] = useState([]);
+  const [columnMapping, setColumnMapping] = useState({
+    doctor_name: '',
+    clinic_name: '',
+    phone: '',
+    email: '',
+    city: '',
+    locality: '',
+    speciality: '',
+    product_interest: '',
+    notes: '',
+  });
+  const [batchDefaults, setBatchDefaults] = useState({
+    city: 'Bangalore',
+    speciality: 'General Physician',
+    product_interest: 'prime',
+    workflow_stage: 'manual',
+  });
+  const [uploadTab, setUploadTab] = useState('preview'); // 'preview' | 'mapping'
+  const [selectedUploadRowIndices, setSelectedUploadRowIndices] = useState(new Set());
+  const [uploadSearch, setUploadSearch] = useState('');
+  const [pushTarget, setPushTarget] = useState('crm'); // 'crm' | 'autopilot' | 'both'
+  const [pushProduct, setPushProduct] = useState('prime');
+  const [isPushing, setIsPushing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   async function fetchLeads() {
     setLoading(true);
@@ -241,56 +272,217 @@ export default function LeadsPage() {
     window.open(url, '_blank');
   }
 
-  function handleImportClick() {
-    if (fileInputRef.current) fileInputRef.current.click();
+  function parseCsvText(text) {
+    if (!text) return [];
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
+    }
+    const rows = [];
+    let currentRow = [];
+    let currentVal = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (inQuotes) {
+        if (char === '"' && nextChar === '"') {
+          currentVal += '"';
+          i++;
+        } else if (char === '"') {
+          inQuotes = false;
+        } else {
+          currentVal += char;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          currentRow.push(currentVal.trim());
+          currentVal = '';
+        } else if (char === '\r') {
+          if (nextChar === '\n') i++;
+          currentRow.push(currentVal.trim());
+          if (currentRow.some(c => c.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentVal = '';
+        } else if (char === '\n') {
+          currentRow.push(currentVal.trim());
+          if (currentRow.some(c => c.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentVal = '';
+        } else {
+          currentVal += char;
+        }
+      }
+    }
+    if (currentVal.length > 0 || currentRow.length > 0) {
+      currentRow.push(currentVal.trim());
+      if (currentRow.some(c => c.length > 0)) {
+        rows.push(currentRow);
+      }
+    }
+    return rows;
   }
 
-  async function handleFileChange(e) {
-    const file = e.target.files?.[0];
+  function guessColumnMapping(headers) {
+    const mapping = {
+      doctor_name: '',
+      clinic_name: '',
+      phone: '',
+      email: '',
+      city: '',
+      locality: '',
+      speciality: '',
+      product_interest: '',
+      notes: '',
+    };
+
+    const cleanHeaders = headers.map(h => (h || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+
+    headers.forEach((originalHeader, idx) => {
+      const h = cleanHeaders[idx];
+      if (!mapping.phone && (/phone|mobile|cell|contactno|contactnum|mobilenum/i.test(h) || h === 'contact' || h === 'tel')) {
+        mapping.phone = originalHeader;
+      } else if (!mapping.email && /email|mail|emailaddress/i.test(h)) {
+        mapping.email = originalHeader;
+      } else if (!mapping.doctor_name && (/doctor|doc|physician|drname|doctorname|leadname|fullname|provider/i.test(h) || h === 'name')) {
+        mapping.doctor_name = originalHeader;
+      } else if (!mapping.clinic_name && (/clinic|hospital|centre|center|company|organization|facility|practice/i.test(h))) {
+        mapping.clinic_name = originalHeader;
+      } else if (!mapping.city && /city|town|metro/i.test(h)) {
+        mapping.city = originalHeader;
+      } else if (!mapping.locality && (/locality|area|suburb|address|location/i.test(h))) {
+        mapping.locality = originalHeader;
+      } else if (!mapping.speciality && (/spec|speciality|specialization|dept|department|category/i.test(h))) {
+        mapping.speciality = originalHeader;
+      } else if (!mapping.product_interest && (/product|package|plan|tier|interest/i.test(h))) {
+        mapping.product_interest = originalHeader;
+      } else if (!mapping.notes && (/note|notes|remark|comment/i.test(h))) {
+        mapping.notes = originalHeader;
+      }
+    });
+
+    if (!mapping.doctor_name && headers.length > 0 && mapping.clinic_name !== headers[0] && mapping.phone !== headers[0]) {
+      mapping.doctor_name = headers[0];
+    }
+    if (!mapping.clinic_name && headers.length > 1 && mapping.doctor_name !== headers[1] && mapping.phone !== headers[1]) {
+      mapping.clinic_name = headers[1];
+    }
+
+    return mapping;
+  }
+
+  function downloadSampleCsv() {
+    const header = 'doctor_name,clinic_name,phone,email,city,locality,speciality,product_interest,notes\n';
+    const row1 = 'Dr. Rohan Mehra,Apex Dental Care,+919876543210,rohan@apexdental.com,Bangalore,Indiranagar,Dentist,prime,Interested in patient appointments\n';
+    const row2 = 'Dr. Shalini Gupta,Skin Radiance Clinic,+919811223344,shalini@skinradiance.in,Bangalore,Koramangala,Dermatologist,reach,Wants Practo reach ads\n';
+    const row3 = 'Dr. Vikram Rao,Bangalore Heart Clinic,+919988776655,vikram@heartcare.org,Bangalore,Whitefield,Cardiologist,ray,Looking for Practo Ray EMR\n';
+    const blob = new Blob([header + row1 + row2 + row3], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'practo_sales_leads_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function handleCsvFileSelect(file) {
     if (!file) return;
-
+    setUploadFile(file);
     const reader = new FileReader();
-    reader.onload = async (evt) => {
+    reader.onload = (evt) => {
       const text = evt.target.result;
-      const lines = text.split(/\r?\n/);
-      if (lines.length < 2) return;
-
-      const importedLeads = [];
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const parts = line.split(',');
-        if (parts.length >= 2) {
-          importedLeads.push({
-            name: parts[0]?.replace(/"/g, '').trim(),
-            company: parts[1]?.replace(/"/g, '').trim() || '',
-            phone: parts[2]?.replace(/"/g, '').trim() || '',
-            email: parts[3]?.replace(/"/g, '').trim() || '',
-            city: parts[4]?.replace(/"/g, '').trim() || 'Bangalore',
-            title: parts[5]?.replace(/"/g, '').trim() || 'General Physician',
-            speciality: parts[5]?.replace(/"/g, '').trim() || 'General Physician',
-            product_interest: parts[6]?.replace(/"/g, '').trim() || 'prime',
-            workflow_stage: parts[7]?.replace(/"/g, '').trim() || 'manual',
-            source: 'csv_import',
-            stage: 'new',
-            status: 'open',
-            score: 70,
-          });
-        }
+      const rows = parseCsvText(text);
+      if (rows.length < 1) {
+        setMessage({ type: 'error', text: 'Uploaded CSV file appears to be empty.' });
+        return;
       }
-
-      if (importedLeads.length > 0) {
-        try {
-          await api.bulkImportLeads(importedLeads);
-          setMessage({ type: 'success', text: `Imported ${importedLeads.length} leads with full contact and product mapping from CSV!` });
-          fetchLeads();
-        } catch (err) {
-          setMessage({ type: 'error', text: err.message });
-        }
-      }
+      const headers = rows[0].map(h => (h || '').trim());
+      const dataRows = rows.slice(1).filter(r => r.some(cell => (cell || '').trim().length > 0));
+      setRawHeaders(headers);
+      setRawRows(dataRows);
+      const guessed = guessColumnMapping(headers);
+      setColumnMapping(guessed);
+      setSelectedUploadRowIndices(new Set(dataRows.map((_, idx) => idx)));
+      setUploadTab('preview');
+      setShowUploadModal(true);
     };
     reader.readAsText(file);
-    e.target.value = '';
+  }
+
+  function mapRowToLead(row) {
+    const getValue = (fieldKey) => {
+      const colName = columnMapping[fieldKey];
+      if (!colName) return '';
+      const colIdx = rawHeaders.indexOf(colName);
+      return colIdx >= 0 && row[colIdx] ? row[colIdx].trim() : '';
+    };
+
+    const docName = getValue('doctor_name') || 'Dr. ' + (getValue('clinic_name') || 'Doctor');
+    const clinicName = getValue('clinic_name') || '';
+    const phone = getValue('phone') || '';
+    const email = getValue('email') || '';
+    const city = getValue('city') || batchDefaults.city || 'Bangalore';
+    const locality = getValue('locality') || '';
+    const speciality = getValue('speciality') || batchDefaults.speciality || 'General Physician';
+    const product = getValue('product_interest') || pushProduct || batchDefaults.product_interest || 'prime';
+    const notes = getValue('notes') || '';
+
+    return {
+      name: docName,
+      doctor_name: docName,
+      company: clinicName,
+      clinic_name: clinicName,
+      phone,
+      email,
+      city,
+      locality,
+      speciality,
+      title: speciality,
+      product_interest: product,
+      workflow_stage: pushTarget === 'crm' ? 'manual' : 'autopilot',
+      notes,
+      source: 'csv_custom_upload',
+      stage: 'new',
+      status: 'open',
+      score: 75,
+    };
+  }
+
+  async function handleExecutePush() {
+    if (selectedUploadRowIndices.size === 0) return;
+    setIsPushing(true);
+    try {
+      const leadsToPush = Array.from(selectedUploadRowIndices).map(idx => mapRowToLead(rawRows[idx]));
+      const res = await api.bulkImportLeads(leadsToPush, {
+        target: pushTarget,
+        pushToAutopilot: pushTarget === 'autopilot' || pushTarget === 'both',
+        defaultProduct: pushProduct,
+      });
+      const msg = pushTarget === 'crm'
+        ? `Successfully imported ${res.imported || leadsToPush.length} leads into CRM!`
+        : `Successfully pushed ${res.imported || leadsToPush.length} leads into CRM and enqueued ${res.enqueued || res.imported || leadsToPush.length} into Autopilot queue!`;
+      setMessage({ type: 'success', text: msg });
+      setShowUploadModal(false);
+      setUploadFile(null);
+      setRawRows([]);
+      fetchLeads();
+    } catch (err) {
+      setMessage({ type: 'error', text: `Failed to push leads: ${err.message}` });
+    } finally {
+      setIsPushing(false);
+    }
+  }
+
+  function handleImportClick() {
+    setShowUploadModal(true);
   }
 
   async function handleCreate(e) {
@@ -349,12 +541,16 @@ export default function LeadsPage() {
           <input
             type="file"
             ref={fileInputRef}
-            onChange={handleFileChange}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleCsvFileSelect(f);
+              e.target.value = '';
+            }}
             accept=".csv"
             style={{ display: 'none' }}
           />
-          <button className="btn btn-secondary btn-sm" onClick={handleImportClick}>
-            📥 Import CSV
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowUploadModal(true)}>
+            📥 Upload CSV (Custom & Push)
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleExportCsv}>
             📤 Export CSV
@@ -894,6 +1090,553 @@ export default function LeadsPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload CSV & Custom Mapping & Choose & Push Modal */}
+      {showUploadModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowUploadModal(false)}>
+          <div className="modal fade-in" style={{ maxWidth: 940, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header flex justify-between items-center" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: 14 }}>
+              <div>
+                <h3 className="modal-title flex items-center gap-2">
+                  <span>📥</span> Leads CSV Upload & Push Engine
+                </h3>
+                <p className="text-xs text-secondary mt-1">
+                  Upload custom lead CSVs, customize column mappings, select individual leads, and push to CRM or Autopilot queue.
+                </p>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowUploadModal(false)}>✕</button>
+            </div>
+
+            {/* File Upload / Source Bar */}
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+              <input
+                type="file"
+                ref={csvModalFileInputRef}
+                accept=".csv"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleCsvFileSelect(f);
+                  e.target.value = '';
+                }}
+              />
+              {!uploadFile ? (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    const f = e.dataTransfer.files?.[0];
+                    if (f && f.name.endsWith('.csv')) handleCsvFileSelect(f);
+                    else setMessage({ type: 'error', text: 'Please drop a valid .csv file' });
+                  }}
+                  style={{
+                    border: isDragOver ? '2px dashed #0ea5e9' : '2px dashed #cbd5e1',
+                    borderRadius: 10,
+                    padding: '24px 20px',
+                    textAlign: 'center',
+                    background: isDragOver ? '#f0f9ff' : '#ffffff',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onClick={() => csvModalFileInputRef.current?.click()}
+                >
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📁</div>
+                  <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 14 }}>
+                    Click to browse or drag & drop your leads CSV file here
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                    Supports any CSV format (Google Sheets, Apollo, Practo Scrapes, Excel). Intelligent auto-mapping will detect headers.
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => { e.stopPropagation(); downloadSampleCsv(); }}
+                    >
+                      📥 Download Sample CSV Template
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 10 }}>
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: 20 }}>📄</span>
+                    <div>
+                      <strong style={{ fontSize: 13, color: '#0f172a' }}>{uploadFile.name}</strong>
+                      <div className="text-xs text-secondary">
+                        {Math.round(uploadFile.size / 1024)} KB · {rawRows.length} data rows detected · {rawHeaders.length} columns found
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => csvModalFileInputRef.current?.click()}
+                    >
+                      🔄 Change CSV File
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={downloadSampleCsv}
+                    >
+                      📥 Sample Template
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {uploadFile && (
+              <>
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: 6, padding: '10px 20px 0', borderBottom: '1px solid #e2e8f0' }}>
+                  <button
+                    type="button"
+                    onClick={() => setUploadTab('preview')}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      borderBottom: uploadTab === 'preview' ? '2px solid #0284c7' : '2px solid transparent',
+                      color: uploadTab === 'preview' ? '#0284c7' : '#64748b',
+                      background: 'none',
+                      borderTop: 'none',
+                      borderLeft: 'none',
+                      borderRight: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📋 1. Preview & Choose Leads ({selectedUploadRowIndices.size} selected)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadTab('mapping')}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      borderBottom: uploadTab === 'mapping' ? '2px solid #0284c7' : '2px solid transparent',
+                      color: uploadTab === 'mapping' ? '#0284c7' : '#64748b',
+                      background: 'none',
+                      borderTop: 'none',
+                      borderLeft: 'none',
+                      borderRight: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ⚙️ 2. Custom Column Mapping ({Object.values(columnMapping).filter(Boolean).length} mapped)
+                  </button>
+                </div>
+
+                {/* Tab 1: Preview & Choose Leads */}
+                {uploadTab === 'preview' && (
+                  <div style={{ padding: '14px 20px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* Toolbar */}
+                    <div className="flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 8 }}>
+                      <div className="flex items-center gap-2" style={{ flex: 1, minWidth: 220 }}>
+                        <input
+                          className="input"
+                          placeholder="🔍 Filter preview by doctor, clinic, city, or phone..."
+                          value={uploadSearch}
+                          onChange={(e) => setUploadSearch(e.target.value)}
+                          style={{ fontSize: 12, padding: '6px 10px', width: '100%' }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => {
+                            const filtered = rawRows
+                              .map((row, idx) => ({ row, idx }))
+                              .filter(({ row }) => {
+                                if (!uploadSearch) return true;
+                                const l = uploadSearch.toLowerCase();
+                                return row.some(c => (c || '').toLowerCase().includes(l));
+                              })
+                              .map(({ idx }) => idx);
+                            setSelectedUploadRowIndices(new Set([...selectedUploadRowIndices, ...filtered]));
+                          }}
+                        >
+                          ☑️ Select Filtered
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setSelectedUploadRowIndices(new Set())}
+                        >
+                          ◻️ Deselect All
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setUploadTab('mapping')}
+                        >
+                          ⚙️ Adjust Mapping
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stats pill bar */}
+                    <div className="flex items-center gap-3 text-xs" style={{ color: '#475569' }}>
+                      <span className="badge badge-secondary">
+                        Total Rows: {rawRows.length}
+                      </span>
+                      <span className="badge badge-primary">
+                        Selected: {selectedUploadRowIndices.size}
+                      </span>
+                      {rawRows.filter(r => !mapRowToLead(r).phone).length > 0 && (
+                        <span className="badge badge-warning" style={{ background: '#fef3c7', color: '#92400e' }}>
+                          ⚠️ {rawRows.filter(r => !mapRowToLead(r).phone).length} missing phone number
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Interactive Table */}
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+                      <div style={{ maxHeight: 310, overflowY: 'auto' }}>
+                        <table className="table" style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                          <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 2, borderBottom: '1px solid #e2e8f0' }}>
+                            <tr>
+                              <th style={{ width: 40, padding: '8px 10px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={rawRows.length > 0 && selectedUploadRowIndices.size === rawRows.length}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedUploadRowIndices(new Set(rawRows.map((_, i) => i)));
+                                    } else {
+                                      setSelectedUploadRowIndices(new Set());
+                                    }
+                                  }}
+                                />
+                              </th>
+                              <th style={{ padding: '8px 10px' }}>Doctor Name</th>
+                              <th style={{ padding: '8px 10px' }}>Clinic Name</th>
+                              <th style={{ padding: '8px 10px' }}>Phone Number</th>
+                              <th style={{ padding: '8px 10px' }}>Speciality</th>
+                              <th style={{ padding: '8px 10px' }}>City / Locality</th>
+                              <th style={{ padding: '8px 10px' }}>Product</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rawRows.map((row, idx) => {
+                              const lead = mapRowToLead(row);
+                              if (uploadSearch) {
+                                const q = uploadSearch.toLowerCase();
+                                const matches = Object.values(lead).some(val => String(val).toLowerCase().includes(q));
+                                if (!matches) return null;
+                              }
+                              const isSelected = selectedUploadRowIndices.has(idx);
+                              const hasPhone = Boolean(lead.phone && lead.phone.replace(/\D/g, '').length >= 10);
+                              return (
+                                <tr
+                                  key={idx}
+                                  style={{
+                                    background: isSelected ? '#f0fdf4' : 'transparent',
+                                    borderBottom: '1px solid #f1f5f9',
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={() => {
+                                    const next = new Set(selectedUploadRowIndices);
+                                    if (next.has(idx)) next.delete(idx);
+                                    else next.add(idx);
+                                    setSelectedUploadRowIndices(next);
+                                  }}
+                                >
+                                  <td style={{ textAlign: 'center', padding: '8px 10px' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        const next = new Set(selectedUploadRowIndices);
+                                        if (e.target.checked) next.add(idx);
+                                        else next.delete(idx);
+                                        setSelectedUploadRowIndices(next);
+                                      }}
+                                    />
+                                  </td>
+                                  <td style={{ padding: '8px 10px', fontWeight: 600, color: '#0f172a' }}>
+                                    {lead.name}
+                                  </td>
+                                  <td style={{ padding: '8px 10px', color: '#334155' }}>
+                                    {lead.company || <span className="text-muted italic">None</span>}
+                                  </td>
+                                  <td style={{ padding: '8px 10px' }}>
+                                    {hasPhone ? (
+                                      <span style={{ fontFamily: 'monospace', color: '#0369a1' }}>{lead.phone}</span>
+                                    ) : (
+                                      <span className="badge badge-warning" style={{ fontSize: 10, background: '#fef3c7', color: '#b45309' }}>
+                                        ⚠️ {lead.phone || 'No phone'}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '8px 10px', color: '#475569' }}>
+                                    {lead.speciality}
+                                  </td>
+                                  <td style={{ padding: '8px 10px', color: '#64748b' }}>
+                                    {lead.city}{lead.locality ? `, ${lead.locality}` : ''}
+                                  </td>
+                                  <td style={{ padding: '8px 10px' }}>
+                                    <span className="badge badge-secondary" style={{ textTransform: 'uppercase', fontSize: 10 }}>
+                                      {lead.product_interest}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 2: Custom Column Mapping */}
+                {uploadTab === 'mapping' && (
+                  <div style={{ padding: '16px 20px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <strong className="text-xs text-secondary uppercase font-bold">
+                          Detected Columns in Your CSV ({rawHeaders.length}):
+                        </strong>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 11, padding: '4px 8px' }}
+                            onClick={() => setColumnMapping(guessColumnMapping(rawHeaders))}
+                          >
+                            ⚡ Re-run Auto-Detect
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: 11, padding: '4px 8px' }}
+                            onClick={() => setColumnMapping({
+                              doctor_name: '', clinic_name: '', phone: '', email: '',
+                              city: '', locality: '', speciality: '', product_interest: '', notes: ''
+                            })}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {rawHeaders.map((h, i) => (
+                          <span key={i} className="badge badge-secondary" style={{ fontSize: 11 }}>
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mapping Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+                      {[
+                        { key: 'doctor_name', label: 'Doctor / Provider Name *', desc: 'Primary contact or doctor name' },
+                        { key: 'clinic_name', label: 'Clinic / Hospital Name *', desc: 'Facility, clinic, or company' },
+                        { key: 'phone', label: 'Phone / Mobile Number *', desc: 'Used for Voice AI calling & WhatsApp' },
+                        { key: 'email', label: 'Email Address', desc: 'Commercial proposal dispatch' },
+                        { key: 'city', label: 'City', desc: 'e.g. Bangalore, Mumbai, Delhi' },
+                        { key: 'locality', label: 'Locality / Area', desc: 'e.g. Indiranagar, Koramangala' },
+                        { key: 'speciality', label: 'Speciality / Category', desc: 'e.g. Dentist, Dermatologist' },
+                        { key: 'product_interest', label: 'Product Interest', desc: 'Reach, Prime, Ray, Insta' },
+                        { key: 'notes', label: 'Notes / Remarks', desc: 'Custom lead notes or history' },
+                      ].map(({ key, label, desc }) => {
+                        const mappedCol = columnMapping[key];
+                        const sampleVal = mappedCol && rawRows.length > 0 && rawHeaders.indexOf(mappedCol) >= 0
+                          ? rawRows[0][rawHeaders.indexOf(mappedCol)]
+                          : null;
+                        return (
+                          <div key={key} className="card" style={{ padding: 12, background: '#ffffff' }}>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">
+                              {label}
+                            </label>
+                            <select
+                              className="input text-xs"
+                              value={columnMapping[key] || ''}
+                              onChange={(e) => setColumnMapping({ ...columnMapping, [key]: e.target.value })}
+                              style={{ width: '100%', marginBottom: 4 }}
+                            >
+                              <option value="">(Skip / Not Mapped)</option>
+                              {rawHeaders.map((h, idx) => (
+                                <option key={idx} value={h}>{h}</option>
+                              ))}
+                            </select>
+                            <div className="flex justify-between items-center text-xs text-muted" style={{ fontSize: 11 }}>
+                              <span>{desc}</span>
+                              {sampleVal && (
+                                <span style={{ color: '#0369a1', fontStyle: 'italic', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Ex: "{sampleVal}"
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Batch Defaults */}
+                    <div className="card" style={{ padding: 14, background: '#f8fafc' }}>
+                      <h4 className="text-xs font-bold text-secondary uppercase mb-2">
+                        Fallback / Batch Defaults (Used when column is skipped or cell is blank):
+                      </h4>
+                      <div className="flex gap-4" style={{ flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: 140 }}>
+                          <label className="text-xs text-secondary block mb-1">Default City</label>
+                          <input
+                            className="input text-xs"
+                            value={batchDefaults.city}
+                            onChange={(e) => setBatchDefaults({ ...batchDefaults, city: e.target.value })}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 140 }}>
+                          <label className="text-xs text-secondary block mb-1">Default Speciality</label>
+                          <input
+                            className="input text-xs"
+                            value={batchDefaults.speciality}
+                            onChange={(e) => setBatchDefaults({ ...batchDefaults, speciality: e.target.value })}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 140 }}>
+                          <label className="text-xs text-secondary block mb-1">Default Product</label>
+                          <select
+                            className="input text-xs"
+                            value={batchDefaults.product_interest}
+                            onChange={(e) => setBatchDefaults({ ...batchDefaults, product_interest: e.target.value })}
+                          >
+                            <option value="prime">Practo PRIME (Growth)</option>
+                            <option value="reach">Practo REACH (High Ad Intent)</option>
+                            <option value="ray">Practo RAY (Clinic EMR)</option>
+                            <option value="insta">Practo INSTA (Enterprise)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setUploadTab('preview')}
+                      >
+                        ✓ Done & View Preview Table →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer: Push Action Bar */}
+                <div style={{ borderTop: '1px solid #e2e8f0', padding: '14px 20px', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                  {/* Push Destination Selection */}
+                  <div className="flex items-center gap-3" style={{ flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>
+                      Choose Push Destination:
+                    </span>
+                    <div style={{ display: 'inline-flex', borderRadius: 6, border: '1px solid #cbd5e1', overflow: 'hidden' }}>
+                      <button
+                        type="button"
+                        onClick={() => setPushTarget('crm')}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: pushTarget === 'crm' ? '#0284c7' : '#ffffff',
+                          color: pushTarget === 'crm' ? '#ffffff' : '#334155'
+                        }}
+                      >
+                        📁 CRM Only
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPushTarget('autopilot')}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          border: 'none',
+                          borderLeft: '1px solid #cbd5e1',
+                          cursor: 'pointer',
+                          background: pushTarget === 'autopilot' ? '#8b5cf6' : '#ffffff',
+                          color: pushTarget === 'autopilot' ? '#ffffff' : '#334155'
+                        }}
+                      >
+                        🚀 Autopilot Queue (AI Call)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPushTarget('both')}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          border: 'none',
+                          borderLeft: '1px solid #cbd5e1',
+                          cursor: 'pointer',
+                          background: pushTarget === 'both' ? '#10b981' : '#ffffff',
+                          color: pushTarget === 'both' ? '#ffffff' : '#334155'
+                        }}
+                      >
+                        ⚡ Both (CRM + Autopilot)
+                      </button>
+                    </div>
+
+                    {(pushTarget === 'autopilot' || pushTarget === 'both') && (
+                      <div className="flex items-center gap-1">
+                        <span style={{ fontSize: 11, color: '#64748b' }}>Campaign:</span>
+                        <select
+                          className="input text-xs"
+                          value={pushProduct}
+                          onChange={(e) => setPushProduct(e.target.value)}
+                          style={{ padding: '4px 8px', height: 32 }}
+                        >
+                          <option value="reach">Practo REACH</option>
+                          <option value="prime">Practo PRIME</option>
+                          <option value="ray">Practo RAY</option>
+                          <option value="insta">Practo INSTA</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setShowUploadModal(false)}
+                      disabled={isPushing}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={handleExecutePush}
+                      disabled={selectedUploadRowIndices.size === 0 || isPushing}
+                      style={{
+                        background: pushTarget === 'crm' ? '#0284c7' : pushTarget === 'autopilot' ? '#8b5cf6' : '#10b981',
+                        borderColor: pushTarget === 'crm' ? '#0284c7' : pushTarget === 'autopilot' ? '#8b5cf6' : '#10b981'
+                      }}
+                    >
+                      {isPushing
+                        ? 'Pushing Leads...'
+                        : `🚀 Push ${selectedUploadRowIndices.size} Selected Leads`}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

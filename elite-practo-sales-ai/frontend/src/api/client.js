@@ -64,7 +64,7 @@ export const api = {
   createLead: (data) => post('/leads', data),
   updateLead: (id, data) => put(`/leads/${id}`, data),
   deleteLead: (id) => del(`/leads/${id}`),
-  bulkImportLeads: (leads) => post('/leads/bulk-import', { leads }),
+  bulkImportLeads: (leads, options = {}) => post('/leads/bulk-import', { leads, ...options }),
   addLeadActivity: (id, data) => post(`/leads/${id}/activities`, data),
 
   // ── Sarvam Voice ──────────────────────────────────────────────────────────

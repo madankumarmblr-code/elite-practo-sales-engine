@@ -4,6 +4,7 @@ import { authRequired, requirePermission } from '../auth/middleware.js';
 import { reachInventoryService } from '../services/reachInventoryService.js';
 import { logEvent } from '../services/logger.js';
 import { recordAuditLog } from '../services/auditLogger.js';
+import { persistDurableDbNow } from '../services/dbSnapshot.js';
 
 const now = () => new Date().toISOString();
 
@@ -70,7 +71,7 @@ export function registerProposalRoutes(app) {
   });
 
   // ── Commercial Proposals ──────────────────────────────────────────────────
-  app.post('/api/proposals', authRequired, requirePermission('pitch:write'), async (req, res) => {
+  app.post('/api/proposals', authRequired, requirePermission('pitch:write', 'proposals:create'), async (req, res) => {
     const {
       leadId = null,
       clientName = 'Doctor',
@@ -120,10 +121,12 @@ export function registerProposalRoutes(app) {
       meta: { id, clinicName, netAmount },
     });
 
+    await persistDurableDbNow({ force: true });
+
     res.status(201).json({ id, ok: true, createdAt: ts });
   });
 
-  app.get('/api/proposals', authRequired, requirePermission('pitch:read'), (_req, res) => {
+  app.get('/api/proposals', authRequired, requirePermission('pitch:read', 'proposals:read'), (_req, res) => {
     const rows = db.prepare('SELECT * FROM commercial_proposals ORDER BY created_at DESC LIMIT 50').all();
     res.json(rows.map((r) => ({
       ...r,

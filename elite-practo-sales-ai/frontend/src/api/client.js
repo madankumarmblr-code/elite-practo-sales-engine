@@ -54,8 +54,12 @@ export const api = {
 
   // ── Users ──────────────────────────────────────────────────────────────────
   getUsers: () => get('/users'),
+  getUser: (id) => get(`/users/${id}`),
+  getRolesAndPermissions: () => get('/users/roles-permissions'),
   createUser: (data) => post('/users', data),
   updateUser: (id, data) => put(`/users/${id}`, data),
+  patchUser: (id, data) => patch(`/users/${id}`, data),
+  resetUserPassword: (id, newPassword) => post(`/users/${id}/reset-password`, { newPassword }),
   deleteUser: (id) => del(`/users/${id}`),
 
   // ── Leads ──────────────────────────────────────────────────────────────────

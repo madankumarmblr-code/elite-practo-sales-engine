@@ -638,6 +638,7 @@ ensureColumn('users', 'can_trigger_autopilot', "INTEGER DEFAULT 1");
 ensureColumn('users', 'can_approve_proposals', "INTEGER DEFAULT 0");
 ensureColumn('users', 'status', "TEXT DEFAULT 'active'");
 ensureColumn('users', 'phone', "TEXT DEFAULT ''");
+ensureColumn('users', 'department', "TEXT DEFAULT 'Enterprise Sales'");
 
 // Autopilot human interference & retry columns
 ensureColumn('autopilot_queue', 'human_interference_required', "INTEGER DEFAULT 0");

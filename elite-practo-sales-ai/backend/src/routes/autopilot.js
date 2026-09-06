@@ -263,7 +263,7 @@ export function registerAutopilotRoutes(app) {
   });
 
   // ── ⚡ Global Automation Status & Mode ──────────────────────────────────────
-  app.get('/api/autopilot/automation-status', authRequired, requirePermission('dashboard:read'), (_req, res) => {
+  const handleAutomationStatus = (_req, res) => {
     const stats = autopilotService.getFunnelStats();
     res.json({
       ok: true,
@@ -276,7 +276,9 @@ export function registerAutopilotRoutes(app) {
       autoWhatsAppDispatch: 'Enabled',
       ...stats,
     });
-  });
+  };
+  app.get('/api/autopilot/automation-status', authRequired, requirePermission('dashboard:read', 'autopilot:read', 'leads:read'), handleAutomationStatus);
+  app.get('/api/autopilot/status', authRequired, requirePermission('dashboard:read', 'autopilot:read', 'leads:read'), handleAutomationStatus);
 
   // ── Sarvam Webhook Integration for Autopilot ──────────────────────────────
   app.post('/api/autopilot/webhook', async (req, res) => {

@@ -112,78 +112,7 @@ export function registerAuthRoutes(app) {
     res.json({ id: req.user.id, name: req.user.name, email: req.user.email, username: req.user.username || '', role: req.user.role, roleLabel: ROLES[req.user.role]?.label || req.user.role, level: ROLES[req.user.role]?.level || 0, permissions: req.user.permissions || [], active: true, isSuperAdmin: req.user.role === 'superadmin', createdAt: null, updatedAt: null });
   });
 
-  // ── User CRUD ──────────────────────────────────────────────────────────────
-  app.get('/api/users', authRequired, requirePermission('users:read'), (_req, res) => {
-    const rows = db.prepare("SELECT * FROM users ORDER BY CASE role WHEN 'superadmin' THEN 0 ELSE 1 END, name").all().map(publicUser);
-    res.json(rows);
-  });
-
-  app.post('/api/users', authRequired, requirePermission('users:write'), async (req, res) => {
-    if (!isSuperAdmin(req.user)) return res.status(403).json({ error: 'Only Super Admin can create users' });
-    const { name, email, username, password, role = 'agent', permissions, active = true } = req.body || {};
-    if (!name || !email || !password) return res.status(400).json({ error: 'name, email, and password are required' });
-    if (role === 'superadmin') return res.status(400).json({ error: 'Cannot create another Super Admin via API' });
-    if (!ROLES[role]) return res.status(400).json({ error: 'Invalid role' });
-
-    const emailNorm = String(email).toLowerCase().trim();
-    const usernameNorm = String(username || emailNorm.split('@')[0]).toLowerCase().trim().replace(/[^a-z0-9._-]/g, '');
-    if (!usernameNorm) return res.status(400).json({ error: 'username is required' });
-    if (db.prepare('SELECT id FROM users WHERE email = ?').get(emailNorm)) return res.status(409).json({ error: 'Email already exists' });
-    if (db.prepare('SELECT id FROM users WHERE lower(username) = ?').get(usernameNorm)) return res.status(409).json({ error: 'Username already exists' });
-
-    const perms = Array.isArray(permissions) && permissions.length ? permissions : permissionsForRole(role);
-    const id = nanoid();
-    const ts = now();
-    db.prepare('INSERT INTO users (id, name, email, username, password_hash, role, permissions, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(id, name, emailNorm, usernameNorm, bcrypt.hashSync(password, 10), role, JSON.stringify(perms), active ? 1 : 0, ts, ts);
-
-    logEvent({ type: 'info', category: 'users', message: 'User created', detail: `${usernameNorm} (${role})`, userId: req.user.id, meta: { createdUserId: id } });
-    await persistDurableDbNow();
-    res.status(201).json(publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id)));
-  });
-
-  app.put('/api/users/:id', authRequired, requirePermission('users:write'), async (req, res) => {
-    if (!isSuperAdmin(req.user)) return res.status(403).json({ error: 'Only Super Admin can update users' });
-    const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
-    if (!existing) return res.status(404).json({ error: 'User not found' });
-
-    const b = req.body || {};
-    if (existing.role === 'superadmin' && b.role && b.role !== 'superadmin') return res.status(400).json({ error: 'Cannot change Super Admin role' });
-
-    const role = existing.role === 'superadmin' ? 'superadmin' : b.role || existing.role;
-    if (!ROLES[role]) return res.status(400).json({ error: 'Invalid role' });
-
-    let perms;
-    if (role === 'superadmin') perms = permissionsForRole('superadmin');
-    else if (Array.isArray(b.permissions)) perms = b.permissions;
-    else if (b.role && b.role !== existing.role) perms = permissionsForRole(role);
-    else perms = JSON.parse(existing.permissions || '[]');
-
-    const emailNorm = String(b.email || existing.email).toLowerCase().trim();
-    const usernameNorm = String(b.username != null ? b.username : existing.username || '').toLowerCase().trim().replace(/[^a-z0-9._-]/g, '');
-
-    if (db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(emailNorm, existing.id)) return res.status(409).json({ error: 'Email already exists' });
-    if (usernameNorm && db.prepare('SELECT id FROM users WHERE lower(username) = ? AND id != ?').get(usernameNorm, existing.id)) return res.status(409).json({ error: 'Username already exists' });
-
-    db.prepare('UPDATE users SET name=?, email=?, username=?, role=?, permissions=?, active=?, updated_at=? WHERE id=?').run(b.name ?? existing.name, emailNorm, usernameNorm || existing.username, role, JSON.stringify(perms), b.active !== undefined ? (b.active ? 1 : 0) : existing.active, now(), existing.id);
-    if (b.password) db.prepare('UPDATE users SET password_hash=?, updated_at=? WHERE id=?').run(bcrypt.hashSync(b.password, 10), now(), existing.id);
-
-    logEvent({ type: 'info', category: 'users', message: 'User updated', detail: emailNorm, userId: req.user.id });
-    await persistDurableDbNow();
-    res.json(publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id)));
-  });
-
-  app.delete('/api/users/:id', authRequired, requirePermission('users:write'), async (req, res) => {
-    if (!isSuperAdmin(req.user)) return res.status(403).json({ error: 'Only Super Admin can delete users' });
-    const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
-    if (!existing) return res.status(404).json({ error: 'User not found' });
-    if (existing.role === 'superadmin') return res.status(400).json({ error: 'Cannot delete Super Admin' });
-    if (existing.id === req.user.id) return res.status(400).json({ error: 'Cannot delete your own account' });
-    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(existing.id);
-    db.prepare('DELETE FROM users WHERE id = ?').run(existing.id);
-    logEvent({ type: 'warn', category: 'users', message: 'User deleted', detail: existing.email, userId: req.user.id });
-    await persistDurableDbNow();
-    res.json({ ok: true });
-  });
+  // Note: All Enterprise User & Permission CRUD is registered via registerUsersRoutes in ./users.js
 
   // ── System ─────────────────────────────────────────────────────────────────
   app.get('/api/system/events', authRequired, requirePermission('system:logs'), (req, res) => {
